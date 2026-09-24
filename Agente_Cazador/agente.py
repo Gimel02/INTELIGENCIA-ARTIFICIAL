@@ -114,6 +114,8 @@ class AgenteCazador:
 
         self.sentidos.direccion_sonido = None
 
+        self.sentidos.intensidad_sonido = None
+
         self.sentidos.objetivo_sonido = None
 
         self.sentidos.huele_puma = False
@@ -185,6 +187,15 @@ class AgenteCazador:
                 continue
 
 
+            # No elegir bayas malas que recuerda
+
+            if posicion in (
+                self.memoria.bayas_malas
+            ):
+
+                continue
+
+
             # Si ya fue revisada,
             # no necesitamos volver todavía
 
@@ -228,6 +239,13 @@ class AgenteCazador:
             ):
 
                 if tipo == 1:
+
+                    continue
+
+
+                if posicion in (
+                    self.memoria.bayas_malas
+                ):
 
                     continue
 
@@ -282,7 +300,9 @@ class AgenteCazador:
 
                 candidata,
 
-                self.mundo
+                self.mundo,
+
+                self.memoria.bayas_malas
 
             )
 
@@ -313,9 +333,22 @@ class AgenteCazador:
         # TACTO
         # ==========================================
 
-        self.sentidos.usar_tacto(
-            posicion
+        _, arena_vecina = (
+            self.sentidos.usar_tacto(
+                posicion
+            )
         )
+
+
+        # Recordar la arena que sintió
+        # alrededor, antes de pisarla
+
+        for celda in arena_vecina:
+
+            self.memoria.registrar_terreno(
+                celda,
+                "arena"
+            )
 
 
         # ==========================================
@@ -345,6 +378,15 @@ class AgenteCazador:
         # ==========================================
         # GUSTO
         # ==========================================
+
+        # Antes de comerla, ve de qué color es
+
+        color = (
+            self.sentidos.observar(
+                posicion
+            )
+        )
+
 
         alimento = (
             self.sentidos.usar_gusto(
@@ -376,11 +418,30 @@ class AgenteCazador:
             )
 
 
+            # ======================================
+            # APRENDE QUE ESE COLOR ES BUENO
+            # ======================================
+
+            if self.memoria.aprender_baya(
+                color,
+                "buena"
+            ):
+
+                self.estado = (
+                    f"¡Aprendió: bayas {color}s "
+                    "son buenas! (+20)"
+                )
+
+
             # La baya desaparece
 
             self.mundo.grid[
                 posicion
             ] = 0
+
+            self.memoria.olvidar_baya(
+                posicion
+            )
 
 
         # ==========================================
@@ -406,11 +467,122 @@ class AgenteCazador:
             )
 
 
+            # ======================================
+            # APRENDE QUE ESE COLOR ES MALO
+            # ======================================
+
+            if self.memoria.aprender_baya(
+                color,
+                "mala"
+            ):
+
+                self.estado = (
+                    f"¡Aprendió: bayas {color}s "
+                    "son malas! (-10)"
+                )
+
+
             # La baya desaparece
 
             self.mundo.grid[
                 posicion
             ] = 0
+
+            self.memoria.olvidar_baya(
+                posicion
+            )
+
+
+    # ==========================================
+    # BUSCAR BAYA BUENA RECORDADA
+    #
+    # Solo la elige si está más cerca
+    # que el campamento.
+    # ==========================================
+
+    def buscar_baya_recordada(self):
+
+        if not self.memoria.bayas_buenas:
+
+            return None
+
+
+        camino_campamento = AEstrella.buscar(
+
+            self.posicion,
+
+            self.mundo.campamento,
+
+            self.mundo,
+
+            self.memoria.bayas_malas
+
+        )
+
+
+        mejor = None
+
+        mejor_largo = None
+
+
+        for baya in (
+            self.memoria.bayas_buenas
+        ):
+
+            if baya == self.posicion:
+
+                continue
+
+
+            camino = AEstrella.buscar(
+
+                self.posicion,
+
+                baya,
+
+                self.mundo,
+
+                self.memoria.bayas_malas
+
+            )
+
+
+            if not camino:
+
+                continue
+
+
+            if (
+                mejor_largo is None
+                or
+                len(camino) < mejor_largo
+            ):
+
+                mejor = baya
+
+                mejor_largo = len(camino)
+
+
+        if mejor is None:
+
+            return None
+
+
+        # Si el campamento está más cerca,
+        # mejor ir al campamento
+
+        if (
+            camino_campamento
+            and
+            len(camino_campamento)
+            <=
+            mejor_largo
+        ):
+
+            return None
+
+
+        return mejor
 
 
     # ==========================================
@@ -454,6 +626,23 @@ class AgenteCazador:
                 ]
 
             )
+
+
+            # ======================================
+            # MEMORIA DEL TERRENO QUE VE
+            # (bayas buenas, bayas malas, arena)
+            # ======================================
+
+            for celda, observacion in (
+                percepcion_visual[
+                    "terreno"
+                ].items()
+            ):
+
+                self.memoria.registrar_terreno(
+                    celda,
+                    observacion
+                )
 
 
             # ======================================
@@ -535,6 +724,16 @@ class AgenteCazador:
         )
 
 
+        for celda in celdas_visibles:
+
+            self.memoria.registrar_terreno(
+                celda,
+                self.sentidos.observar(
+                    celda
+                )
+            )
+
+
         # No puede detectar un puma muerto
 
         self.sentidos.ve_puma = False
@@ -542,6 +741,8 @@ class AgenteCazador:
         self.sentidos.escucha_puma = False
 
         self.sentidos.direccion_sonido = None
+
+        self.sentidos.intensidad_sonido = None
 
         self.sentidos.objetivo_sonido = None
 
@@ -615,6 +816,14 @@ class AgenteCazador:
         )
 
 
+        # Olfato de bayas dulces
+
+        self.sentidos.usar_olfato_bayas(
+            self.posicion,
+            self.memoria.colores_buenos()
+        )
+
+
         # ==========================================
         # 4. POCA ENERGÍA
         # ==========================================
@@ -652,6 +861,57 @@ class AgenteCazador:
                 )
 
                 return
+
+
+            # ======================================
+            # ¿HAY COMIDA MÁS CERCA
+            # QUE EL CAMPAMENTO?
+            # ======================================
+
+            baya = (
+                self.buscar_baya_recordada()
+            )
+
+
+            if baya is not None:
+
+                meta = baya
+
+                self.estado = (
+                    "Poca energía: "
+                    "va por bayas que recuerda"
+                )
+
+
+            elif (
+
+                self.sentidos.huele_bayas
+
+                and
+
+                self.sentidos.objetivo_olor_bayas
+                is not None
+
+                and
+
+                AEstrella.heuristica(
+                    self.posicion,
+                    self.mundo.campamento
+                )
+                >
+                self.sentidos.rango_olfato_bayas
+
+            ):
+
+                meta = (
+                    self.sentidos
+                    .objetivo_olor_bayas
+                )
+
+                self.estado = (
+                    "Poca energía: "
+                    "siguiendo olor dulce"
+                )
 
 
         # ==========================================
@@ -899,7 +1159,9 @@ class AgenteCazador:
 
             meta,
 
-            self.mundo
+            self.mundo,
+
+            self.memoria.bayas_malas
 
         )
 
@@ -994,3 +1256,24 @@ class AgenteCazador:
                 self.comprobar_caza_puma(
                     posicion_puma
                 )
+
+
+            # ======================================
+            # 17. VOLVER A PERCIBIR
+            #
+            # Después de moverse, usa otra vez
+            # la vista, el oído y el olfato desde
+            # la casilla nueva. Así todo lo que
+            # muestra el panel corresponde a la
+            # misma casilla donde está parado.
+            # ======================================
+
+            self.percibir_puma(
+                posicion_puma
+            )
+
+
+            self.sentidos.usar_olfato_bayas(
+                self.posicion,
+                self.memoria.colores_buenos()
+            )

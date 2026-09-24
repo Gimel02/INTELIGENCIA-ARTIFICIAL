@@ -422,9 +422,8 @@ class Interfaz:
 
             texto_oido = (
 
-                self.agente
-                .sentidos
-                .direccion_sonido
+                f"{self.agente.sentidos.direccion_sonido} "
+                f"({self.agente.sentidos.intensidad_sonido})"
 
             )
 
@@ -535,10 +534,20 @@ class Interfaz:
 
             texto_olfato = (
 
-                self.agente
-                .sentidos
-                .intensidad_olor
+                "Puma, "
+                f"{self.agente.sentidos.intensidad_olor.lower()}"
 
+            )
+
+        elif (
+            self.agente
+            .sentidos
+            .huele_bayas
+        ):
+
+            texto_olfato = (
+                "Bayas "
+                f"{self.agente.sentidos.color_olor_bayas}s"
             )
 
         else:
@@ -594,6 +603,84 @@ class Interfaz:
         self.pantalla.blit(
             control,
             (20, 128)
+        )
+
+
+        # =====================================
+        # TACTO: ARENA ALREDEDOR
+        # =====================================
+
+        arena_cercana = (
+            self.agente
+            .sentidos
+            .arena_cercana
+        )
+
+
+        if arena_cercana:
+
+            # Solo la inicial: N, S, E, O
+
+            texto_arena = ", ".join(
+                direccion[0]
+                for direccion in arena_cercana
+            )
+
+        else:
+
+            texto_arena = "Ninguna"
+
+
+        arena = self.fuente_pequena.render(
+
+            f"Arena cerca: {texto_arena}",
+
+            True,
+
+            (230, 190, 140)
+
+        )
+
+        self.pantalla.blit(
+            arena,
+            (200, 128)
+        )
+
+
+        # =====================================
+        # LO QUE HA APRENDIDO DE LAS BAYAS
+        # "?" = todavía no la prueba
+        # =====================================
+
+        conocimiento = (
+            self.agente
+            .memoria
+            .conocimiento_bayas
+        )
+
+        texto_moradas = (
+            conocimiento["morada"] or "?"
+        )
+
+        texto_rojas = (
+            conocimiento["roja"] or "?"
+        )
+
+
+        bayas = self.fuente_pequena.render(
+
+            f"Moradas: {texto_moradas}  "
+            f"Rojas: {texto_rojas}",
+
+            True,
+
+            (220, 220, 220)
+
+        )
+
+        self.pantalla.blit(
+            bayas,
+            (400, 128)
         )
 
 

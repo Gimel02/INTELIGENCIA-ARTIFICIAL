@@ -17,8 +17,17 @@ class AEstrella:
     def buscar(
         inicio,
         objetivo,
-        mundo
+        mundo,
+        evitar=None
     ):
+
+        # Casillas que el cazador prefiere no
+        # pisar, como las bayas malas que recuerda.
+
+        if evitar is None:
+
+            evitar = set()
+
 
         if not mundo.es_transitable(
             objetivo
@@ -79,7 +88,15 @@ class AEstrella:
                 # COSTOS
                 # =================================
 
-                if tipo == 4:
+                if (
+                    vecino in evitar
+                    and
+                    vecino != objetivo
+                ):
+
+                    costo_movimiento = 20
+
+                elif tipo == 4:
 
                     costo_movimiento = 8
 

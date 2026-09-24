@@ -1,3 +1,17 @@
+# Lo que la vista distingue de cada tipo de casilla.
+# De las bayas solo ve el color: no sabe si son
+# buenas o malas hasta probarlas.
+
+OBSERVACIONES = {
+
+    1: "arbol",
+    4: "arena",
+    5: "morada",
+    6: "roja"
+
+}
+
+
 class Sentidos:
 
     def __init__(self, mundo):
@@ -9,7 +23,9 @@ class Sentidos:
         # VISTA
         # ==========================================
 
-        self.rango_vista = 1
+        # Los árboles tapan la vista
+
+        self.rango_vista = 2
 
         self.ve_puma = False
 
@@ -18,11 +34,15 @@ class Sentidos:
         # OÍDO
         # ==========================================
 
-        self.rango_oido = 2
+        # El sonido sí pasa entre los árboles
+
+        self.rango_oido = 3
 
         self.escucha_puma = False
 
         self.direccion_sonido = None
+
+        self.intensidad_sonido = None
 
         self.objetivo_sonido = None
 
@@ -34,6 +54,11 @@ class Sentidos:
         self.sensacion_tacto = (
             "Suelo firme"
         )
+
+        # Direcciones de las casillas vecinas
+        # donde siente arena movediza
+
+        self.arena_cercana = []
 
 
         # ==========================================
@@ -49,13 +74,27 @@ class Sentidos:
         # OLFATO
         # ==========================================
 
-        self.rango_olfato = 4
+        # Olor del puma
+
+        self.rango_olfato = 5
 
         self.huele_puma = False
 
         self.intensidad_olor = None
 
         self.objetivo_olor = None
+
+
+        # Olor de las bayas que ya sabe
+        # que son buenas
+
+        self.rango_olfato_bayas = 3
+
+        self.huele_bayas = False
+
+        self.color_olor_bayas = None
+
+        self.objetivo_olor_bayas = None
 
 
     # ==========================================
@@ -88,6 +127,240 @@ class Sentidos:
 
 
     # ==========================================
+    # NOMBRE DE UNA DIRECCIÓN
+    # ==========================================
+
+    @staticmethod
+    def nombre_direccion(
+        df,
+        dc
+    ):
+
+        nombres = {
+
+            (-1, 0): "NORTE",
+            (1, 0): "SUR",
+            (0, 1): "ESTE",
+            (0, -1): "OESTE",
+
+            (-1, 1): "NORESTE",
+            (-1, -1): "NOROESTE",
+            (1, 1): "SURESTE",
+            (1, -1): "SUROESTE"
+
+        }
+
+        return nombres.get(
+            (df, dc)
+        )
+
+
+    # ==========================================
+    # LÍNEA DE VISTA
+    #
+    # Revisa las casillas que hay entre
+    # el cazador y el destino.
+    # Si un árbol está en medio, no lo puede ver.
+    # ==========================================
+
+    def hay_linea_de_vista(
+        self,
+        origen,
+        destino
+    ):
+
+        df = destino[0] - origen[0]
+
+        dc = destino[1] - origen[1]
+
+
+        pasos = (
+            abs(df)
+            +
+            abs(dc)
+        )
+
+
+        for i in range(
+            1,
+            pasos
+        ):
+
+            # ======================================
+            # CASILLAS QUE CRUZA LA LÍNEA
+            #
+            # Si la línea pasa justo por la esquina
+            # entre dos casillas, se revisan las dos.
+            # ======================================
+
+            filas = self.valores_en_linea(
+                origen[0],
+                df,
+                i,
+                pasos
+            )
+
+            columnas = self.valores_en_linea(
+                origen[1],
+                dc,
+                i,
+                pasos
+            )
+
+
+            casillas = []
+
+
+            for fila in filas:
+
+                for columna in columnas:
+
+                    casilla = (
+                        fila,
+                        columna
+                    )
+
+                    if (
+                        casilla != origen
+                        and
+                        casilla != destino
+                    ):
+
+                        casillas.append(
+                            casilla
+                        )
+
+
+            if not casillas:
+
+                continue
+
+
+            # ======================================
+            # SOLO SE TAPA SI TODAS LAS CASILLAS
+            # DE ESE PUNTO SON ÁRBOLES
+            # ======================================
+
+            todas_son_arbol = all(
+
+                self.mundo.grid.get(
+                    casilla
+                ) == 1
+
+                for casilla in casillas
+
+            )
+
+
+            if todas_son_arbol:
+
+                return False
+
+
+        return True
+
+
+    @staticmethod
+    def valores_en_linea(
+        inicio,
+        diferencia,
+        paso,
+        pasos
+    ):
+
+        numerador = (
+            diferencia
+            *
+            paso
+        )
+
+
+        # Cae exactamente en una casilla
+
+        if numerador % pasos == 0:
+
+            return [
+                inicio
+                +
+                numerador // pasos
+            ]
+
+
+        # Cae justo entre dos casillas
+
+        if (2 * numerador) % pasos == 0:
+
+            abajo = (
+                inicio
+                +
+                numerador // pasos
+            )
+
+            return [
+                abajo,
+                abajo + 1
+            ]
+
+
+        return [
+            inicio
+            +
+            round(numerador / pasos)
+        ]
+
+
+    # ==========================================
+    # OBSERVAR UNA CASILLA
+    #
+    # Devuelve lo que se ve: "arbol", "arena",
+    # "morada", "roja" o "libre".
+    # ==========================================
+
+    def observar(
+        self,
+        posicion
+    ):
+
+        return OBSERVACIONES.get(
+
+            self.mundo.grid[
+                posicion
+            ],
+
+            "libre"
+
+        )
+
+
+    # ==========================================
+    # ¿PUEDE VER ESA CASILLA?
+    # ==========================================
+
+    def puede_ver(
+        self,
+        posicion_agente,
+        posicion
+    ):
+
+        if (
+            self.distancia(
+                posicion_agente,
+                posicion
+            )
+            >
+            self.rango_vista
+        ):
+
+            return False
+
+
+        return self.hay_linea_de_vista(
+            posicion_agente,
+            posicion
+        )
+
+
+    # ==========================================
     # OBTENER CELDAS VISIBLES
     # ==========================================
 
@@ -113,25 +386,14 @@ class Sentidos:
                 )
 
 
-                distancia = (
-                    self.distancia(
-
-                        posicion_agente,
-
-                        posicion
-
-                    )
-                )
-
-
                 # ======================================
-                # DENTRO DEL RANGO DE VISTA
+                # DENTRO DEL RANGO Y SIN ÁRBOLES
+                # EN MEDIO
                 # ======================================
 
-                if (
-                    distancia
-                    <=
-                    self.rango_vista
+                if self.puede_ver(
+                    posicion_agente,
+                    posicion
                 ):
 
                     visibles.append(
@@ -184,21 +446,23 @@ class Sentidos:
                 #
                 # Solo se toman las celdas:
                 #
-                # 1. Fuera del rango de vista
+                # 1. Que no puede ver
+                #    (lejos o tapadas por árboles)
                 # 2. Dentro del rango de oído
                 # ======================================
 
                 if (
 
                     distancia
-                    >
-                    self.rango_vista
+                    <=
+                    self.rango_oido
 
                     and
 
-                    distancia
-                    <=
-                    self.rango_oido
+                    not self.puede_ver(
+                        posicion_agente,
+                        posicion
+                    )
 
                 ):
 
@@ -240,13 +504,36 @@ class Sentidos:
             self.ve_puma = False
 
 
+        # ======================================
+        # TERRENO QUE VE
+        #
+        # Árboles, arena y bayas (por color)
+        # que tiene enfrente, para guardarlos
+        # en memoria.
+        # ======================================
+
+        terreno = {
+
+            posicion:
+                self.observar(
+                    posicion
+                )
+
+            for posicion in visibles
+
+        }
+
+
         return {
 
             "detectado":
                 self.ve_puma,
 
             "celdas_visibles":
-                visibles
+                visibles,
+
+            "terreno":
+                terreno
 
         }
 
@@ -274,36 +561,29 @@ class Sentidos:
 
         # ======================================
         # FUERA DEL RANGO DEL OÍDO
+        # O LO PUEDE VER
         # ======================================
 
         if (
+
             distancia
             >
             self.rango_oido
+
+            or
+
+            self.puede_ver(
+                posicion_agente,
+                posicion_puma
+            )
+
         ):
 
             self.escucha_puma = False
 
             self.direccion_sonido = None
 
-            self.objetivo_sonido = None
-
-            return False
-
-
-        # ======================================
-        # SI LO VE, NO NECESITA USAR EL OÍDO
-        # ======================================
-
-        if (
-            distancia
-            <=
-            self.rango_vista
-        ):
-
-            self.escucha_puma = False
-
-            self.direccion_sonido = None
+            self.intensidad_sonido = None
 
             self.objetivo_sonido = None
 
@@ -317,78 +597,86 @@ class Sentidos:
         self.escucha_puma = True
 
 
-        cazador_f, cazador_c = (
-            posicion_agente
-        )
-
-        puma_f, puma_c = (
-            posicion_puma
-        )
-
-
         diferencia_filas = (
-            puma_f
+            posicion_puma[0]
             -
-            cazador_f
+            posicion_agente[0]
         )
 
         diferencia_columnas = (
-            puma_c
+            posicion_puma[1]
             -
-            cazador_c
+            posicion_agente[1]
         )
 
 
         # ======================================
         # DETERMINAR DIRECCIÓN DEL SONIDO
+        #
+        # Ahora también reconoce diagonales.
+        # Si una diferencia es más del doble
+        # que la otra, la dirección es recta.
+        # ======================================
+
+        df = (
+            (diferencia_filas > 0)
+            -
+            (diferencia_filas < 0)
+        )
+
+        dc = (
+            (diferencia_columnas > 0)
+            -
+            (diferencia_columnas < 0)
+        )
+
+
+        if (
+            abs(diferencia_filas)
+            >
+            2 * abs(diferencia_columnas)
+        ):
+
+            dc = 0
+
+        elif (
+            abs(diferencia_columnas)
+            >
+            2 * abs(diferencia_filas)
+        ):
+
+            df = 0
+
+
+        self.direccion_sonido = (
+            self.nombre_direccion(
+                df,
+                dc
+            )
+        )
+
+
+        # ======================================
+        # INTENSIDAD DEL SONIDO
+        #
+        # Entre más cerca, más fuerte.
         # ======================================
 
         if (
-            abs(
-                diferencia_filas
-            )
-            >=
-            abs(
-                diferencia_columnas
-            )
+            distancia
+            <
+            self.rango_oido
         ):
 
-            # Puma arriba
-
-            if diferencia_filas < 0:
-
-                self.direccion_sonido = (
-                    "NORTE"
-                )
-
-
-            # Puma abajo
-
-            else:
-
-                self.direccion_sonido = (
-                    "SUR"
-                )
-
+            self.intensidad_sonido = (
+                "fuerte"
+            )
 
         else:
 
-            # Puma a la izquierda
-
-            if diferencia_columnas < 0:
-
-                self.direccion_sonido = (
-                    "OESTE"
-                )
-
-
-            # Puma a la derecha
-
-            else:
-
-                self.direccion_sonido = (
-                    "ESTE"
-                )
+            self.intensidad_sonido = (
+                "débil"
+            )
 
 
         # ======================================
@@ -397,7 +685,9 @@ class Sentidos:
 
         self.objetivo_sonido = (
             self.crear_objetivo_sonido(
-                posicion_agente
+                posicion_agente,
+                df,
+                dc
             )
         )
 
@@ -411,7 +701,9 @@ class Sentidos:
 
     def crear_objetivo_sonido(
         self,
-        posicion_agente
+        posicion_agente,
+        df,
+        dc
     ):
 
         fila, columna = (
@@ -419,52 +711,37 @@ class Sentidos:
         )
 
 
-        direcciones = {
-
-            "NORTE":
-                (-1, 0),
-
-            "SUR":
-                (1, 0),
-
-            "ESTE":
-                (0, 1),
-
-            "OESTE":
-                (0, -1)
-
-        }
-
-
         # ======================================
         # DIRECCIÓN NO VÁLIDA
         # ======================================
 
         if (
-            self.direccion_sonido
-            not in direcciones
+            df == 0
+            and
+            dc == 0
         ):
 
             return None
 
 
-        df, dc = (
-            direcciones[
-                self.direccion_sonido
-            ]
-        )
-
-
         # ======================================
         # BUSCAR HASTA 3 CASILLAS
         #
-        # Primero intenta 3,
-        # después 2,
-        # después 1.
+        # En diagonal cada paso avanza 2
+        # casillas, por eso solo intenta 2 y 1.
         # ======================================
 
+        if df != 0 and dc != 0:
+
+            maximo = 2
+
+        else:
+
+            maximo = 3
+
+
         for distancia in range(
-            3,
+            maximo,
             0,
             -1
         ):
@@ -509,6 +786,56 @@ class Sentidos:
         posicion
     ):
 
+        # ======================================
+        # CASILLAS VECINAS
+        #
+        # Siente la arena de alrededor
+        # antes de pisarla.
+        # ======================================
+
+        self.arena_cercana = []
+
+        arena_vecina = []
+
+
+        fila, columna = posicion
+
+
+        for df, dc in (
+            (-1, 0),
+            (1, 0),
+            (0, 1),
+            (0, -1)
+        ):
+
+            vecino = (
+                fila + df,
+                columna + dc
+            )
+
+
+            if (
+                self.mundo.dentro_limites(
+                    vecino
+                )
+                and
+                self.mundo.grid[
+                    vecino
+                ] == 4
+            ):
+
+                self.arena_cercana.append(
+                    self.nombre_direccion(
+                        df,
+                        dc
+                    )
+                )
+
+                arena_vecina.append(
+                    vecino
+                )
+
+
         tipo = (
             self.mundo.grid[
                 posicion
@@ -526,7 +853,10 @@ class Sentidos:
                 "Arena movediza"
             )
 
-            return "arena"
+            return (
+                "arena",
+                arena_vecina
+            )
 
 
         # ======================================
@@ -537,7 +867,10 @@ class Sentidos:
             "Suelo firme"
         )
 
-        return "normal"
+        return (
+            "normal",
+            arena_vecina
+        )
 
 
     # ==========================================
@@ -592,8 +925,9 @@ class Sentidos:
 
         return None
 
+
     # ==========================================
-    # USAR OLFATO
+    # USAR OLFATO (PUMA)
     # ==========================================
 
     def usar_olfato(
@@ -615,32 +949,21 @@ class Sentidos:
 
         # ======================================
         # FUERA DEL RANGO DEL OLFATO
+        # O YA LO ESCUCHA / LO VE
         # ======================================
 
         if (
+
             distancia
             >
             self.rango_olfato
-        ):
 
-            self.huele_puma = False
+            or
 
-            self.intensidad_olor = None
-
-            self.objetivo_olor = None
-
-            return False
-
-
-        # ======================================
-        # SI LO VE O LO ESCUCHA,
-        # NO NECESITA USAR EL OLFATO
-        # ======================================
-
-        if (
             distancia
             <=
             self.rango_oido
+
         ):
 
             self.huele_puma = False
@@ -698,13 +1021,121 @@ class Sentidos:
 
 
     # ==========================================
+    # USAR OLFATO (BAYAS)
+    #
+    # Distingue el olor de cada color de baya,
+    # pero solo sigue el olor de los colores
+    # que ya aprendió que son buenos.
+    # El olor pasa entre los árboles.
+    # ==========================================
+
+    def usar_olfato_bayas(
+        self,
+        posicion_agente,
+        colores_buenos
+    ):
+
+        mas_cercana = None
+
+        menor_distancia = None
+
+
+        for posicion, tipo in (
+            self.mundo.grid.items()
+        ):
+
+            if (
+                OBSERVACIONES.get(tipo)
+                not in colores_buenos
+            ):
+
+                continue
+
+
+            distancia = (
+                self.distancia(
+                    posicion_agente,
+                    posicion
+                )
+            )
+
+
+            if (
+                distancia
+                >
+                self.rango_olfato_bayas
+            ):
+
+                continue
+
+
+            if (
+                menor_distancia is None
+                or
+                distancia < menor_distancia
+            ):
+
+                mas_cercana = posicion
+
+                menor_distancia = distancia
+
+
+        # ======================================
+        # NO HUELE BAYAS
+        # ======================================
+
+        if mas_cercana is None:
+
+            self.huele_bayas = False
+
+            self.color_olor_bayas = None
+
+            self.objetivo_olor_bayas = None
+
+            return False
+
+
+        # ======================================
+        # HUELE BAYAS BUENAS
+        # ======================================
+
+        self.huele_bayas = True
+
+        self.color_olor_bayas = (
+            self.observar(
+                mas_cercana
+            )
+        )
+
+
+        # Si ya está encima, no necesita moverse
+
+        if mas_cercana == posicion_agente:
+
+            self.objetivo_olor_bayas = None
+
+            return True
+
+
+        self.objetivo_olor_bayas = (
+            self.crear_objetivo_olor(
+                posicion_agente,
+                mas_cercana
+            )
+        )
+
+
+        return True
+
+
+    # ==========================================
     # CREAR OBJETIVO DEL OLOR
     # ==========================================
 
     def crear_objetivo_olor(
         self,
         posicion_agente,
-        posicion_puma
+        posicion_origen_olor
     ):
 
         # ======================================
@@ -717,7 +1148,7 @@ class Sentidos:
         distancia_actual = (
             self.distancia(
                 posicion_agente,
-                posicion_puma
+                posicion_origen_olor
             )
         )
 
@@ -732,7 +1163,7 @@ class Sentidos:
 
                 self.distancia(
                     vecino,
-                    posicion_puma
+                    posicion_origen_olor
                 )
 
                 <

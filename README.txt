@@ -98,21 +98,75 @@ Sentidos del agente
 El agente cazador percibe el mundo con cinco sentidos. Todos están en `Agente_Cazador/sentidos.py`
 y se muestran en el panel superior de la interfaz.
 
--Vista: Detecta al puma si está a 1 casilla o menos. Si lo ve, lo persigue directamente.
--Oído: Detecta al puma a 2 casillas y da la dirección del sonido (NORTE, SUR, ESTE u OESTE).
--Olfato: Detecta al puma a 3 o 4 casillas. A 3 casillas es "Olor fuerte" y a 4 es "Olor débil".
- No da la posición exacta, solo hacia qué casilla vecina el olor es más fuerte, y el agente sigue ese rastro.
- Si los árboles bloquean el rastro, el agente sigue explorando.
--Tacto: Siente el terreno donde está parado: "Suelo firme" o "Arena movediza" (la arena gasta más energía).
+-Vista: Ve hasta 2 casillas de distancia. Los árboles tapan la vista: si hay un árbol entre el cazador
+ y una casilla, no la puede ver (en diagonal solo se tapa si los dos lados son árboles).
+ Además de buscar al puma, se fija en el terreno que tiene enfrente y guarda en memoria dónde hay
+ arena movediza y bayas. De las bayas solo ve el color (moradas o rojas): no sabe si son buenas
+ o malas hasta que las prueba.
+-Oído: Escucha al puma hasta 3 casillas, aunque haya árboles en medio (el sonido sí pasa entre ellos).
+ Solo se usa cuando no lo puede ver. Da la dirección del sonido en 8 direcciones
+ (NORTE, SUR, ESTE, OESTE, NORESTE, NOROESTE, SURESTE, SUROESTE) y su intensidad:
+ "fuerte" si está a menos de 3 casillas y "débil" si está a 3.
+-Olfato: Tiene dos usos.
+ 1. Puma: lo huele a 4 o 5 casillas. A 4 casillas es "Olor fuerte" y a 5 es "Olor débil".
+    No da la posición exacta, solo hacia qué casilla vecina el olor es más fuerte, y el agente sigue ese rastro.
+    Si los árboles bloquean el rastro, el agente sigue explorando.
+ 2. Bayas: huele las bayas a 3 casillas o menos, pero solo sigue el olor de un color que ya aprendió
+    que es bueno. Lo usa cuando tiene poca energía.
+-Tacto: Siente el terreno donde está parado ("Suelo firme" o "Arena movediza") y también la arena
+ de las casillas vecinas (norte, sur, este y oeste) antes de pisarla. La arena que siente se guarda en memoria.
 -Gusto: Prueba las bayas que encuentra: "Bayas dulces" (+20 de energía) o "Bayas amargas" (-10 de energía).
+ Es el sentido con el que el agente aprende: al probar una baya, recuerda si ese color es bueno o malo
+ (ver "Aprendizaje de las bayas"). Cuando se come una baya, la olvida de la memoria.
+
+Aprendizaje de las bayas
+
+Al inicio el agente no sabe qué bayas son buenas y cuáles son malas. Aprende de su experiencia:
+1. Con la vista solo distingue el color: moradas o rojas.
+2. Cuando pisa una baya, se la come y el gusto le dice si es dulce (+20) o amarga (-10).
+3. Guarda en memoria ese color como "buena" o "mala" y en el estado aparece, por ejemplo,
+   "¡Aprendió: bayas rojas son malas! (-10)".
+4. Desde ese momento aplica lo aprendido a todas las bayas de ese color:
+   evita las de color malo y, con poca energía, busca las de color bueno.
+
+Por eso siempre tiene que comer al menos una baya mala para aprender a evitarlas.
+En el mundo actual las moradas son buenas y las rojas son malas.
+
+Memoria del terreno (`Agente_Cazador/memoria.py`)
+
+Además de las celdas revisadas y la última posición del puma, la memoria guarda:
+-Bayas que ha visto y de qué color son.
+-Lo que ha aprendido de cada color de baya: "buena", "mala" o todavía sin probar.
+-Arena movediza que ha visto o sentido.
+
+Con esta memoria el agente:
+-Evita pisar las bayas de un color que ya aprendió que es malo. El A* (`Algoritmos/a_Estrella.py`) les pone un costo alto
+ para rodearlas si hay otro camino.
+-No elige esas bayas como destino al explorar.
+-Cuando tiene poca energía, va por una baya de color bueno que recuerda si está más cerca que el campamento.
 
 Prioridad de decisiones del agente:
-1. Si tiene poca energía (menos de 30), regresa al campamento.
+1. Si tiene poca energía (menos de 30):
+   a. Si recuerda una baya de color bueno más cerca que el campamento, va por ella.
+   b. Si no, pero huele bayas de color bueno y el campamento está lejos, sigue ese olor.
+   c. Si no, regresa al campamento.
 2. Si ve al puma, lo persigue.
 3. Si lo escucha, va hacia la dirección del sonido.
 4. Si lo huele, sigue el rastro del olor.
 5. Si recuerda dónde lo vio, va a investigar esa posición.
 6. Si no percibe nada, explora zonas que todavía no ha revisado.
+
+Después de moverse una casilla, el agente vuelve a usar la vista, el oído y el olfato desde su nueva
+posición. Así todo lo que muestra el panel (vista, oído, olfato, tacto y gusto) corresponde a la casilla
+donde está parado en ese momento.
+
+Panel de la interfaz
+
+-Fila 1: Energía y estado del agente.
+-Fila 2: Vista, Oído (dirección e intensidad) y Memoria (celdas revisadas).
+-Fila 3: Tacto, Gusto y Olfato (puma o bayas de color bueno).
+-Fila 4: Controles, Arena cerca (N, S, E, O) y lo que ha aprendido de las bayas
+ ("Moradas: buena  Rojas: mala"; "?" si todavía no las prueba).
 
 Las carpetas `__pycache__` contienen archivos temporales generados automáticamente por Python al ejecutar el programa. 
 Estos archivos no forman parte de la lógica principal del proyecto.
