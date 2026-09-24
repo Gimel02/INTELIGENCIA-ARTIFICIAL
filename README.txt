@@ -60,7 +60,7 @@ Contiene los componentes que forman el agente cazador y permiten que pueda perci
 
 -`agente.py`**: Contiene la lógica principal del agente cazador y sus decisiones.
 -`memoria.py`**: Se encarga de almacenar la información que el agente obtiene durante la exploración del mundo.
--`sentidos.py`**: Maneja las percepciones que recibe el agente sobre su entorno.
+-`sentidos.py`**: Maneja las percepciones que recibe el agente sobre su entorno (vista, oído, tacto, gusto y olfato).
 
 `Algoritmos/`
 
@@ -92,6 +92,27 @@ Contiene las clases encargadas de dibujar los diferentes elementos que aparecen 
 -`cazador.py`: Dibuja al cazador.
 -`puma.py`: Dibuja al puma.
 -`raton.py`: Dibuja al ratón.
+
+Sentidos del agente
+
+El agente cazador percibe el mundo con cinco sentidos. Todos están en `Agente_Cazador/sentidos.py`
+y se muestran en el panel superior de la interfaz.
+
+-Vista: Detecta al puma si está a 1 casilla o menos. Si lo ve, lo persigue directamente.
+-Oído: Detecta al puma a 2 casillas y da la dirección del sonido (NORTE, SUR, ESTE u OESTE).
+-Olfato: Detecta al puma a 3 o 4 casillas. A 3 casillas es "Olor fuerte" y a 4 es "Olor débil".
+ No da la posición exacta, solo hacia qué casilla vecina el olor es más fuerte, y el agente sigue ese rastro.
+ Si los árboles bloquean el rastro, el agente sigue explorando.
+-Tacto: Siente el terreno donde está parado: "Suelo firme" o "Arena movediza" (la arena gasta más energía).
+-Gusto: Prueba las bayas que encuentra: "Bayas dulces" (+20 de energía) o "Bayas amargas" (-10 de energía).
+
+Prioridad de decisiones del agente:
+1. Si tiene poca energía (menos de 30), regresa al campamento.
+2. Si ve al puma, lo persigue.
+3. Si lo escucha, va hacia la dirección del sonido.
+4. Si lo huele, sigue el rastro del olor.
+5. Si recuerda dónde lo vio, va a investigar esa posición.
+6. Si no percibe nada, explora zonas que todavía no ha revisado.
 
 Las carpetas `__pycache__` contienen archivos temporales generados automáticamente por Python al ejecutar el programa. 
 Estos archivos no forman parte de la lógica principal del proyecto.

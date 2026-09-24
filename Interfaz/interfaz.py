@@ -48,7 +48,7 @@ class Interfaz:
         # PANEL SUPERIOR
         # =========================================
 
-        self.alto_panel = 130
+        self.alto_panel = 155
 
         self.ancho = (
             self.mundo.ancho
@@ -482,6 +482,89 @@ class Interfaz:
 
 
         # =====================================
+        # TACTO
+        # =====================================
+
+        tacto = self.fuente_pequena.render(
+
+            f"Tacto: "
+            f"{self.agente.sentidos.sensacion_tacto}",
+
+            True,
+
+            (230, 190, 140)
+
+        )
+
+        self.pantalla.blit(
+            tacto,
+            (20, 102)
+        )
+
+
+        # =====================================
+        # GUSTO
+        # =====================================
+
+        gusto = self.fuente_pequena.render(
+
+            f"Gusto: "
+            f"{self.agente.sentidos.sensacion_gusto}",
+
+            True,
+
+            (240, 160, 190)
+
+        )
+
+        self.pantalla.blit(
+            gusto,
+            (200, 102)
+        )
+
+
+        # =====================================
+        # OLFATO
+        # =====================================
+
+        if (
+            self.agente
+            .sentidos
+            .huele_puma
+        ):
+
+            texto_olfato = (
+
+                self.agente
+                .sentidos
+                .intensidad_olor
+
+            )
+
+        else:
+
+            texto_olfato = (
+                "Sin detección"
+            )
+
+
+        olfato = self.fuente_pequena.render(
+
+            f"Olfato: {texto_olfato}",
+
+            True,
+
+            (170, 230, 200)
+
+        )
+
+        self.pantalla.blit(
+            olfato,
+            (400, 102)
+        )
+
+
+        # =====================================
         # CONTROLES
         # =====================================
 
@@ -510,7 +593,7 @@ class Interfaz:
 
         self.pantalla.blit(
             control,
-            (20, 105)
+            (20, 128)
         )
 
 

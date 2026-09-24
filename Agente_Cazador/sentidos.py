@@ -45,6 +45,19 @@ class Sentidos:
         )
 
 
+        # ==========================================
+        # OLFATO
+        # ==========================================
+
+        self.rango_olfato = 4
+
+        self.huele_puma = False
+
+        self.intensidad_olor = None
+
+        self.objetivo_olor = None
+
+
     # ==========================================
     # DISTANCIA MANHATTAN
     # ==========================================
@@ -576,5 +589,159 @@ class Sentidos:
         self.sensacion_gusto = (
             "Sin alimento"
         )
+
+        return None
+
+    # ==========================================
+    # USAR OLFATO
+    # ==========================================
+
+    def usar_olfato(
+        self,
+        posicion_agente,
+        posicion_puma
+    ):
+
+        distancia = (
+            self.distancia(
+
+                posicion_agente,
+
+                posicion_puma
+
+            )
+        )
+
+
+        # ======================================
+        # FUERA DEL RANGO DEL OLFATO
+        # ======================================
+
+        if (
+            distancia
+            >
+            self.rango_olfato
+        ):
+
+            self.huele_puma = False
+
+            self.intensidad_olor = None
+
+            self.objetivo_olor = None
+
+            return False
+
+
+        # ======================================
+        # SI LO VE O LO ESCUCHA,
+        # NO NECESITA USAR EL OLFATO
+        # ======================================
+
+        if (
+            distancia
+            <=
+            self.rango_oido
+        ):
+
+            self.huele_puma = False
+
+            self.intensidad_olor = None
+
+            self.objetivo_olor = None
+
+            return False
+
+
+        # ======================================
+        # HUELE AL PUMA
+        # ======================================
+
+        self.huele_puma = True
+
+
+        # ======================================
+        # INTENSIDAD DEL OLOR
+        #
+        # Entre más cerca, más fuerte.
+        # ======================================
+
+        if (
+            distancia
+            <=
+            self.rango_oido + 1
+        ):
+
+            self.intensidad_olor = (
+                "Olor fuerte"
+            )
+
+        else:
+
+            self.intensidad_olor = (
+                "Olor débil"
+            )
+
+
+        # ======================================
+        # SEGUIR EL RASTRO
+        # ======================================
+
+        self.objetivo_olor = (
+            self.crear_objetivo_olor(
+                posicion_agente,
+                posicion_puma
+            )
+        )
+
+
+        return True
+
+
+    # ==========================================
+    # CREAR OBJETIVO DEL OLOR
+    # ==========================================
+
+    def crear_objetivo_olor(
+        self,
+        posicion_agente,
+        posicion_puma
+    ):
+
+        # ======================================
+        # EL OLOR NO DA LA POSICIÓN EXACTA.
+        #
+        # El cazador solo sabe hacia qué
+        # casilla vecina el olor es más fuerte.
+        # ======================================
+
+        distancia_actual = (
+            self.distancia(
+                posicion_agente,
+                posicion_puma
+            )
+        )
+
+
+        for vecino in (
+            self.mundo.vecinos_validos(
+                posicion_agente
+            )
+        ):
+
+            if (
+
+                self.distancia(
+                    vecino,
+                    posicion_puma
+                )
+
+                <
+
+                distancia_actual
+
+            ):
+
+                return vecino
+
 
         return None

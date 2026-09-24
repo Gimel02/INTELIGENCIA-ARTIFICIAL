@@ -34,7 +34,7 @@ class AgenteCazador:
         # SENTIDOS
         # ==========================================
 
-        # Los valores de rango de vista y oído
+        # Los valores de rango de vista, oído y olfato
         # se encuentran únicamente en sentidos.py
 
         self.sentidos = Sentidos(
@@ -115,6 +115,12 @@ class AgenteCazador:
         self.sentidos.direccion_sonido = None
 
         self.sentidos.objetivo_sonido = None
+
+        self.sentidos.huele_puma = False
+
+        self.sentidos.intensidad_olor = None
+
+        self.sentidos.objetivo_olor = None
 
 
     # ==========================================
@@ -487,9 +493,25 @@ class AgenteCazador:
             )
 
 
+            # ======================================
+            # OLFATO
+            # ======================================
+
+            puma_olido = (
+                self.sentidos.usar_olfato(
+
+                    self.posicion,
+
+                    posicion_puma
+
+                )
+            )
+
+
             return (
                 puma_visible,
-                puma_escuchado
+                puma_escuchado,
+                puma_olido
             )
 
 
@@ -523,8 +545,15 @@ class AgenteCazador:
 
         self.sentidos.objetivo_sonido = None
 
+        self.sentidos.huele_puma = False
+
+        self.sentidos.intensidad_olor = None
+
+        self.sentidos.objetivo_olor = None
+
 
         return (
+            False,
             False,
             False
         )
@@ -579,7 +608,8 @@ class AgenteCazador:
 
         (
             puma_visible,
-            puma_escuchado
+            puma_escuchado,
+            puma_olido
         ) = self.percibir_puma(
             posicion_puma
         )
@@ -685,6 +715,43 @@ class AgenteCazador:
             if meta is None:
 
                 return
+
+
+        # ==========================================
+        # 6.1 NO LO VE NI LO ESCUCHA,
+        # PERO LO HUELE
+        #
+        # Si los árboles bloquean el rastro,
+        # sigue explorando.
+        # ==========================================
+
+        elif (
+            self.mundo.puma_vivo
+            and
+            puma_olido
+            and
+            self.sentidos.objetivo_olor
+            is not None
+        ):
+
+            meta = (
+                self.sentidos
+                .objetivo_olor
+            )
+
+
+            self.estado = (
+
+                "Siguiendo el rastro del Puma "
+
+                f"({self.sentidos.intensidad_olor})"
+
+            )
+
+
+            self.memoria.objetivo_busqueda = (
+                None
+            )
 
 
         # ==========================================
