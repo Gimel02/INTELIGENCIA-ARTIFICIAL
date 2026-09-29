@@ -23,9 +23,12 @@ class Sentidos:
         # VISTA
         # ==========================================
 
+        # Cada sentido detecta al puma por su
+        # cuenta, dentro de su propio alcance.
+
         # Los árboles tapan la vista
 
-        self.rango_vista = 2
+        self.rango_vista = 3
 
         self.ve_puma = False
 
@@ -36,7 +39,7 @@ class Sentidos:
 
         # El sonido sí pasa entre los árboles
 
-        self.rango_oido = 3
+        self.rango_oido = 2
 
         self.escucha_puma = False
 
@@ -76,7 +79,7 @@ class Sentidos:
 
         # Olor del puma
 
-        self.rango_olfato = 5
+        self.rango_olfato = 1
 
         self.huele_puma = False
 
@@ -86,9 +89,12 @@ class Sentidos:
 
 
         # Olor de las bayas que ya sabe
-        # que son buenas
+        # que son buenas (mismo alcance
+        # que el olfato)
 
-        self.rango_olfato_bayas = 3
+        self.rango_olfato_bayas = (
+            self.rango_olfato
+        )
 
         self.huele_bayas = False
 
@@ -444,26 +450,15 @@ class Sentidos:
                 # ======================================
                 # RANGO DEL OÍDO
                 #
-                # Solo se toman las celdas:
-                #
-                # 1. Que no puede ver
-                #    (lejos o tapadas por árboles)
-                # 2. Dentro del rango de oído
+                # El sonido pasa entre los árboles,
+                # así que cuenta toda celda dentro
+                # del alcance.
                 # ======================================
 
                 if (
-
                     distancia
                     <=
                     self.rango_oido
-
-                    and
-
-                    not self.puede_ver(
-                        posicion_agente,
-                        posicion
-                    )
-
                 ):
 
                     celdas_oido.append(
@@ -561,22 +556,12 @@ class Sentidos:
 
         # ======================================
         # FUERA DEL RANGO DEL OÍDO
-        # O LO PUEDE VER
         # ======================================
 
         if (
-
             distancia
             >
             self.rango_oido
-
-            or
-
-            self.puede_ver(
-                posicion_agente,
-                posicion_puma
-            )
-
         ):
 
             self.escucha_puma = False
@@ -659,13 +644,15 @@ class Sentidos:
         # ======================================
         # INTENSIDAD DEL SONIDO
         #
-        # Entre más cerca, más fuerte.
+        # Entre más cerca, más fuerte:
+        # fuerte en la mitad más cercana
+        # del alcance, débil en el resto.
         # ======================================
 
         if (
             distancia
-            <
-            self.rango_oido
+            <=
+            (self.rango_oido + 1) // 2
         ):
 
             self.intensidad_sonido = (
@@ -725,19 +712,22 @@ class Sentidos:
 
 
         # ======================================
-        # BUSCAR HASTA 3 CASILLAS
+        # BUSCAR HASTA EL ALCANCE DEL OÍDO
         #
         # En diagonal cada paso avanza 2
-        # casillas, por eso solo intenta 2 y 1.
+        # casillas, por eso intenta una menos.
         # ======================================
 
         if df != 0 and dc != 0:
 
-            maximo = 2
+            maximo = max(
+                1,
+                self.rango_oido - 1
+            )
 
         else:
 
-            maximo = 3
+            maximo = self.rango_oido
 
 
         for distancia in range(
@@ -949,21 +939,12 @@ class Sentidos:
 
         # ======================================
         # FUERA DEL RANGO DEL OLFATO
-        # O YA LO ESCUCHA / LO VE
         # ======================================
 
         if (
-
             distancia
             >
             self.rango_olfato
-
-            or
-
-            distancia
-            <=
-            self.rango_oido
-
         ):
 
             self.huele_puma = False
@@ -985,13 +966,15 @@ class Sentidos:
         # ======================================
         # INTENSIDAD DEL OLOR
         #
-        # Entre más cerca, más fuerte.
+        # Entre más cerca, más fuerte:
+        # fuerte en la mitad más cercana
+        # del alcance, débil en el resto.
         # ======================================
 
         if (
             distancia
             <=
-            self.rango_oido + 1
+            (self.rango_olfato + 1) // 2
         ):
 
             self.intensidad_olor = (

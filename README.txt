@@ -98,20 +98,29 @@ Sentidos del agente
 El agente cazador percibe el mundo con cinco sentidos. Todos están en `Agente_Cazador/sentidos.py`
 y se muestran en el panel superior de la interfaz.
 
--Vista: Ve hasta 2 casillas de distancia. Los árboles tapan la vista: si hay un árbol entre el cazador
+Alcance de cada sentido (se cambia en el __init__ de `sentidos.py`):
+-Vista: 3 casillas (`rango_vista`).
+-Oído: 2 casillas (`rango_oido`).
+-Olfato: 1 casilla (`rango_olfato`), para el puma y para las bayas.
+
+Cada sentido detecta al puma por su cuenta, dentro de su propio alcance. Por eso pueden detectarlo
+varios sentidos al mismo tiempo (por ejemplo, a 1 casilla lo ve, lo oye y lo huele). Para decidir,
+el agente usa primero la vista, después el oído y al final el olfato.
+
+-Vista: Ve hasta 3 casillas de distancia. Los árboles tapan la vista: si hay un árbol entre el cazador
  y una casilla, no la puede ver (en diagonal solo se tapa si los dos lados son árboles).
  Además de buscar al puma, se fija en el terreno que tiene enfrente y guarda en memoria dónde hay
  arena movediza y bayas. De las bayas solo ve el color (moradas o rojas): no sabe si son buenas
  o malas hasta que las prueba.
--Oído: Escucha al puma hasta 3 casillas, aunque haya árboles en medio (el sonido sí pasa entre ellos).
- Solo se usa cuando no lo puede ver. Da la dirección del sonido en 8 direcciones
+-Oído: Escucha al puma hasta 2 casillas, aunque haya árboles en medio (el sonido sí pasa entre ellos).
+ Es útil cuando un árbol le tapa la vista. Da la dirección del sonido en 8 direcciones
  (NORTE, SUR, ESTE, OESTE, NORESTE, NOROESTE, SURESTE, SUROESTE) y su intensidad:
- "fuerte" si está a menos de 3 casillas y "débil" si está a 3.
+ "fuerte" a 1 casilla y "débil" a 2.
 -Olfato: Tiene dos usos.
- 1. Puma: lo huele a 4 o 5 casillas. A 4 casillas es "Olor fuerte" y a 5 es "Olor débil".
+ 1. Puma: lo huele a 1 casilla ("Olor fuerte"). El olor pasa entre los árboles.
     No da la posición exacta, solo hacia qué casilla vecina el olor es más fuerte, y el agente sigue ese rastro.
     Si los árboles bloquean el rastro, el agente sigue explorando.
- 2. Bayas: huele las bayas a 3 casillas o menos, pero solo sigue el olor de un color que ya aprendió
+ 2. Bayas: huele las bayas a 1 casilla, pero solo sigue el olor de un color que ya aprendió
     que es bueno. Lo usa cuando tiene poca energía.
 -Tacto: Siente el terreno donde está parado ("Suelo firme" o "Arena movediza") y también la arena
  de las casillas vecinas (norte, sur, este y oeste) antes de pisarla. La arena que siente se guarda en memoria.
