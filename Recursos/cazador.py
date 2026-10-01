@@ -1,4 +1,6 @@
+
 import pygame
+import os
 
 
 class Cazador:
@@ -7,19 +9,204 @@ class Cazador:
 
         self.tamano_celda = tamano_celda
 
-        # Colores
-        self.piel = (210, 160, 110)
-        self.camisa = (70, 105, 65)
-        self.camisa_oscura = (45, 75, 45)
-        self.pantalon = (75, 65, 50)
-        self.botas = (55, 40, 30)
+        # =========================================
+        # CARGAR SPRITES
+        # =========================================
 
-        self.sombrero = (120, 85, 45)
-        self.sombrero_oscuro = (90, 60, 30)
+        # Obtener la carpeta donde está este archivo
+        carpeta_recursos = os.path.dirname(
+            os.path.abspath(__file__)
+        )
 
-        self.mochila = (100, 65, 35)
-        self.negro = (30, 30, 30)
+        # Rutas de los sprites
+        ruta_arriba = os.path.join(
+            carpeta_recursos,
+            "images",
+            "cazador_arriba.png"
+        )
 
+        ruta_abajo = os.path.join(
+            carpeta_recursos,
+            "images",
+            "cazador_abajo.png"
+        )
+
+        ruta_izquierda = os.path.join(
+            carpeta_recursos,
+            "images",
+            "cazador_izquierda.png"
+        )
+
+        ruta_derecha = os.path.join(
+            carpeta_recursos,
+            "images",
+            "cazador_derecha.png"
+        )
+
+        # =========================================
+        # CARGAR IMÁGENES
+        # =========================================
+
+        self.sprite_arriba = pygame.image.load(
+            ruta_arriba
+        ).convert_alpha()
+
+        self.sprite_abajo = pygame.image.load(
+            ruta_abajo
+        ).convert_alpha()
+
+        self.sprite_izquierda = pygame.image.load(
+            ruta_izquierda
+        ).convert_alpha()
+
+        self.sprite_derecha = pygame.image.load(
+            ruta_derecha
+        ).convert_alpha()
+
+        # =========================================
+        # CAMBIAR TAMAÑO
+        # =========================================
+
+        self.sprite_arriba = pygame.transform.scale(
+            self.sprite_arriba,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        self.sprite_abajo = pygame.transform.scale(
+            self.sprite_abajo,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        self.sprite_izquierda = pygame.transform.scale(
+            self.sprite_izquierda,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        self.sprite_derecha = pygame.transform.scale(
+            self.sprite_derecha,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        # =========================================
+        # DIRECCIÓN INICIAL
+        # =========================================
+
+        self.direccion = "abajo"
+
+        # =========================================
+        # POSICIÓN ANTERIOR
+        # =========================================
+
+        self.posicion_anterior = None
+
+
+    # =========================================
+    # ACTUALIZAR DIRECCIÓN
+    # =========================================
+
+    def actualizar_direccion(
+        self,
+        fila,
+        columna
+    ):
+
+        # Primera posición
+        if self.posicion_anterior is None:
+
+            self.posicion_anterior = (
+                fila,
+                columna
+            )
+
+            return
+
+        fila_anterior, columna_anterior = (
+            self.posicion_anterior
+        )
+
+        # =========================================
+        # MOVIMIENTO HACIA ARRIBA
+        # =========================================
+
+        if fila < fila_anterior:
+
+            self.direccion = "arriba"
+
+
+        # =========================================
+        # MOVIMIENTO HACIA ABAJO
+        # =========================================
+
+        elif fila > fila_anterior:
+
+            self.direccion = "abajo"
+
+
+        # =========================================
+        # MOVIMIENTO HACIA IZQUIERDA
+        # =========================================
+
+        elif columna < columna_anterior:
+
+            self.direccion = "izquierda"
+
+
+        # =========================================
+        # MOVIMIENTO HACIA DERECHA
+        # =========================================
+
+        elif columna > columna_anterior:
+
+            self.direccion = "derecha"
+
+
+        # Guardar posición actual
+        self.posicion_anterior = (
+            fila,
+            columna
+        )
+
+
+    # =========================================
+    # OBTENER SPRITE ACTUAL
+    # =========================================
+
+    def obtener_sprite(self):
+
+        if self.direccion == "arriba":
+
+            return self.sprite_arriba
+
+
+        elif self.direccion == "izquierda":
+
+            return self.sprite_izquierda
+
+
+        elif self.direccion == "derecha":
+
+            return self.sprite_derecha
+
+
+        # Por defecto: abajo
+        return self.sprite_abajo
+
+
+    # =========================================
+    # DIBUJAR CAZADOR
+    # =========================================
 
     def dibujar(
         self,
@@ -30,305 +217,67 @@ class Cazador:
     ):
 
         # =========================================
+        # ACTUALIZAR DIRECCIÓN
+        # =========================================
+
+        self.actualizar_direccion(
+            fila,
+            columna
+        )
+
+
+        # =========================================
+        # OBTENER SPRITE
+        # =========================================
+
+        sprite = self.obtener_sprite()
+
+
+        # =========================================
         # POSICIÓN DE LA CELDA
         # =========================================
 
         x = (
-            columna * self.tamano_celda
+            columna
+            *
+            self.tamano_celda
         )
 
         y = (
             desplazamiento_y
-            + fila * self.tamano_celda
+            +
+            fila
+            *
+            self.tamano_celda
         )
 
-        centro_x = (
-            x + self.tamano_celda // 2
-        )
 
         # =========================================
-        # TAMAÑOS
+        # CENTRAR SPRITE
         # =========================================
 
-        cabeza = int(
-            self.tamano_celda * 0.20
-        )
+        rect_sprite = sprite.get_rect(
 
-        # =========================================
-        # MOCHILA
-        # =========================================
+            center=(
 
-        pygame.draw.rect(
-            pantalla,
-            self.mochila,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.30),
+                x
+                +
+                self.tamano_celda // 2,
 
                 y
-                + int(self.tamano_celda * 0.38),
+                +
+                self.tamano_celda // 2
 
-                int(self.tamano_celda * 0.18),
-
-                int(self.tamano_celda * 0.30)
-            ),
-            border_radius=4
-        )
-
-        # =========================================
-        # PIERNAS
-        # =========================================
-
-        pygame.draw.rect(
-            pantalla,
-            self.pantalon,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.17),
-
-                y
-                + int(self.tamano_celda * 0.68),
-
-                int(self.tamano_celda * 0.13),
-
-                int(self.tamano_celda * 0.20)
-            ),
-            border_radius=3
-        )
-
-        pygame.draw.rect(
-            pantalla,
-            self.pantalon,
-            (
-                centro_x
-                + int(self.tamano_celda * 0.04),
-
-                y
-                + int(self.tamano_celda * 0.68),
-
-                int(self.tamano_celda * 0.13),
-
-                int(self.tamano_celda * 0.20)
-            ),
-            border_radius=3
-        )
-
-        # =========================================
-        # BOTAS
-        # =========================================
-
-        pygame.draw.rect(
-            pantalla,
-            self.botas,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.19),
-
-                y
-                + int(self.tamano_celda * 0.84),
-
-                int(self.tamano_celda * 0.17),
-
-                int(self.tamano_celda * 0.08)
-            ),
-            border_radius=3
-        )
-
-        pygame.draw.rect(
-            pantalla,
-            self.botas,
-            (
-                centro_x
-                + int(self.tamano_celda * 0.02),
-
-                y
-                + int(self.tamano_celda * 0.84),
-
-                int(self.tamano_celda * 0.17),
-
-                int(self.tamano_celda * 0.08)
-            ),
-            border_radius=3
-        )
-
-        # =========================================
-        # CUERPO
-        # =========================================
-
-        pygame.draw.rect(
-            pantalla,
-            self.camisa,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.25),
-
-                y
-                + int(self.tamano_celda * 0.35),
-
-                int(self.tamano_celda * 0.50),
-
-                int(self.tamano_celda * 0.38)
-            ),
-            border_radius=7
-        )
-
-        # =========================================
-        # BRAZO IZQUIERDO
-        # =========================================
-
-        pygame.draw.line(
-            pantalla,
-            self.camisa_oscura,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.23),
-
-                y
-                + int(self.tamano_celda * 0.42)
-            ),
-            (
-                centro_x
-                - int(self.tamano_celda * 0.32),
-
-                y
-                + int(self.tamano_celda * 0.68)
-            ),
-            max(
-                3,
-                int(self.tamano_celda * 0.10)
             )
+
         )
 
-        # =========================================
-        # BRAZO DERECHO
-        # =========================================
-
-        pygame.draw.line(
-            pantalla,
-            self.camisa_oscura,
-            (
-                centro_x
-                + int(self.tamano_celda * 0.23),
-
-                y
-                + int(self.tamano_celda * 0.42)
-            ),
-            (
-                centro_x
-                + int(self.tamano_celda * 0.32),
-
-                y
-                + int(self.tamano_celda * 0.68)
-            ),
-            max(
-                3,
-                int(self.tamano_celda * 0.10)
-            )
-        )
 
         # =========================================
-        # CABEZA
+        # DIBUJAR
         # =========================================
 
-        pygame.draw.circle(
-            pantalla,
-            self.piel,
-            (
-                centro_x,
-                y
-                + int(self.tamano_celda * 0.27)
-            ),
-            cabeza
-        )
-
-        # =========================================
-        # SOMBRERO
-        # =========================================
-
-        sombrero_y = (
-            y
-            + int(self.tamano_celda * 0.08)
-        )
-
-        pygame.draw.ellipse(
-            pantalla,
-            self.sombrero,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.32),
-
-                sombrero_y,
-
-                int(self.tamano_celda * 0.64),
-
-                int(self.tamano_celda * 0.16)
-            )
-        )
-
-        pygame.draw.rect(
-            pantalla,
-            self.sombrero,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.20),
-
-                sombrero_y
-                - int(self.tamano_celda * 0.08),
-
-                int(self.tamano_celda * 0.40),
-
-                int(self.tamano_celda * 0.15)
-            ),
-            border_radius=4
-        )
-
-        # =========================================
-        # CINTA DEL SOMBRERO
-        # =========================================
-
-        pygame.draw.rect(
-            pantalla,
-            self.sombrero_oscuro,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.20),
-
-                sombrero_y
-                + int(self.tamano_celda * 0.06),
-
-                int(self.tamano_celda * 0.40),
-
-                int(self.tamano_celda * 0.05)
-            )
-        )
-
-        # =========================================
-        # OJOS
-        # =========================================
-
-        ojo_y = (
-            y
-            + int(self.tamano_celda * 0.27)
-        )
-
-        pygame.draw.circle(
-            pantalla,
-            self.negro,
-            (
-                centro_x
-                - int(self.tamano_celda * 0.07),
-                ojo_y
-            ),
-            2
-        )
-
-        pygame.draw.circle(
-            pantalla,
-            self.negro,
-            (
-                centro_x
-                + int(self.tamano_celda * 0.07),
-                ojo_y
-            ),
-            2
+        pantalla.blit(
+            sprite,
+            rect_sprite
         )

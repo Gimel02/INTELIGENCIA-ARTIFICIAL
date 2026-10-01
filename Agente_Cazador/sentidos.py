@@ -6,8 +6,18 @@ OBSERVACIONES = {
 
     1: "arbol",
     4: "arena",
-    5: "morada",
+    5: "azul",
     6: "roja"
+
+}
+
+
+# Plural de cada color, para los mensajes
+
+PLURAL_COLORES = {
+
+    "azul": "azules",
+    "roja": "rojas"
 
 }
 
@@ -319,7 +329,7 @@ class Sentidos:
     # OBSERVAR UNA CASILLA
     #
     # Devuelve lo que se ve: "arbol", "arena",
-    # "morada", "roja" o "libre".
+    # "azul", "roja" o "libre".
     # ==========================================
 
     def observar(

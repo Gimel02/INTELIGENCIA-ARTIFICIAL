@@ -1,5 +1,5 @@
 from Agente_Cazador.memoria import Memoria
-from Agente_Cazador.sentidos import Sentidos
+from Agente_Cazador.sentidos import Sentidos, PLURAL_COLORES
 
 from Algoritmos.a_Estrella import AEstrella
 
@@ -428,7 +428,7 @@ class AgenteCazador:
             ):
 
                 self.estado = (
-                    f"¡Aprendió: bayas {color}s "
+                    f"¡Aprendió: bayas {PLURAL_COLORES[color]} "
                     "son buenas! (+20)"
                 )
 
@@ -477,7 +477,7 @@ class AgenteCazador:
             ):
 
                 self.estado = (
-                    f"¡Aprendió: bayas {color}s "
+                    f"¡Aprendió: bayas {PLURAL_COLORES[color]} "
                     "son malas! (-10)"
                 )
 

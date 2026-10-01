@@ -1,4 +1,6 @@
+
 import pygame
+import os
 
 
 class Baya:
@@ -7,9 +9,61 @@ class Baya:
 
         self.tamano_celda = tamano_celda
 
-        self.buena = (130, 70, 170)
-        self.mala = (180, 60, 50)
-        self.hoja = (35, 110, 45)
+        # =========================================
+        # CARGAR SPRITES
+        # =========================================
+
+        # Obtiene la carpeta donde está este archivo
+        carpeta_recursos = os.path.dirname(
+            os.path.abspath(__file__)
+        )
+
+        # Rutas de las imágenes
+        ruta_baya_buena = os.path.join(
+            carpeta_recursos,
+            "images",
+            "bayas_buenas.png"
+        )
+
+        ruta_baya_mala = os.path.join(
+            carpeta_recursos,
+            "images",
+            "bayas_malas.png"
+        )
+
+        # =========================================
+        # CARGAR IMÁGENES
+        # =========================================
+
+        # Baya buena
+        self.sprite_buena = pygame.image.load(
+            ruta_baya_buena
+        ).convert_alpha()
+
+        # Baya mala
+        self.sprite_mala = pygame.image.load(
+            ruta_baya_mala
+        ).convert_alpha()
+
+        # =========================================
+        # CAMBIAR TAMAÑO
+        # =========================================
+
+        self.sprite_buena = pygame.transform.scale(
+            self.sprite_buena,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        self.sprite_mala = pygame.transform.scale(
+            self.sprite_mala,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
 
 
     def dibujar(
@@ -22,104 +76,46 @@ class Baya:
     ):
 
         # =========================================
-        # CENTRO DE LA CELDA
+        # ELEGIR SPRITE
         # =========================================
 
-        centro_x = (
-            columna * self.tamano_celda
-            + self.tamano_celda // 2
+        if buena:
+            sprite = self.sprite_buena
+        else:
+            sprite = self.sprite_mala
+
+        # =========================================
+        # POSICIÓN DE LA CELDA
+        # =========================================
+
+        x = (
+            columna
+            * self.tamano_celda
         )
 
-        centro_y = (
+        y = (
             desplazamiento_y
-            + fila * self.tamano_celda
-            + self.tamano_celda // 2
+            +
+            fila
+            * self.tamano_celda
         )
-
 
         # =========================================
-        # COLOR
+        # CENTRAR SPRITE
         # =========================================
 
-        color = (
-            self.buena
-            if buena
-            else self.mala
-        )
-
-
-        # =========================================
-        # TAMAÑO
-        # =========================================
-
-        radio = max(
-            3,
-            int(self.tamano_celda * 0.11)
-        )
-
-        separacion = int(
-            self.tamano_celda * 0.14
-        )
-
-
-        # =========================================
-        # BAYAS
-        # =========================================
-
-        pygame.draw.circle(
-            pantalla,
-            color,
-            (
-                centro_x - separacion,
-                centro_y
-            ),
-            radio
-        )
-
-        pygame.draw.circle(
-            pantalla,
-            color,
-            (
-                centro_x + separacion,
-                centro_y
-            ),
-            radio
-        )
-
-        pygame.draw.circle(
-            pantalla,
-            color,
-            (
-                centro_x,
-                centro_y - separacion
-            ),
-            radio
-        )
-
-
-        # =========================================
-        # HOJA
-        # =========================================
-
-        ancho_hoja = int(
-            self.tamano_celda * 0.20
-        )
-
-        alto_hoja = int(
-            self.tamano_celda * 0.10
-        )
-
-        pygame.draw.ellipse(
-            pantalla,
-            self.hoja,
-            (
-                centro_x
-                - ancho_hoja // 2,
-
-                centro_y
-                - int(self.tamano_celda * 0.38),
-
-                ancho_hoja,
-                alto_hoja
+        rect_sprite = sprite.get_rect(
+            center=(
+                x + self.tamano_celda // 2,
+                y + self.tamano_celda // 2
             )
+        )
+
+        # =========================================
+        # DIBUJAR BAYA
+        # =========================================
+
+        pantalla.blit(
+            sprite,
+            rect_sprite
         )

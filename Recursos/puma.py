@@ -1,4 +1,5 @@
 import pygame
+import os
 
 
 class Puma:
@@ -7,11 +8,186 @@ class Puma:
 
         self.tamano_celda = tamano_celda
 
-        # Colores
-        self.color_cuerpo = (190, 110, 45)
-        self.color_oscuro = (120, 70, 30)
-        self.color_claro = (220, 150, 70)
-        self.negro = (25, 25, 25)
+        # =========================================
+        # CARGAR SPRITES
+        # =========================================
+
+        # Obtiene la carpeta donde está este archivo puma.py
+        carpeta_recursos = os.path.dirname(
+            os.path.abspath(__file__)
+        )
+
+        # Rutas de los sprites
+        ruta_arriba = os.path.join(
+            carpeta_recursos,
+            "images",
+            "jaguar_arriba.png"
+        )
+
+        ruta_abajo = os.path.join(
+            carpeta_recursos,
+            "images",
+            "jaguar_abajo.png"
+        )
+
+        ruta_izquierda = os.path.join(
+            carpeta_recursos,
+            "images",
+            "jaguar_izquierda.png"
+        )
+
+        ruta_derecha = os.path.join(
+            carpeta_recursos,
+            "images",
+            "jaguar_derecha.png"
+        )
+
+        # =========================================
+        # CARGAR IMÁGENES
+        # =========================================
+
+        self.sprite_arriba = pygame.image.load(
+            ruta_arriba
+        ).convert_alpha()
+
+        self.sprite_abajo = pygame.image.load(
+            ruta_abajo
+        ).convert_alpha()
+
+        self.sprite_izquierda = pygame.image.load(
+            ruta_izquierda
+        ).convert_alpha()
+
+        self.sprite_derecha = pygame.image.load(
+            ruta_derecha
+        ).convert_alpha()
+
+        # =========================================
+        # CAMBIAR TAMAÑO
+        # =========================================
+
+        # El tablero utiliza celdas de 50x50,
+        # por eso adaptamos los sprites de 64x64
+        # al tamaño de la celda.
+
+        self.sprite_arriba = pygame.transform.scale(
+            self.sprite_arriba,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        self.sprite_abajo = pygame.transform.scale(
+            self.sprite_abajo,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        self.sprite_izquierda = pygame.transform.scale(
+            self.sprite_izquierda,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        self.sprite_derecha = pygame.transform.scale(
+            self.sprite_derecha,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
+
+        # =========================================
+        # DIRECCIÓN INICIAL
+        # =========================================
+
+        self.direccion = "abajo"
+
+        # Guarda la posición anterior del puma
+        # para detectar hacia dónde se movió.
+        self.posicion_anterior = None
+
+
+    def actualizar_direccion(
+        self,
+        fila,
+        columna
+    ):
+
+        # Si es la primera vez que dibujamos
+        # al puma, todavía no sabemos hacia
+        # dónde se movió.
+        if self.posicion_anterior is None:
+
+            self.posicion_anterior = (
+                fila,
+                columna
+            )
+
+            return
+
+        # Obtener posición anterior
+        fila_anterior, columna_anterior = (
+            self.posicion_anterior
+        )
+
+        # =========================================
+        # DETECTAR DIRECCIÓN
+        # =========================================
+
+        # Se movió hacia arriba
+        if fila < fila_anterior:
+
+            self.direccion = "arriba"
+
+        # Se movió hacia abajo
+        elif fila > fila_anterior:
+
+            self.direccion = "abajo"
+
+        # Se movió hacia la izquierda
+        elif columna < columna_anterior:
+
+            self.direccion = "izquierda"
+
+        # Se movió hacia la derecha
+        elif columna > columna_anterior:
+
+            self.direccion = "derecha"
+
+        # Guardamos la posición actual
+        # para compararla en el siguiente movimiento.
+        self.posicion_anterior = (
+            fila,
+            columna
+        )
+
+
+    def obtener_sprite(self):
+
+        # =========================================
+        # SELECCIONAR SPRITE
+        # =========================================
+
+        if self.direccion == "arriba":
+
+            return self.sprite_arriba
+
+        elif self.direccion == "izquierda":
+
+            return self.sprite_izquierda
+
+        elif self.direccion == "derecha":
+
+            return self.sprite_derecha
+
+        # Por defecto mira hacia abajo
+        return self.sprite_abajo
 
 
     def dibujar(
@@ -21,6 +197,18 @@ class Puma:
         columna,
         desplazamiento_y=0
     ):
+
+        # =========================================
+        # ACTUALIZAR DIRECCIÓN
+        # =========================================
+
+        self.actualizar_direccion(
+            fila,
+            columna
+        )
+
+        # Obtener el sprite correspondiente
+        sprite = self.obtener_sprite()
 
         # =========================================
         # POSICIÓN DE LA CELDA
@@ -38,355 +226,22 @@ class Puma:
             * self.tamano_celda
         )
 
-
         # =========================================
-        # CENTRO
-        # =========================================
-
-        centro_x = (
-            x
-            +
-            self.tamano_celda // 2
-        )
-
-        centro_y = (
-            y
-            +
-            self.tamano_celda // 2
-        )
-
-
-        # =========================================
-        # CUERPO
+        # CENTRAR SPRITE EN LA CELDA
         # =========================================
 
-        ancho_cuerpo = int(
-            self.tamano_celda * 0.48
-        )
-
-        alto_cuerpo = int(
-            self.tamano_celda * 0.28
-        )
-
-
-        pygame.draw.ellipse(
-
-            pantalla,
-
-            self.color_cuerpo,
-
-            (
-                centro_x
-                - ancho_cuerpo // 2,
-
-                centro_y,
-
-                ancho_cuerpo,
-
-                alto_cuerpo
-            )
-
-        )
-
-
-        # =========================================
-        # CABEZA
-        # =========================================
-
-        radio_cabeza = int(
-            self.tamano_celda * 0.17
-        )
-
-
-        cabeza_x = (
-            centro_x
-            +
-            int(
-                self.tamano_celda * 0.20
+        rect_sprite = sprite.get_rect(
+            center=(
+                x + self.tamano_celda // 2,
+                y + self.tamano_celda // 2
             )
         )
 
-        cabeza_y = (
-            centro_y
-            -
-            int(
-                self.tamano_celda * 0.05
-            )
-        )
-
-
-        pygame.draw.circle(
-
-            pantalla,
-
-            self.color_claro,
-
-            (
-                cabeza_x,
-                cabeza_y
-            ),
-
-            radio_cabeza
-
-        )
-
-
         # =========================================
-        # OREJAS
+        # DIBUJAR PUMA
         # =========================================
 
-        radio_oreja = max(
-            2,
-            int(
-                self.tamano_celda * 0.06
-            )
-        )
-
-
-        pygame.draw.circle(
-
-            pantalla,
-
-            self.color_oscuro,
-
-            (
-                cabeza_x
-                -
-                int(
-                    self.tamano_celda * 0.10
-                ),
-
-                cabeza_y
-                -
-                int(
-                    self.tamano_celda * 0.13
-                )
-            ),
-
-            radio_oreja
-
-        )
-
-
-        pygame.draw.circle(
-
-            pantalla,
-
-            self.color_oscuro,
-
-            (
-                cabeza_x
-                +
-                int(
-                    self.tamano_celda * 0.10
-                ),
-
-                cabeza_y
-                -
-                int(
-                    self.tamano_celda * 0.13
-                )
-            ),
-
-            radio_oreja
-
-        )
-
-
-        # =========================================
-        # OJOS
-        # =========================================
-
-        pygame.draw.circle(
-
-            pantalla,
-
-            self.negro,
-
-            (
-                cabeza_x
-                -
-                int(
-                    self.tamano_celda * 0.05
-                ),
-
-                cabeza_y
-                -
-                int(
-                    self.tamano_celda * 0.02
-                )
-            ),
-
-            2
-
-        )
-
-
-        pygame.draw.circle(
-
-            pantalla,
-
-            self.negro,
-
-            (
-                cabeza_x
-                +
-                int(
-                    self.tamano_celda * 0.05
-                ),
-
-                cabeza_y
-                -
-                int(
-                    self.tamano_celda * 0.02
-                )
-            ),
-
-            2
-
-        )
-
-
-        # =========================================
-        # NARIZ
-        # =========================================
-
-        pygame.draw.circle(
-
-            pantalla,
-
-            self.negro,
-
-            (
-                cabeza_x,
-
-                cabeza_y
-                +
-                int(
-                    self.tamano_celda * 0.06
-                )
-            ),
-
-            2
-
-        )
-
-
-        # =========================================
-        # PATAS
-        # =========================================
-
-        ancho_pata = max(
-            3,
-            int(
-                self.tamano_celda * 0.07
-            )
-        )
-
-        alto_pata = int(
-            self.tamano_celda * 0.18
-        )
-
-
-        pygame.draw.rect(
-
-            pantalla,
-
-            self.color_oscuro,
-
-            (
-                centro_x
-                -
-                int(
-                    self.tamano_celda * 0.16
-                ),
-
-                centro_y
-                +
-                int(
-                    self.tamano_celda * 0.20
-                ),
-
-                ancho_pata,
-
-                alto_pata
-            ),
-
-            border_radius=3
-
-        )
-
-
-        pygame.draw.rect(
-
-            pantalla,
-
-            self.color_oscuro,
-
-            (
-                centro_x
-                +
-                int(
-                    self.tamano_celda * 0.08
-                ),
-
-                centro_y
-                +
-                int(
-                    self.tamano_celda * 0.20
-                ),
-
-                ancho_pata,
-
-                alto_pata
-            ),
-
-            border_radius=3
-
-        )
-
-
-        # =========================================
-        # COLA
-        # =========================================
-
-        pygame.draw.arc(
-
-            pantalla,
-
-            self.color_oscuro,
-
-            (
-                centro_x
-                -
-                int(
-                    self.tamano_celda * 0.45
-                ),
-
-                centro_y
-                -
-                int(
-                    self.tamano_celda * 0.05
-                ),
-
-                int(
-                    self.tamano_celda * 0.35
-                ),
-
-                int(
-                    self.tamano_celda * 0.40
-                )
-            ),
-
-            1.2,
-
-            4.5,
-
-            max(
-                2,
-                int(
-                    self.tamano_celda * 0.05
-                )
-            )
-
+        pantalla.blit(
+            sprite,
+            rect_sprite
         )

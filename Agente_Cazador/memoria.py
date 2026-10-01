@@ -24,7 +24,7 @@ class Memoria:
         # con el gusto: "buena", "mala" o
         # None si todavía no la prueba.
         self.conocimiento_bayas = {
-            "morada": None,
+            "azul": None,
             "roja": None
         }
 
@@ -87,7 +87,7 @@ class Memoria:
     # ==========================================
     # REGISTRAR TERRENO
     #
-    # observacion: "arena", "morada", "roja",
+    # observacion: "arena", "azul", "roja",
     # "arbol" o "libre"
     # ==========================================
 

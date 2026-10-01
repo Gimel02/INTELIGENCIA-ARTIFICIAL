@@ -1,4 +1,6 @@
+
 import pygame
+import os
 
 
 class ArenaMovediza:
@@ -7,9 +9,35 @@ class ArenaMovediza:
 
         self.tamano_celda = tamano_celda
 
-        self.color = (194, 170, 90)
-        self.detalle = (145, 115, 60)
+        # =========================================
+        # CARGAR SPRITE
+        # =========================================
 
+        carpeta_recursos = os.path.dirname(
+            os.path.abspath(__file__)
+        )
+
+        ruta_arena = os.path.join(
+            carpeta_recursos,
+            "images",
+            "arena_movediza.png"
+        )
+
+        self.sprite = pygame.image.load(
+            ruta_arena
+        ).convert_alpha()
+
+        # =========================================
+        # CAMBIAR TAMAÑO
+        # =========================================
+
+        self.sprite = pygame.transform.scale(
+            self.sprite,
+            (
+                self.tamano_celda,
+                self.tamano_celda
+            )
+        )
 
     def dibujar(
         self,
@@ -19,46 +47,37 @@ class ArenaMovediza:
         desplazamiento_y=0
     ):
 
+        # =========================================
         # POSICIÓN DE LA CELDA
+        # =========================================
+
         x = (
-            columna * self.tamano_celda
+            columna
+            * self.tamano_celda
         )
 
         y = (
             desplazamiento_y
-            + fila * self.tamano_celda
+            + fila
+            * self.tamano_celda
         )
 
-        # MARGEN
-        margen = 8
+        # =========================================
+        # CENTRAR SPRITE
+        # =========================================
 
-        # ARENA
-        pygame.draw.rect(
-            pantalla,
-            self.color,
-            (
-                x + margen,
-                y + margen,
-                self.tamano_celda - margen * 2,
-                self.tamano_celda - margen * 2
-            ),
-            border_radius=10
-        )
-
-        # ONDAS DE LA ARENA
-
-        for i in range(3):
-
-            pygame.draw.arc(
-                pantalla,
-                self.detalle,
-                (
-                    x + 15,
-                    y + 20 + i * 10,
-                    45,
-                    12
-                ),
-                0,
-                3.14,
-                2
+        rect_sprite = self.sprite.get_rect(
+            center=(
+                x + self.tamano_celda // 2,
+                y + self.tamano_celda // 2
             )
+        )
+
+        # =========================================
+        # DIBUJAR ARENA MOVEDIZA
+        # =========================================
+
+        pantalla.blit(
+            self.sprite,
+            rect_sprite
+        )

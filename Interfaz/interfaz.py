@@ -12,6 +12,7 @@ print(
 )
 
 from Agente_Cazador.agente import AgenteCazador
+from Agente_Cazador.sentidos import PLURAL_COLORES
 
 
 from Recursos.arbol import Arbol
@@ -547,7 +548,7 @@ class Interfaz:
 
             texto_olfato = (
                 "Bayas "
-                f"{self.agente.sentidos.color_olor_bayas}s"
+                f"{PLURAL_COLORES[self.agente.sentidos.color_olor_bayas]}"
             )
 
         else:
@@ -658,8 +659,8 @@ class Interfaz:
             .conocimiento_bayas
         )
 
-        texto_moradas = (
-            conocimiento["morada"] or "?"
+        texto_azules = (
+            conocimiento["azul"] or "?"
         )
 
         texto_rojas = (
@@ -669,7 +670,7 @@ class Interfaz:
 
         bayas = self.fuente_pequena.render(
 
-            f"Moradas: {texto_moradas}  "
+            f"Azules: {texto_azules}  "
             f"Rojas: {texto_rojas}",
 
             True,
