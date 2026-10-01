@@ -1,13 +1,15 @@
 # Lo que la vista distingue de cada tipo de casilla.
 # De las bayas solo ve el color: no sabe si son
 # buenas o malas hasta probarlas.
+# (Sprites: bayas_buenas.png es roja y
+# bayas_malas.png es azul)
 
 OBSERVACIONES = {
 
     1: "arbol",
     4: "arena",
-    5: "azul",
-    6: "roja"
+    5: "roja",
+    6: "azul"
 
 }
 

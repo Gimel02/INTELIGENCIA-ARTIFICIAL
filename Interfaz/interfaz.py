@@ -869,8 +869,8 @@ class Interfaz:
 
         bayas = self.fuente_pequena.render(
 
-            f"Azules: {texto_azules}  "
-            f"Rojas: {texto_rojas}",
+            f"Rojas: {texto_rojas}  "
+            f"Azules: {texto_azules}",
 
             True,
 

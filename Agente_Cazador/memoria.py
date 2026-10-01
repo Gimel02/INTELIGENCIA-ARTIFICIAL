@@ -36,8 +36,8 @@ class Memoria:
         # con el gusto: "buena", "mala" o
         # None si todavía no la prueba.
         self.conocimiento_bayas = {
-            "azul": None,
-            "roja": None
+            "roja": None,
+            "azul": None
         }
 
 

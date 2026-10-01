@@ -96,7 +96,7 @@ Contiene las clases encargadas de dibujar los diferentes elementos que aparecen 
 
 -`arbol.py`: Dibuja los árboles.
 -`arena.py`: Dibuja la arena movediza.
--`bayas.py`: Dibuja las bayas buenas (azules) y malas (rojas).
+-`bayas.py`: Dibuja las bayas buenas (rojas) y malas (azules).
 -`campamento.py`: Dibuja el campamento.
 -`cazador.py`: Dibuja al cazador. El sprite cambia según la dirección en la que se mueve.
 -`puma.py`: Dibuja al puma (sprite de jaguar). El sprite cambia según la dirección en la que se mueve.
@@ -122,7 +122,7 @@ el agente usa primero la vista, después el oído y al final el olfato.
 -Vista: Ve hasta 4 casillas de distancia. Los árboles tapan la vista: si hay un árbol entre el cazador
  y una casilla, no la puede ver (en diagonal solo se tapa si los dos lados son árboles).
  Además de buscar al puma, se fija en el terreno que tiene enfrente y guarda en memoria dónde hay
- arena movediza y bayas. De las bayas solo ve el color (azules o rojas): no sabe si son buenas
+ arena movediza y bayas. De las bayas solo ve el color (rojas o azules): no sabe si son buenas
  o malas hasta que las prueba.
 -Oído: Escucha al puma hasta 2 casillas, aunque haya árboles en medio (el sonido sí pasa entre ellos).
  Es útil cuando un árbol le tapa la vista. Da la dirección del sonido en 8 direcciones
@@ -143,17 +143,17 @@ el agente usa primero la vista, después el oído y al final el olfato.
 Aprendizaje de las bayas
 
 Al inicio el agente no sabe qué bayas son buenas y cuáles son malas. Aprende de su experiencia:
-1. Con la vista solo distingue el color: azules o rojas.
+1. Con la vista solo distingue el color: rojas o azules.
 2. Cuando pisa una baya, se la come y el gusto le dice si es dulce (+20) o amarga (-10).
 3. Guarda en memoria ese color como "buena" o "mala" y en el estado aparece, por ejemplo,
-   "¡Aprendió: bayas rojas son malas! (-10)".
+   "¡Aprendió: bayas azules son malas! (-10)".
 4. Desde ese momento aplica lo aprendido a todas las bayas de ese color:
    evita las de color malo y, con poca energía, busca las de color bueno.
 5. Nunca vuelve a comer una baya de color malo. Si no hay otro camino y tiene que pasar por encima,
-   la deja donde está y en el panel aparece "Gusto: No come bayas rojas".
+   la deja donde está y en el panel aparece "Gusto: No come bayas azules".
 
 Por eso siempre tiene que comer al menos una baya mala para aprender a evitarlas.
-En el mundo actual las azules son buenas y las rojas son malas (ver los sprites en `Recursos/images/`).
+En el mundo actual las rojas son buenas y las azules son malas (ver los sprites en `Recursos/images/`).
 
 Memoria del terreno (`Agente_Cazador/memoria.py`)
 
@@ -191,7 +191,7 @@ Panel de la interfaz
 -Fila 2: Vista, Oído (dirección e intensidad) y Memoria (celdas revisadas).
 -Fila 3: Tacto, Gusto y Olfato (puma o bayas de color bueno).
 -Fila 4: Controles, Arena cerca (N, S, E, O) y lo que ha aprendido de las bayas
- ("Azules: buena  Rojas: mala"; "?" si todavía no las prueba).
+ ("Rojas: buena  Azules: mala"; "?" si todavía no las prueba).
 -Fila 5: Masa y velocidad del cazador, estado y velocidad del puma, y pasos (y cuántos fueron repetidos).
 
 En el tablero se marca el alcance de cada sentido alrededor del cazador, con el mismo color que su texto
