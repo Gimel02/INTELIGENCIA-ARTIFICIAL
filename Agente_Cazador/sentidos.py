@@ -38,7 +38,7 @@ class Sentidos:
 
         # Los árboles tapan la vista
 
-        self.rango_vista = 3
+        self.rango_vista = 4
 
         self.ve_puma = False
 
@@ -477,6 +477,39 @@ class Sentidos:
 
 
         return celdas_oido
+
+
+    # ==========================================
+    # OBTENER CELDAS DEL RANGO DE OLFATO
+    #
+    # El olor pasa entre los árboles.
+    # ==========================================
+
+    def obtener_celdas_olfato(
+        self,
+        posicion_agente
+    ):
+
+        return [
+
+            (fila, columna)
+
+            for fila in range(
+                self.mundo.filas
+            )
+
+            for columna in range(
+                self.mundo.columnas
+            )
+
+            if self.distancia(
+                posicion_agente,
+                (fila, columna)
+            )
+            <=
+            self.rango_olfato
+
+        ]
 
 
     # ==========================================

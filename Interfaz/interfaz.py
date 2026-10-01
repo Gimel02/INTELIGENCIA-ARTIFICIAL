@@ -13,6 +13,9 @@ print(
 
 from Agente_Cazador.agente import AgenteCazador
 from Agente_Cazador.sentidos import PLURAL_COLORES
+from Agente_Puma.agente import AgentePuma
+
+from Fisica.cinematica import CuerpoFisico
 
 
 from Recursos.arbol import Arbol
@@ -46,10 +49,65 @@ class Interfaz:
 
 
         # =========================================
+        # PUMA (huye cuando detecta al cazador)
+        # =========================================
+
+        self.agente_puma = AgentePuma(
+            self.mundo
+        )
+
+
+        # =========================================
+        # CUERPOS FÍSICOS
+        #
+        # masa (kg), fuerza motriz (N),
+        # coeficiente de arrastre (N·s/m)
+        #
+        # El puma es más ligero: acelera más
+        # rápido, pero su fuerza es menor y su
+        # velocidad máxima también. Así el
+        # cazador lo puede alcanzar.
+        # =========================================
+
+        self.cuerpo_cazador = CuerpoFisico(
+
+            masa=75,
+
+            fuerza_motriz=400,
+
+            coeficiente_arrastre=120,
+
+            posicion=self.agente.posicion
+
+        )
+
+
+        self.cuerpo_puma = CuerpoFisico(
+
+            masa=55,
+
+            fuerza_motriz=330,
+
+            coeficiente_arrastre=120,
+
+            posicion=self.mundo.posicion_puma
+
+        )
+
+
+        # Segundos que espera quieto cuando
+        # decide no moverse
+
+        self.pausa_cazador = 0.3
+
+        self.pausa_puma = 0.4
+
+
+        # =========================================
         # PANEL SUPERIOR
         # =========================================
 
-        self.alto_panel = 155
+        self.alto_panel = 180
 
         self.ancho = (
             self.mundo.ancho
@@ -143,20 +201,6 @@ class Interfaz:
 
 
         # =========================================
-        # VELOCIDAD DEL AGENTE
-        # =========================================
-
-        # Cada cuánto toma una decisión
-        # 500 ms = dos veces por segundo
-
-        self.intervalo_agente = 500
-
-        self.ultimo_movimiento = (
-            pygame.time.get_ticks()
-        )
-
-
-        # =========================================
         # RELOJ
         # =========================================
 
@@ -176,38 +220,27 @@ class Interfaz:
 
 
             # =====================================
-            # ACTUALIZAR AGENTE
+            # TIEMPO DESDE EL CUADRO ANTERIOR
+            #
+            # La interfaz corre a 60 FPS.
+            # dt se limita para que una pausa
+            # larga no haga "saltar" a nadie.
             # =====================================
 
-            tiempo_actual = (
-                pygame.time.get_ticks()
+            dt = min(
+
+                self.reloj.tick(60) / 1000,
+
+                0.05
+
             )
 
 
             if self.en_curso:
 
-                if (
-
-                    tiempo_actual
-                    -
-                    self.ultimo_movimiento
-
-                    >=
-
-                    self.intervalo_agente
-
-                ):
-
-                    self.agente.tomar_decision(
-
-                        self.mundo.posicion_puma
-
-                    )
-
-
-                    self.ultimo_movimiento = (
-                        tiempo_actual
-                    )
+                self.actualizar(
+                    dt
+                )
 
 
             # =====================================
@@ -219,14 +252,111 @@ class Interfaz:
             pygame.display.flip()
 
 
-            # La interfaz puede correr a 60 FPS,
-            # aunque el cazador solo tome una
-            # decisión cada 500 ms.
-
-            self.reloj.tick(60)
-
-
         pygame.quit()
+
+
+    # =========================================
+    # ACTUALIZAR SIMULACIÓN
+    #
+    # 1. La física mueve a cada cuerpo.
+    # 2. Cuando un cuerpo llega a su casilla,
+    #    su agente decide el siguiente paso.
+    #    Así cada quien decide a su propio
+    #    ritmo, según su masa y el suelo.
+    # =========================================
+
+    def actualizar(
+        self,
+        dt
+    ):
+
+        grid = self.mundo.grid
+
+
+        # =====================================
+        # CAZADOR
+        # =====================================
+
+        cuerpo = self.cuerpo_cazador
+
+        cuerpo.actualizar(
+            dt,
+            grid[cuerpo.destino]
+        )
+
+
+        if cuerpo.en_reposo():
+
+            antes = self.agente.posicion
+
+
+            self.agente.tomar_decision(
+                self.mundo.posicion_puma
+            )
+
+
+            if self.agente.posicion != antes:
+
+                cuerpo.mover_a(
+                    self.agente.posicion
+                )
+
+            else:
+
+                cuerpo.detener(
+                    self.pausa_cazador
+                )
+
+
+        # =====================================
+        # PUMA
+        # =====================================
+
+        if self.mundo.puma_vivo:
+
+            cuerpo = self.cuerpo_puma
+
+            cuerpo.actualizar(
+                dt,
+                grid[cuerpo.destino]
+            )
+
+
+            if cuerpo.en_reposo():
+
+                destino = (
+                    self.agente_puma.tomar_decision(
+                        self.agente.posicion
+                    )
+                )
+
+
+                if destino is not None:
+
+                    cuerpo.mover_a(
+                        destino
+                    )
+
+                else:
+
+                    cuerpo.detener(
+                        self.pausa_puma
+                    )
+
+
+        # =====================================
+        # ¿LO ATRAPÓ?
+        # =====================================
+
+        if (
+            self.mundo.puma_vivo
+            and
+            self.agente.posicion
+            ==
+            self.mundo.posicion_puma
+        ):
+
+            self.agente.atrapar_puma()
 
 
     # =========================================
@@ -441,7 +571,7 @@ class Interfaz:
 
             True,
 
-            (210, 220, 230)
+            (190, 195, 200)
 
         )
 
@@ -564,7 +694,7 @@ class Interfaz:
 
             True,
 
-            (170, 230, 200)
+            (110, 200, 245)
 
         )
 
@@ -604,6 +734,75 @@ class Interfaz:
         self.pantalla.blit(
             control,
             (20, 128)
+        )
+
+
+        # =====================================
+        # FILA 5: FÍSICA, PUMA Y EFICIENCIA
+        # =====================================
+
+        fisica = self.fuente_pequena.render(
+
+            f"Cazador: "
+            f"{self.cuerpo_cazador.masa} kg, "
+            f"{self.cuerpo_cazador.velocidad:.1f} m/s",
+
+            True,
+
+            (200, 200, 255)
+
+        )
+
+        self.pantalla.blit(
+            fisica,
+            (20, 153)
+        )
+
+
+        if self.mundo.puma_vivo:
+
+            texto_puma = (
+                f"Puma: {self.agente_puma.estado}, "
+                f"{self.cuerpo_puma.velocidad:.1f} m/s"
+            )
+
+        else:
+
+            texto_puma = "Puma: cazado"
+
+
+        puma = self.fuente_pequena.render(
+
+            texto_puma,
+
+            True,
+
+            (240, 180, 120)
+
+        )
+
+        self.pantalla.blit(
+            puma,
+            (200, 153)
+        )
+
+
+        memoria = self.agente.memoria
+
+        eficiencia = self.fuente_pequena.render(
+
+            f"Pasos: {memoria.pasos} "
+            f"(repetidos: {memoria.pasos_repetidos})",
+
+            True,
+
+            (220, 220, 220)
+
+        )
+
+        self.pantalla.blit(
+            eficiencia,
+            (400, 153)
         )
 
 
@@ -683,6 +882,57 @@ class Interfaz:
             bayas,
             (400, 128)
         )
+
+
+    # =========================================
+    # ALCANCE DE UN SENTIDO
+    #
+    # Dibuja el borde de cada celda.
+    # margen: cuántos píxeles hacia adentro
+    # de la celda va el cuadro.
+    # =========================================
+
+    def dibujar_alcance(
+        self,
+        celdas,
+        color,
+        margen
+    ):
+
+        tamano = self.mundo.tamano_celda
+
+
+        for fila, columna in celdas:
+
+            rect = pygame.Rect(
+
+                columna * tamano + margen,
+
+                self.alto_panel
+                +
+                fila * tamano
+                +
+                margen,
+
+                tamano - 2 * margen,
+
+                tamano - 2 * margen
+
+            )
+
+
+            pygame.draw.rect(
+
+                self.pantalla,
+
+                color,
+
+                rect,
+
+                # Grosor
+                2
+
+            )
 
 
     # =========================================
@@ -813,106 +1063,64 @@ class Interfaz:
                 1
 
             )
-            # =====================================
-            # RANGO DEL OÍDO
-            # =====================================
-
-            celdas_oido = (
-
-                self.agente
-                .sentidos
-                .obtener_celdas_oido(
-
-                    self.agente.posicion
-
-                )
-
-            )
-
-
-            for fila, columna in celdas_oido:
-
-                rect = pygame.Rect(
-
-                    columna
-                    *
-                    self.mundo.tamano_celda,
-
-                    self.alto_panel
-                    +
-                    fila
-                    *
-                    self.mundo.tamano_celda,
-
-                    self.mundo.tamano_celda,
-
-                    self.mundo.tamano_celda
-
-                )
-
-
-                pygame.draw.rect(
-
-                    self.pantalla,
-
-                    # Gris
-                    (174, 182, 191),
-
-                    rect,
-
-                    # Grosor
-                    1
-
-                )
-
-
 
 
         # =====================================
-        # RANGO DE VISIÓN
+        # ALCANCE DE LOS SENTIDOS
+        #
+        # Cada sentido tiene su color (el mismo
+        # que su texto en el panel) y su cuadro
+        # va un poco más adentro de la casilla,
+        # para que se vean aunque compartan
+        # casillas.
+        #
+        # Vista:  amarillo, borde exterior
+        # Oído:   gris, en medio
+        # Olfato: azul cielo, más adentro
         # =====================================
 
-        celdas_visibles = (
+        sentidos = self.agente.sentidos
 
-            self.agente
-            .sentidos
-            .obtener_celdas_visibles(
+        posicion = self.agente.posicion
 
-                self.agente.posicion
 
-            )
+        self.dibujar_alcance(
+
+            sentidos.obtener_celdas_visibles(
+                posicion
+            ),
+
+            (240, 220, 80),
+
+            0
 
         )
 
 
-        for fila, columna in celdas_visibles:
+        self.dibujar_alcance(
 
-            rect = pygame.Rect(
+            sentidos.obtener_celdas_oido(
+                posicion
+            ),
 
-                columna*self.mundo.tamano_celda,
+            (190, 195, 200),
 
-                self.alto_panel
-                +
-                fila*self.mundo.tamano_celda,
+            5
 
-                self.mundo.tamano_celda,
-
-                self.mundo.tamano_celda
-
-            )
+        )
 
 
-            pygame.draw.rect(
+        self.dibujar_alcance(
 
-                self.pantalla,
+            sentidos.obtener_celdas_olfato(
+                posicion
+            ),
 
-                (240, 220, 80),
+            (110, 200, 245),
 
-                rect,
+            10
 
-                2
-
-            )
+        )
 
 
         # =====================================
@@ -1024,13 +1232,14 @@ class Interfaz:
         # =====================================
         # PUMA
         #
-        # Por ahora lo dibujamos directamente.
-        # Después conectamos Recursos/puma.py.
+        # Se dibuja en su posición física
+        # (entre dos casillas si va caminando).
         # =====================================
+
         if self.mundo.puma_vivo:
 
             fila_puma, columna_puma = (
-                self.mundo.posicion_puma
+                self.cuerpo_puma.posicion_visual()
             )
 
             self.puma.dibujar(
@@ -1044,12 +1253,12 @@ class Interfaz:
         # =====================================
         # CAZADOR
         #
-        # IMPORTANTE:
-        # YA NO SE USA inicio_cazador.
+        # Se dibuja en su posición física
+        # (entre dos casillas si va caminando).
         # =====================================
 
         fila, columna = (
-            self.agente.posicion
+            self.cuerpo_cazador.posicion_visual()
         )
 
 

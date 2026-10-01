@@ -2,9 +2,16 @@ from Agente_Cazador.memoria import Memoria
 from Agente_Cazador.sentidos import Sentidos, PLURAL_COLORES
 
 from Algoritmos.a_Estrella import AEstrella
+from Algoritmos.persecucion import Persecucion
 
 
 class AgenteCazador:
+
+    # Cuánto vale cada casilla nueva que vería
+    # al explorar, comparado con el costo de
+    # caminar (2 por casilla de pasto)
+
+    PESO_TERRENO_NUEVO = 1
 
     def __init__(self, mundo):
 
@@ -47,6 +54,12 @@ class AgenteCazador:
         # ==========================================
 
         self.memoria = Memoria()
+
+        # La casilla inicial cuenta como pisada
+
+        self.memoria.visitas[
+            self.posicion
+        ] = 1
 
 
         # ==========================================
@@ -146,19 +159,36 @@ class AgenteCazador:
 
         if self.posicion == posicion_puma:
 
-            self.mundo.cazar_puma()
-
-            self.limpiar_informacion_puma()
-
-            self.estado = (
-                "¡Puma cazado! "
-                "Continuando exploración"
-            )
-
-            return True
+            return self.atrapar_puma()
 
 
         return False
+
+
+    # ==========================================
+    # ATRAPAR PUMA
+    #
+    # También se usa cuando el cazador y el
+    # puma se cruzan en el camino.
+    # ==========================================
+
+    def atrapar_puma(self):
+
+        if not self.mundo.puma_vivo:
+
+            return False
+
+
+        self.mundo.cazar_puma()
+
+        self.limpiar_informacion_puma()
+
+        self.estado = (
+            "¡Puma cazado! "
+            "Regresando a la cabaña"
+        )
+
+        return True
 
 
     # ==========================================
@@ -272,47 +302,129 @@ class AgenteCazador:
 
 
         # ==========================================
-        # ORDENAR POR DISTANCIA
+        # EXPLORACIÓN POR FRONTERAS
+        #
+        # 1. Con una sola búsqueda calcula cuánto
+        #    le cuesta llegar a cada casilla
+        #    (suelo, bayas malas y casillas que
+        #    ya pisó cuestan más).
+        # 2. A cada candidata le resta cuántas
+        #    casillas nuevas vería desde ahí.
+        # 3. Elige la de menor puntaje: cerca,
+        #    sin repetir camino y que descubra
+        #    mucho terreno.
         # ==========================================
 
-        candidatas.sort(
+        costos = AEstrella.costos_desde(
 
-            key=lambda posicion:
+            self.posicion,
 
-            AEstrella.heuristica(
-                self.posicion,
-                posicion
-            )
+            self.mundo,
+
+            self.memoria.bayas_malas,
+
+            self.memoria.visitas
 
         )
 
 
-        # ==========================================
-        # BUSCAR UNA CELDA
-        # A LA QUE REALMENTE PUEDA LLEGAR
-        # ==========================================
+        mejor = None
+
+        mejor_puntaje = None
+
 
         for candidata in candidatas:
 
-            camino = AEstrella.buscar(
+            # No puede llegar
 
-                self.posicion,
+            if candidata not in costos:
 
-                candidata,
+                continue
 
-                self.mundo,
 
-                self.memoria.bayas_malas
+            puntaje = (
+
+                costos[candidata]
+
+                -
+
+                self.PESO_TERRENO_NUEVO
+                *
+                self.terreno_nuevo_desde(
+                    candidata
+                )
 
             )
 
 
-            if camino:
+            if (
+                mejor_puntaje is None
+                or
+                puntaje < mejor_puntaje
+            ):
 
-                return candidata
+                mejor = candidata
+
+                mejor_puntaje = puntaje
 
 
-        return None
+        return mejor
+
+
+    # ==========================================
+    # TERRENO NUEVO DESDE UNA CASILLA
+    #
+    # Cuántas casillas que todavía no ha
+    # revisado vería si estuviera ahí.
+    # ==========================================
+
+    def terreno_nuevo_desde(
+        self,
+        posicion
+    ):
+
+        rango = self.sentidos.rango_vista
+
+        fila, columna = posicion
+
+        nuevas = 0
+
+
+        for df in range(-rango, rango + 1):
+
+            for dc in range(-rango, rango + 1):
+
+                celda = (
+                    fila + df,
+                    columna + dc
+                )
+
+
+                if (
+
+                    self.mundo.dentro_limites(
+                        celda
+                    )
+
+                    and
+
+                    not self.memoria.fue_revisada(
+                        celda
+                    )
+
+                    and
+
+                    self.sentidos.puede_ver(
+                        posicion,
+                        celda
+                    )
+
+                ):
+
+                    nuevas += 1
+
+
+        return nuevas
 
 
     # ==========================================
@@ -386,6 +498,29 @@ class AgenteCazador:
                 posicion
             )
         )
+
+
+        # ==========================================
+        # YA SABE QUE ESE COLOR ES MALO:
+        # NO SE LA COME
+        #
+        # Puede pasar por encima, pero la deja
+        # donde está.
+        # ==========================================
+
+        if (
+            self.memoria.conocimiento_bayas.get(
+                color
+            )
+            == "mala"
+        ):
+
+            self.sentidos.sensacion_gusto = (
+                f"No come bayas "
+                f"{PLURAL_COLORES[color]}"
+            )
+
+            return
 
 
         alimento = (
@@ -924,14 +1059,39 @@ class AgenteCazador:
             puma_visible
         ):
 
-            meta = (
-                posicion_puma
+            # ======================================
+            # PERSECUCIÓN
+            #
+            # Apunta a donde va a estar el puma,
+            # no a donde está ahora.
+            # ======================================
+
+            meta = Persecucion.punto_intercepcion(
+
+                self.posicion,
+
+                posicion_puma,
+
+                self.memoria
+                .penultima_posicion_puma,
+
+                self.mundo
+
             )
 
 
-            self.estado = (
-                "¡Puma detectado! Persiguiendo"
-            )
+            if meta == posicion_puma:
+
+                self.estado = (
+                    "¡Puma detectado! Persiguiendo"
+                )
+
+            else:
+
+                self.estado = (
+                    "¡Puma detectado! "
+                    "Cortándole el paso"
+                )
 
 
             # Cancelar búsqueda anterior
@@ -1026,9 +1186,28 @@ class AgenteCazador:
             is not None
         ):
 
-            ultima = (
+            # ======================================
+            # ¿HACIA DÓNDE SE FUE?
+            #
+            # Si sabe en qué dirección huía,
+            # busca 2 casillas más adelante de
+            # donde lo vio por última vez.
+            # ======================================
+
+            ultima = Persecucion.punto_intercepcion(
+
+                self.posicion,
+
                 self.memoria
-                .ultima_posicion_puma
+                .ultima_posicion_puma,
+
+                self.memoria
+                .penultima_posicion_puma,
+
+                self.mundo,
+
+                adelanto=2
+
             )
 
 
@@ -1042,8 +1221,8 @@ class AgenteCazador:
 
 
                 self.estado = (
-                    "Investigando última "
-                    "posición del Puma"
+                    "Siguiendo hacia donde "
+                    "huyó el Puma"
                 )
 
 
@@ -1078,26 +1257,50 @@ class AgenteCazador:
 
 
         # ==========================================
+        # 7.1 YA CAZÓ AL PUMA:
+        # REGRESAR A LA CABAÑA
+        # ==========================================
+
+        elif not self.mundo.puma_vivo:
+
+            meta = (
+                self.mundo.campamento
+            )
+
+
+            # ======================================
+            # YA LLEGÓ: MISIÓN CUMPLIDA
+            # ======================================
+
+            if self.posicion == meta:
+
+                self.energia = (
+                    self.energia_max
+                )
+
+                self.estado = (
+                    "En la cabaña: "
+                    "¡misión cumplida!"
+                )
+
+                return
+
+
+            self.estado = (
+                "¡Puma cazado! "
+                "Regresando a la cabaña"
+            )
+
+
+        # ==========================================
         # 8. EXPLORACIÓN
-        #
-        # También entra aquí cuando
-        # el puma ya fue cazado.
         # ==========================================
 
         else:
 
-            if self.mundo.puma_vivo:
-
-                self.estado = (
-                    "Buscando zonas no revisadas"
-                )
-
-            else:
-
-                self.estado = (
-                    "Puma cazado. "
-                    "Explorando la selva"
-                )
+            self.estado = (
+                "Buscando zonas no revisadas"
+            )
 
 
             # ======================================
@@ -1161,7 +1364,9 @@ class AgenteCazador:
 
             self.mundo,
 
-            self.memoria.bayas_malas
+            self.memoria.bayas_malas,
+
+            self.memoria.visitas
 
         )
 
@@ -1230,6 +1435,13 @@ class AgenteCazador:
         if movimiento_valido:
 
             self.posicion = (
+                siguiente_posicion
+            )
+
+
+            # Contar el paso (y si repite casilla)
+
+            self.memoria.registrar_paso(
                 siguiente_posicion
             )
 

@@ -328,9 +328,25 @@ class MundoSelva:
     # MOVER PUMA
     # =========================================
 
-    
+    def mover_puma(
+        self,
+        nueva_posicion
+    ):
 
-    
+        if not self.es_transitable(
+            nueva_posicion
+        ):
+
+            return False
+
+
+        self.posicion_puma = (
+            nueva_posicion
+        )
+
+        return True
+
+
     # =========================================
     # CAZAR PUMA
     # =========================================

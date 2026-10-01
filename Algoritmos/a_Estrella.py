@@ -3,6 +3,12 @@ import heapq
 
 class AEstrella:
 
+    # Costo extra por pasar por una casilla
+    # que el cazador ya pisó
+
+    COSTO_PISADA = 2
+
+
     @staticmethod
     def heuristica(a, b):
 
@@ -13,13 +19,162 @@ class AEstrella:
         )
 
 
+    # =========================================
+    # COSTO DE ENTRAR A UNA CASILLA
+    # =========================================
+
+    @staticmethod
+    def costo_paso(
+        casilla,
+        objetivo,
+        mundo,
+        evitar,
+        pisadas
+    ):
+
+        # Bayas malas conocidas
+
+        if (
+            casilla in evitar
+            and
+            casilla != objetivo
+        ):
+
+            costo = 20
+
+        # Arena movediza
+
+        elif mundo.grid[casilla] == 4:
+
+            costo = 8
+
+        # Terreno normal
+
+        else:
+
+            costo = 2
+
+
+        # Casilla que ya pisó
+
+        if casilla in pisadas:
+
+            costo += AEstrella.COSTO_PISADA
+
+
+        return costo
+
+
+    # =========================================
+    # COSTO DE LLEGAR A TODAS LAS CASILLAS
+    #
+    # Dijkstra desde el inicio (A* sin meta).
+    # Sirve para comparar muchos destinos
+    # con una sola búsqueda.
+    # =========================================
+
+    @staticmethod
+    def costos_desde(
+        inicio,
+        mundo,
+        evitar=None,
+        pisadas=None
+    ):
+
+        if evitar is None:
+
+            evitar = set()
+
+        if pisadas is None:
+
+            pisadas = set()
+
+
+        costos = {
+            inicio: 0
+        }
+
+        frontera = [
+            (0, inicio)
+        ]
+
+        cerrados = set()
+
+
+        while frontera:
+
+            costo, actual = heapq.heappop(
+                frontera
+            )
+
+
+            if actual in cerrados:
+
+                continue
+
+            cerrados.add(
+                actual
+            )
+
+
+            for vecino in (
+                mundo.vecinos_validos(
+                    actual
+                )
+            ):
+
+                if vecino in cerrados:
+
+                    continue
+
+
+                nuevo = (
+                    costo
+                    +
+                    AEstrella.costo_paso(
+                        vecino,
+                        None,
+                        mundo,
+                        evitar,
+                        pisadas
+                    )
+                )
+
+
+                if nuevo < costos.get(
+                    vecino,
+                    float("inf")
+                ):
+
+                    costos[vecino] = nuevo
+
+                    heapq.heappush(
+                        frontera,
+                        (nuevo, vecino)
+                    )
+
+
+        return costos
+
+
     @staticmethod
     def buscar(
         inicio,
         objetivo,
         mundo,
-        evitar=None
+        evitar=None,
+        pisadas=None
     ):
+
+        # pisadas: casillas por las que el
+        # cazador ya caminó. Cuestan un poco
+        # más para preferir caminos nuevos y
+        # no repetir nodos.
+
+        if pisadas is None:
+
+            pisadas = set()
+
 
         # Casillas que el cazador prefiere no
         # pisar, como las bayas malas que recuerda.
@@ -58,10 +213,33 @@ class AEstrella:
         }
 
 
+        # =========================================
+        # NODOS CERRADOS
+        #
+        # Un nodo que ya se expandió no se
+        # vuelve a expandir.
+        # =========================================
+
+        cerrados = set()
+
+
         while frontera:
 
             _, actual = heapq.heappop(
                 frontera
+            )
+
+
+            # Entrada vieja de un nodo que ya
+            # se expandió con un costo menor
+
+            if actual in cerrados:
+
+                continue
+
+
+            cerrados.add(
+                actual
             )
 
 
@@ -79,30 +257,20 @@ class AEstrella:
 
             for vecino in vecinos:
 
-                tipo = mundo.grid[
-                    vecino
-                ]
+                if vecino in cerrados:
+
+                    continue
 
 
-                # =================================
-                # COSTOS
-                # =================================
-
-                if (
-                    vecino in evitar
-                    and
-                    vecino != objetivo
-                ):
-
-                    costo_movimiento = 20
-
-                elif tipo == 4:
-
-                    costo_movimiento = 8
-
-                else:
-
-                    costo_movimiento = 2
+                costo_movimiento = (
+                    AEstrella.costo_paso(
+                        vecino,
+                        objetivo,
+                        mundo,
+                        evitar,
+                        pisadas
+                    )
+                )
 
 
                 nuevo_costo = (

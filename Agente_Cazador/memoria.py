@@ -8,6 +8,18 @@ class Memoria:
         # Última posición donde vio realmente al puma
         self.ultima_posicion_puma = None
 
+        # La posición donde lo vio antes de esa
+        # (para saber hacia dónde se mueve)
+        self.penultima_posicion_puma = None
+
+        # Casillas que ha pisado y cuántas veces
+        self.visitas = {}
+
+        # Pasos que ha dado y cuántos fueron
+        # a una casilla que ya había pisado
+        self.pasos = 0
+        self.pasos_repetidos = 0
+
         # Lugar que actualmente está investigando
         self.objetivo_busqueda = None
 
@@ -46,6 +58,12 @@ class Memoria:
 
     def recordar_puma(self, posicion):
 
+        if posicion != self.ultima_posicion_puma:
+
+            self.penultima_posicion_puma = (
+                self.ultima_posicion_puma
+            )
+
         self.ultima_posicion_puma = posicion
 
 
@@ -56,6 +74,26 @@ class Memoria:
     def olvidar_puma(self):
 
         self.ultima_posicion_puma = None
+        self.penultima_posicion_puma = None
+
+
+    # ==========================================
+    # REGISTRAR UN PASO
+    # ==========================================
+
+    def registrar_paso(self, posicion):
+
+        self.pasos += 1
+
+        if posicion in self.visitas:
+
+            self.pasos_repetidos += 1
+
+        self.visitas[posicion] = (
+            self.visitas.get(posicion, 0)
+            +
+            1
+        )
 
 
     # ==========================================
