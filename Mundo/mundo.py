@@ -11,8 +11,10 @@ class MundoSelva:
 
         self.tamano_celda = 50
 
-        self.filas = 10
-        self.columnas = 12
+        self.filas = 15
+        self.columnas = 20
+
+        
 
         self.ancho = (
             self.columnas
