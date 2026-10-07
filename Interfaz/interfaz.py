@@ -190,6 +190,45 @@ class Interfaz:
             bold=True
         )
 
+        # =========================================
+        # FUENTES DEL VISUAL DE MAIN
+        # =========================================
+
+        self.fuente_subtitulo = pygame.font.SysFont(
+            "trebuchetms,georgia",
+            13,
+            bold=True
+        )
+
+        self.fuente_UI = pygame.font.SysFont(
+            "trebuchetms,arial",
+            14,
+            bold=True
+        )
+
+        self.fuente_numeros = pygame.font.SysFont(
+            "impact,arialblack",
+            18
+        )
+
+        # =========================================
+        # COLORES DEL VISUAL DE MAIN
+        # =========================================
+
+        self.C_MADERA_FONDO = (28, 19, 14)
+        self.C_MADERA_BASE = (42, 28, 22)
+        self.C_MADERA_LUZ = (65, 45, 33)
+        self.C_MADERA_SOMBRA = (15, 10, 8)
+
+        self.C_ORO_PURO = (255, 215, 0)
+        self.C_ORO_VIEJO = (184, 134, 11)
+        self.C_BRONCE = (140, 95, 30)
+
+        self.C_NEON_ROJO = (255, 60, 60)
+        self.C_NEON_VERDE = (50, 255, 100)
+        self.C_NEON_AZUL = (60, 180, 255)
+        self.C_NEON_AMARILLO = (255, 220, 50)
+        self.C_NEON_MORADO = (200, 80, 255)
 
         # =========================================
         # SIMULACIÓN para que se empiece a mover 
