@@ -1,5 +1,5 @@
 import pygame
-
+import os
 
 from Mundo.mundo import MundoSelva
 import Mundo.mundo as modulo_mundo
@@ -213,6 +213,40 @@ class Interfaz:
         pygame.display.set_caption(
             "Agente Cazador vs Jaguar"
         )
+
+        # =========================================
+        # FONDO VISUAL DE MAIN
+        # =========================================
+
+        ruta_fondo = os.path.join(
+            "Recursos",
+            "images",
+            "fondo.jpg"
+        )
+
+        try:
+
+            imagen_raw = pygame.image.load(
+                ruta_fondo
+            ).convert()
+
+            self.fondo_juego = pygame.transform.smoothscale(
+                imagen_raw,
+                (
+                    self.ancho,
+                    self.alto
+                )
+            )
+
+            self.usa_fondo_img = True
+
+        except Exception:
+
+            print(
+                "No se encontró fondo.jpg. Usando color base."
+            )
+
+            self.usa_fondo_img = False
 
 
         
@@ -524,26 +558,36 @@ class Interfaz:
 
     def dibujar(self):
 
-        # Fondo general
+        # =====================================
+        # FONDO GENERAL
+        # =====================================
 
-        self.pantalla.fill(
-            (25, 25, 25)
-        )
+        if self.usa_fondo_img:
+
+            self.pantalla.blit(
+                self.fondo_juego,
+                (0, 0)
+            )
+
+        else:
+
+            self.pantalla.fill(
+                self.C_MADERA_SOMBRA
+            )
 
 
-        # Panel
-
-        self.dibujar_panel()
-
-
-        # Mundo
+        # =====================================
+        # MUNDO
+        # =====================================
 
         self.dibujar_tablero()
 
 
-    # =========================================
-    # PANEL
-    # =========================================
+        # =====================================
+        # PANEL
+        # =====================================
+
+        self.dibujar_panel()
 
     def dibujar_panel(self):
 
