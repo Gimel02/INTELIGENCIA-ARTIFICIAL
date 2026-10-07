@@ -103,22 +103,98 @@ class Interfaz:
         self.pausa_jaguar = 0.4
 
 
-        # =========================================
+       # =========================================
         # PANEL SUPERIOR
         # =========================================
 
-        self.alto_panel = 180
+        self.alto_panel = 190
 
-        self.ancho = (
-            self.mundo.ancho
+
+        # =========================================
+        # RESOLUCIÓN NATIVA
+        # =========================================
+
+        info_pantalla = pygame.display.Info()
+
+        self.ancho = info_pantalla.current_w
+        self.alto = info_pantalla.current_h
+
+
+        # =========================================
+        # AJUSTAR TAMAÑO DEL MAPA
+        # =========================================
+
+        margen_lateral = 120
+        margen_inferior = 80
+
+        espacio_disponible_x = (
+            self.ancho
+            -
+            margen_lateral
         )
 
-        self.alto = (
-
-            self.mundo.alto
-            +
+        espacio_disponible_y = (
+            self.alto
+            -
             self.alto_panel
+            -
+            margen_inferior
+        )
 
+        tamano_posible_x = (
+            espacio_disponible_x
+            //
+            self.mundo.columnas
+        )
+
+        tamano_posible_y = (
+            espacio_disponible_y
+            //
+            self.mundo.filas
+        )
+
+        self.mundo.tamano_celda = min(
+            tamano_posible_x,
+            tamano_posible_y
+        )
+
+        self.mundo.ancho = (
+            self.mundo.columnas
+            *
+            self.mundo.tamano_celda
+        )
+
+        self.mundo.alto = (
+            self.mundo.filas
+            *
+            self.mundo.tamano_celda
+        )
+
+
+        # =========================================
+        # CENTRAR MAPA
+        # =========================================
+
+        self.offset_mapa_x = (
+            (self.ancho - self.mundo.ancho)
+            //
+            2
+        )
+
+        self.offset_mapa_y = (
+            self.alto_panel
+            +
+            (
+                (
+                    self.alto
+                    -
+                    self.alto_panel
+                    -
+                    self.mundo.alto
+                )
+                //
+                2
+            )
         )
 
 
@@ -127,17 +203,19 @@ class Interfaz:
         # =========================================
 
         self.pantalla = pygame.display.set_mode(
-
             (
                 self.ancho,
                 self.alto
-            )
-
+            ),
+            pygame.NOFRAME
         )
 
         pygame.display.set_caption(
-            "Agente Cazador - Jungla"
+            "Agente Cazador vs Jaguar"
         )
+
+
+        
 
 
         # =========================================
@@ -979,14 +1057,17 @@ class Interfaz:
 
         tamano = self.mundo.tamano_celda
 
-
         for fila, columna in celdas:
 
             rect = pygame.Rect(
 
-                columna * tamano + margen,
+                self.offset_mapa_x
+                +
+                columna * tamano
+                +
+                margen,
 
-                self.alto_panel
+                self.offset_mapa_y
                 +
                 fila * tamano
                 +
@@ -998,18 +1079,11 @@ class Interfaz:
 
             )
 
-
             pygame.draw.rect(
-
                 self.pantalla,
-
                 color,
-
                 rect,
-
-                # Grosor
                 2
-
             )
 
 
@@ -1020,36 +1094,21 @@ class Interfaz:
     def dibujar_tablero(self):
 
         # =====================================
-        # ZONA EXACTA DEL MUNDO
+        # ZONA DEL MUNDO CENTRADA
         # =====================================
 
         zona_mundo = pygame.Rect(
 
-            0,
-
-            self.alto_panel,
-
+            self.offset_mapa_x,
+            self.offset_mapa_y,
             self.mundo.ancho,
-
             self.mundo.alto
 
         )
 
 
         # =====================================
-        # CLIPPING
-        #
-        # Nada puede dibujarse fuera del
-        # área del mundo.
-        # =====================================
-
-        self.pantalla.set_clip(
-            zona_mundo
-        )
-
-
-        # =====================================
-        # FONDO
+        # FONDO DEL MAPA
         # =====================================
 
         pygame.draw.rect(
@@ -1064,6 +1123,15 @@ class Interfaz:
 
 
         # =====================================
+        # CLIPPING
+        # =====================================
+
+        self.pantalla.set_clip(
+            zona_mundo
+        )
+
+
+        # =====================================
         # CUADRÍCULA VERTICAL
         # =====================================
 
@@ -1072,13 +1140,10 @@ class Interfaz:
         ):
 
             x = (
-
-                columna
-                *
-                self.mundo.tamano_celda
-
+                self.offset_mapa_x
+                +
+                columna * self.mundo.tamano_celda
             )
-
 
             pygame.draw.line(
 
@@ -1088,16 +1153,17 @@ class Interfaz:
 
                 (
                     x,
-                    self.alto_panel
+                    self.offset_mapa_y
                 ),
 
                 (
                     x,
-                    self.alto
+                    self.offset_mapa_y
+                    +
+                    self.mundo.alto
                 ),
 
                 1
-
             )
 
 
@@ -1110,17 +1176,10 @@ class Interfaz:
         ):
 
             y = (
-
-                self.alto_panel
-
+                self.offset_mapa_y
                 +
-
-                fila
-                *
-                self.mundo.tamano_celda
-
+                fila * self.mundo.tamano_celda
             )
-
 
             pygame.draw.line(
 
@@ -1129,38 +1188,27 @@ class Interfaz:
                 (45, 120, 55),
 
                 (
-                    0,
+                    self.offset_mapa_x,
                     y
                 ),
 
                 (
-                    self.ancho,
+                    self.offset_mapa_x
+                    +
+                    self.mundo.ancho,
                     y
                 ),
 
                 1
-
             )
 
 
         # =====================================
-        # ALCANCE DE LOS SENTIDOS
-        #
-        # Cada sentido tiene su color (el mismo
-        # que su texto en el panel) y su cuadro
-        # va un poco más adentro de la casilla,
-        # para que se vean aunque compartan
-        # casillas.
-        #
-        # Vista:  amarillo, borde exterior
-        # Oído:   gris, en medio
-        # Olfato: azul cielo, más adentro
+        # SENTIDOS
         # =====================================
 
         sentidos = self.agente.sentidos
-
         posicion = self.agente.posicion
-
 
         self.dibujar_alcance(
 
@@ -1171,9 +1219,7 @@ class Interfaz:
             (240, 220, 80),
 
             0
-
         )
-
 
         self.dibujar_alcance(
 
@@ -1184,9 +1230,7 @@ class Interfaz:
             (190, 195, 200),
 
             5
-
         )
-
 
         self.dibujar_alcance(
 
@@ -1197,12 +1241,27 @@ class Interfaz:
             (110, 200, 245),
 
             10
+        )
+
+
+        # =====================================
+        # SUPERFICIE DE ENTIDADES
+        # =====================================
+
+        sup_entidades = pygame.Surface(
+
+            (
+                self.mundo.ancho,
+                self.mundo.alto
+            ),
+
+            pygame.SRCALPHA
 
         )
 
 
         # =====================================
-        # RECURSOS DEL MAPA
+        # RECURSOS
         # =====================================
 
         for (
@@ -1210,108 +1269,64 @@ class Interfaz:
             columna
         ), tipo in self.mundo.grid.items():
 
-
-            # Árbol
-
             if tipo == 1:
 
                 self.arbol.dibujar(
-
-                    self.pantalla,
-
+                    sup_entidades,
                     fila,
-
                     columna,
-
-                    self.alto_panel
-
+                    0
                 )
-
-
-            # Arena
 
             elif tipo == 4:
 
                 self.arena.dibujar(
-
-                    self.pantalla,
-
+                    sup_entidades,
                     fila,
-
                     columna,
-
-                    self.alto_panel
-
+                    0
                 )
-
-
-            # Baya buena
 
             elif tipo == 5:
 
                 self.baya.dibujar(
-
-                    self.pantalla,
-
+                    sup_entidades,
                     fila,
-
                     columna,
-
                     True,
-
-                    self.alto_panel
-
+                    0
                 )
-
-
-            # Baya mala
 
             elif tipo == 6:
 
                 self.baya.dibujar(
-
-                    self.pantalla,
-
+                    sup_entidades,
                     fila,
-
                     columna,
-
                     False,
-
-                    self.alto_panel
-
+                    0
                 )
 
 
         # =====================================
         # CAMPAMENTO
-        #
-        # Se dibuja ANTES del cazador.
         # =====================================
 
-        fila, columna = (
-            self.mundo.campamento
-        )
-
+        fila, columna = self.mundo.campamento
 
         self.campamento.dibujar(
 
-            self.pantalla,
+            sup_entidades,
 
             fila,
-
             columna,
-
-            self.alto_panel
+            0
 
         )
 
 
         # =====================================
         # JAGUAR
-        #
-        # Se dibuja en su posición física
-        # (entre dos casillas si va caminando).
         # =====================================
 
         if self.mundo.jaguar_vivo:
@@ -1321,34 +1336,47 @@ class Interfaz:
             )
 
             self.jaguar.dibujar(
-                self.pantalla,
+
+                sup_entidades,
+
                 fila_jaguar,
                 columna_jaguar,
-                self.alto_panel
+                0
+
             )
 
 
         # =====================================
         # CAZADOR
-        #
-        # Se dibuja en su posición física
-        # (entre dos casillas si va caminando).
         # =====================================
 
         fila, columna = (
             self.cuerpo_cazador.posicion_visual()
         )
 
-
         self.cazador.dibujar(
 
-            self.pantalla,
+            sup_entidades,
 
             fila,
-
             columna,
+            0
 
-            self.alto_panel
+        )
+
+
+        # =====================================
+        # PEGAR ENTIDADES EN EL MAPA CENTRADO
+        # =====================================
+
+        self.pantalla.blit(
+
+            sup_entidades,
+
+            (
+                self.offset_mapa_x,
+                self.offset_mapa_y
+            )
 
         )
 
