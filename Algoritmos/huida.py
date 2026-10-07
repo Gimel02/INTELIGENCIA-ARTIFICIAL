@@ -6,7 +6,7 @@ class Huida:
     # ==========================================
     # ELEGIR CASILLA DE ESCAPE
     #
-    # El que huye (puma) revisa sus casillas
+    # El que huye (jaguar) revisa sus casillas
     # vecinas y elige la mejor para alejarse
     # del cazador.
     #

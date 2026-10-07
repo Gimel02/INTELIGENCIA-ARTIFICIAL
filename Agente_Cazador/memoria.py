@@ -5,12 +5,12 @@ class Memoria:
         # Celdas que el cazador ya observó
         self.celdas_revisadas = set()
 
-        # Última posición donde vio realmente al puma
-        self.ultima_posicion_puma = None
+        # Última posición donde vio realmente al jaguar
+        self.ultima_posicion_jaguar = None
 
         # La posición donde lo vio antes de esa
         # (para saber hacia dónde se mueve)
-        self.penultima_posicion_puma = None
+        self.penultima_posicion_jaguar = None
 
         # Casillas que ha pisado y cuántas veces
         self.visitas = {}
@@ -53,28 +53,28 @@ class Memoria:
 
 
     # ==========================================
-    # RECORDAR AL PUMA
+    # RECORDAR AL JAGUAR
     # ==========================================
 
-    def recordar_puma(self, posicion):
+    def recordar_jaguar(self, posicion):
 
-        if posicion != self.ultima_posicion_puma:
+        if posicion != self.ultima_posicion_jaguar:
 
-            self.penultima_posicion_puma = (
-                self.ultima_posicion_puma
+            self.penultima_posicion_jaguar = (
+                self.ultima_posicion_jaguar
             )
 
-        self.ultima_posicion_puma = posicion
+        self.ultima_posicion_jaguar = posicion
 
 
     # ==========================================
-    # OLVIDAR POSICIÓN ANTIGUA DEL PUMA
+    # OLVIDAR POSICIÓN ANTIGUA DEL JAGUAR
     # ==========================================
 
-    def olvidar_puma(self):
+    def olvidar_jaguar(self):
 
-        self.ultima_posicion_puma = None
-        self.penultima_posicion_puma = None
+        self.ultima_posicion_jaguar = None
+        self.penultima_posicion_jaguar = None
 
 
     # ==========================================

@@ -4,7 +4,7 @@ from Algoritmos.a_Estrella import AEstrella
 from Algoritmos.huida import Huida
 
 
-class AgentePuma:
+class AgenteJaguar:
 
     def __init__(self, mundo):
 
@@ -14,7 +14,7 @@ class AgentePuma:
         # ==========================================
         # DETECCIÓN DEL CAZADOR
         #
-        # El puma huele y oye al cazador a
+        # El jaguar huele y oye al cazador a
         # esta distancia (los árboles no lo tapan).
         # ==========================================
 
@@ -37,7 +37,7 @@ class AgentePuma:
     @property
     def posicion(self):
 
-        return self.mundo.posicion_puma
+        return self.mundo.posicion_jaguar
 
 
     # ==========================================
@@ -52,7 +52,7 @@ class AgentePuma:
         posicion_cazador
     ):
 
-        if not self.mundo.puma_vivo:
+        if not self.mundo.jaguar_vivo:
 
             return None
 
@@ -95,7 +95,7 @@ class AgentePuma:
 
             self.estado = "Huyendo"
 
-            self.mundo.mover_puma(
+            self.mundo.mover_jaguar(
                 destino
             )
 
@@ -147,7 +147,7 @@ class AgentePuma:
 
         self.estado = "Merodeando"
 
-        self.mundo.mover_puma(
+        self.mundo.mover_jaguar(
             destino
         )
 

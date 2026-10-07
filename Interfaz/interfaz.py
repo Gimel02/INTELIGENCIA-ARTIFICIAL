@@ -13,7 +13,7 @@ print(
 
 from Agente_Cazador.agente import AgenteCazador
 from Agente_Cazador.sentidos import PLURAL_COLORES
-from Agente_Puma.agente import AgentePuma
+from Agente_Jaguar.agente import AgenteJaguar
 
 from Fisica.cinematica import CuerpoFisico
 
@@ -23,7 +23,7 @@ from Recursos.bayas import Baya
 from Recursos.arena import ArenaMovediza
 from Recursos.campamento import Campamento
 from Recursos.cazador import Cazador
-from Recursos.puma import Puma
+from Recursos.jaguar import Jaguar
 
 class Interfaz:
 
@@ -49,10 +49,10 @@ class Interfaz:
 
 
         # =========================================
-        # PUMA (huye cuando detecta al cazador)
+        # JAGUAR (huye cuando detecta al cazador)
         # =========================================
 
-        self.agente_puma = AgentePuma(
+        self.agente_jaguar = AgenteJaguar(
             self.mundo
         )
 
@@ -63,7 +63,7 @@ class Interfaz:
         # masa (kg), fuerza motriz (N),
         # coeficiente de arrastre (N·s/m)
         #
-        # El puma es más ligero: acelera más
+        # El jaguar es más ligero: acelera más
         # rápido, pero su fuerza es menor y su
         # velocidad máxima también. Así el
         # cazador lo puede alcanzar.
@@ -82,7 +82,7 @@ class Interfaz:
         )
 
 
-        self.cuerpo_puma = CuerpoFisico(
+        self.cuerpo_jaguar = CuerpoFisico(
 
             masa=55,
 
@@ -90,7 +90,7 @@ class Interfaz:
 
             coeficiente_arrastre=120,
 
-            posicion=self.mundo.posicion_puma
+            posicion=self.mundo.posicion_jaguar
 
         )
 
@@ -100,7 +100,7 @@ class Interfaz:
 
         self.pausa_cazador = 0.3
 
-        self.pausa_puma = 0.4
+        self.pausa_jaguar = 0.4
 
 
         # =========================================
@@ -164,7 +164,7 @@ class Interfaz:
             self.mundo.tamano_celda
         )
 
-        self.puma = Puma(
+        self.jaguar = Jaguar(
         self.mundo.tamano_celda
         )
 
@@ -291,7 +291,7 @@ class Interfaz:
 
 
             self.agente.tomar_decision(
-                self.mundo.posicion_puma
+                self.mundo.posicion_jaguar
             )
 
 
@@ -309,12 +309,12 @@ class Interfaz:
 
 
         # =====================================
-        # PUMA
+        # JAGUAR
         # =====================================
 
-        if self.mundo.puma_vivo:
+        if self.mundo.jaguar_vivo:
 
-            cuerpo = self.cuerpo_puma
+            cuerpo = self.cuerpo_jaguar
 
             cuerpo.actualizar(
                 dt,
@@ -325,7 +325,7 @@ class Interfaz:
             if cuerpo.en_reposo():
 
                 destino = (
-                    self.agente_puma.tomar_decision(
+                    self.agente_jaguar.tomar_decision(
                         self.agente.posicion
                     )
                 )
@@ -340,7 +340,7 @@ class Interfaz:
                 else:
 
                     cuerpo.detener(
-                        self.pausa_puma
+                        self.pausa_jaguar
                     )
 
 
@@ -349,14 +349,14 @@ class Interfaz:
         # =====================================
 
         if (
-            self.mundo.puma_vivo
+            self.mundo.jaguar_vivo
             and
             self.agente.posicion
             ==
-            self.mundo.posicion_puma
+            self.mundo.posicion_jaguar
         ):
 
-            self.agente.atrapar_puma()
+            self.agente.atrapar_jaguar()
 
 
     # =========================================
@@ -512,10 +512,10 @@ class Interfaz:
         # VISTA
         # =====================================
 
-        if self.agente.sentidos.ve_puma:
+        if self.agente.sentidos.ve_jaguar:
 
             texto_vista = (
-                "Puma detectado"
+                "Jaguar detectado"
             )
 
         else:
@@ -548,7 +548,7 @@ class Interfaz:
         if (
             self.agente
             .sentidos
-            .escucha_puma
+            .escucha_jaguar
         ):
 
             texto_oido = (
@@ -660,12 +660,12 @@ class Interfaz:
         if (
             self.agente
             .sentidos
-            .huele_puma
+            .huele_jaguar
         ):
 
             texto_olfato = (
 
-                "Puma, "
+                "Jaguar, "
                 f"{self.agente.sentidos.intensidad_olor.lower()}"
 
             )
@@ -738,7 +738,7 @@ class Interfaz:
 
 
         # =====================================
-        # FILA 5: FÍSICA, PUMA Y EFICIENCIA
+        # FILA 5: FÍSICA, JAGUAR Y EFICIENCIA
         # =====================================
 
         fisica = self.fuente_pequena.render(
@@ -759,21 +759,21 @@ class Interfaz:
         )
 
 
-        if self.mundo.puma_vivo:
+        if self.mundo.jaguar_vivo:
 
-            texto_puma = (
-                f"Puma: {self.agente_puma.estado}, "
-                f"{self.cuerpo_puma.velocidad:.1f} m/s"
+            texto_jaguar = (
+                f"Jaguar: {self.agente_jaguar.estado}, "
+                f"{self.cuerpo_jaguar.velocidad:.1f} m/s"
             )
 
         else:
 
-            texto_puma = "Puma: cazado"
+            texto_jaguar = "Jaguar: cazado"
 
 
-        puma = self.fuente_pequena.render(
+        jaguar = self.fuente_pequena.render(
 
-            texto_puma,
+            texto_jaguar,
 
             True,
 
@@ -782,7 +782,7 @@ class Interfaz:
         )
 
         self.pantalla.blit(
-            puma,
+            jaguar,
             (200, 153)
         )
 
@@ -1230,22 +1230,22 @@ class Interfaz:
 
 
         # =====================================
-        # PUMA
+        # JAGUAR
         #
         # Se dibuja en su posición física
         # (entre dos casillas si va caminando).
         # =====================================
 
-        if self.mundo.puma_vivo:
+        if self.mundo.jaguar_vivo:
 
-            fila_puma, columna_puma = (
-                self.cuerpo_puma.posicion_visual()
+            fila_jaguar, columna_jaguar = (
+                self.cuerpo_jaguar.posicion_visual()
             )
 
-            self.puma.dibujar(
+            self.jaguar.dibujar(
                 self.pantalla,
-                fila_puma,
-                columna_puma,
+                fila_jaguar,
+                columna_jaguar,
                 self.alto_panel
             )
 

@@ -1,7 +1,7 @@
 # ==========================================
 # FÍSICA CINEMÁTICA
 #
-# Cada personaje (cazador y puma) tiene un
+# Cada personaje (cazador y jaguar) tiene un
 # cuerpo con masa. Para pasar de una casilla
 # a otra no "salta": acelera, alcanza una
 # velocidad y recorre la distancia.

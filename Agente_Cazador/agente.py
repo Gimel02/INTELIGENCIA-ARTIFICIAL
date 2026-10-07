@@ -67,7 +67,7 @@ class AgenteCazador:
         # ==========================================
 
         self.estado = (
-            "Buscando al Puma"
+            "Buscando al Jaguar"
         )
 
 
@@ -99,14 +99,14 @@ class AgenteCazador:
 
 
     # ==========================================
-    # LIMPIAR INFORMACIÓN DEL PUMA
+    # LIMPIAR INFORMACIÓN DEL JAGUAR
     # ==========================================
 
-    def limpiar_informacion_puma(self):
+    def limpiar_informacion_jaguar(self):
 
         # Olvidar última posición conocida
 
-        self.memoria.olvidar_puma()
+        self.memoria.olvidar_jaguar()
 
 
         # Cancelar objetivo anterior
@@ -121,9 +121,9 @@ class AgenteCazador:
 
         # Limpiar sentidos
 
-        self.sentidos.ve_puma = False
+        self.sentidos.ve_jaguar = False
 
-        self.sentidos.escucha_puma = False
+        self.sentidos.escucha_jaguar = False
 
         self.sentidos.direccion_sonido = None
 
@@ -131,7 +131,7 @@ class AgenteCazador:
 
         self.sentidos.objetivo_sonido = None
 
-        self.sentidos.huele_puma = False
+        self.sentidos.huele_jaguar = False
 
         self.sentidos.intensidad_olor = None
 
@@ -139,17 +139,17 @@ class AgenteCazador:
 
 
     # ==========================================
-    # CAZAR PUMA
+    # CAZAR JAGUAR
     # ==========================================
 
-    def comprobar_caza_puma(
+    def comprobar_caza_jaguar(
         self,
-        posicion_puma
+        posicion_jaguar
     ):
 
         # Si ya fue cazado, no hacemos nada
 
-        if not self.mundo.puma_vivo:
+        if not self.mundo.jaguar_vivo:
 
             return False
 
@@ -157,34 +157,34 @@ class AgenteCazador:
         # Para cazarlo ambos deben estar
         # exactamente en la misma celda
 
-        if self.posicion == posicion_puma:
+        if self.posicion == posicion_jaguar:
 
-            return self.atrapar_puma()
+            return self.atrapar_jaguar()
 
 
         return False
 
 
     # ==========================================
-    # ATRAPAR PUMA
+    # ATRAPAR JAGUAR
     #
     # También se usa cuando el cazador y el
-    # puma se cruzan en el camino.
+    # jaguar se cruzan en el camino.
     # ==========================================
 
-    def atrapar_puma(self):
+    def atrapar_jaguar(self):
 
-        if not self.mundo.puma_vivo:
+        if not self.mundo.jaguar_vivo:
 
             return False
 
 
-        self.mundo.cazar_puma()
+        self.mundo.cazar_jaguar()
 
-        self.limpiar_informacion_puma()
+        self.limpiar_informacion_jaguar()
 
         self.estado = (
-            "¡Puma cazado! "
+            "¡Jaguar cazado! "
             "Regresando a la cabaña"
         )
 
@@ -721,19 +721,19 @@ class AgenteCazador:
 
 
     # ==========================================
-    # PERCIBIR PUMA
+    # PERCIBIR JAGUAR
     # ==========================================
 
-    def percibir_puma(
+    def percibir_jaguar(
         self,
-        posicion_puma
+        posicion_jaguar
     ):
 
         # ==========================================
-        # PUMA TODAVÍA VIVO
+        # JAGUAR TODAVÍA VIVO
         # ==========================================
 
-        if self.mundo.puma_vivo:
+        if self.mundo.jaguar_vivo:
 
             # ======================================
             # VISTA
@@ -744,7 +744,7 @@ class AgenteCazador:
 
                     self.posicion,
 
-                    posicion_puma
+                    posicion_jaguar
 
                 )
             )
@@ -781,10 +781,10 @@ class AgenteCazador:
 
 
             # ======================================
-            # ¿VIO AL PUMA?
+            # ¿VIO AL JAGUAR?
             # ======================================
 
-            puma_visible = (
+            jaguar_visible = (
                 percepcion_visual[
                     "detectado"
                 ]
@@ -795,10 +795,10 @@ class AgenteCazador:
             # RECORDAR POSICIÓN
             # ======================================
 
-            if puma_visible:
+            if jaguar_visible:
 
-                self.memoria.recordar_puma(
-                    posicion_puma
+                self.memoria.recordar_jaguar(
+                    posicion_jaguar
                 )
 
 
@@ -806,12 +806,12 @@ class AgenteCazador:
             # OÍDO
             # ======================================
 
-            puma_escuchado = (
+            jaguar_escuchado = (
                 self.sentidos.usar_oido(
 
                     self.posicion,
 
-                    posicion_puma
+                    posicion_jaguar
 
                 )
             )
@@ -821,29 +821,29 @@ class AgenteCazador:
             # OLFATO
             # ======================================
 
-            puma_olido = (
+            jaguar_olido = (
                 self.sentidos.usar_olfato(
 
                     self.posicion,
 
-                    posicion_puma
+                    posicion_jaguar
 
                 )
             )
 
 
             return (
-                puma_visible,
-                puma_escuchado,
-                puma_olido
+                jaguar_visible,
+                jaguar_escuchado,
+                jaguar_olido
             )
 
 
         # ==========================================
-        # PUMA YA CAZADO
+        # JAGUAR YA CAZADO
         # ==========================================
 
-        # Aunque no exista el puma,
+        # Aunque no exista el jaguar,
         # el cazador sigue viendo el entorno.
 
         celdas_visibles = (
@@ -869,11 +869,11 @@ class AgenteCazador:
             )
 
 
-        # No puede detectar un puma muerto
+        # No puede detectar un jaguar muerto
 
-        self.sentidos.ve_puma = False
+        self.sentidos.ve_jaguar = False
 
-        self.sentidos.escucha_puma = False
+        self.sentidos.escucha_jaguar = False
 
         self.sentidos.direccion_sonido = None
 
@@ -881,7 +881,7 @@ class AgenteCazador:
 
         self.sentidos.objetivo_sonido = None
 
-        self.sentidos.huele_puma = False
+        self.sentidos.huele_jaguar = False
 
         self.sentidos.intensidad_olor = None
 
@@ -901,7 +901,7 @@ class AgenteCazador:
 
     def tomar_decision(
         self,
-        posicion_puma
+        posicion_jaguar
     ):
 
         # Limpiar ruta anterior
@@ -924,17 +924,17 @@ class AgenteCazador:
 
         # ==========================================
         # 2. COMPROBAR SI YA ESTÁ
-        # SOBRE EL PUMA
+        # SOBRE EL JAGUAR
         # ==========================================
 
         if (
-            self.mundo.puma_vivo
+            self.mundo.jaguar_vivo
             and
-            self.posicion == posicion_puma
+            self.posicion == posicion_jaguar
         ):
 
-            self.comprobar_caza_puma(
-                posicion_puma
+            self.comprobar_caza_jaguar(
+                posicion_jaguar
             )
 
 
@@ -943,11 +943,11 @@ class AgenteCazador:
         # ==========================================
 
         (
-            puma_visible,
-            puma_escuchado,
-            puma_olido
-        ) = self.percibir_puma(
-            posicion_puma
+            jaguar_visible,
+            jaguar_escuchado,
+            jaguar_olido
+        ) = self.percibir_jaguar(
+            posicion_jaguar
         )
 
 
@@ -1050,19 +1050,19 @@ class AgenteCazador:
 
 
         # ==========================================
-        # 5. VE AL PUMA
+        # 5. VE AL JAGUAR
         # ==========================================
 
         elif (
-            self.mundo.puma_vivo
+            self.mundo.jaguar_vivo
             and
-            puma_visible
+            jaguar_visible
         ):
 
             # ======================================
             # PERSECUCIÓN
             #
-            # Apunta a donde va a estar el puma,
+            # Apunta a donde va a estar el jaguar,
             # no a donde está ahora.
             # ======================================
 
@@ -1070,26 +1070,26 @@ class AgenteCazador:
 
                 self.posicion,
 
-                posicion_puma,
+                posicion_jaguar,
 
                 self.memoria
-                .penultima_posicion_puma,
+                .penultima_posicion_jaguar,
 
                 self.mundo
 
             )
 
 
-            if meta == posicion_puma:
+            if meta == posicion_jaguar:
 
                 self.estado = (
-                    "¡Puma detectado! Persiguiendo"
+                    "¡Jaguar detectado! Persiguiendo"
                 )
 
             else:
 
                 self.estado = (
-                    "¡Puma detectado! "
+                    "¡Jaguar detectado! "
                     "Cortándole el paso"
                 )
 
@@ -1107,9 +1107,9 @@ class AgenteCazador:
         # ==========================================
 
         elif (
-            self.mundo.puma_vivo
+            self.mundo.jaguar_vivo
             and
-            puma_escuchado
+            jaguar_escuchado
         ):
 
             meta = (
@@ -1120,7 +1120,7 @@ class AgenteCazador:
 
             self.estado = (
 
-                "Escuchó al Puma hacia "
+                "Escuchó al Jaguar hacia "
 
                 f"{self.sentidos.direccion_sonido}"
 
@@ -1146,9 +1146,9 @@ class AgenteCazador:
         # ==========================================
 
         elif (
-            self.mundo.puma_vivo
+            self.mundo.jaguar_vivo
             and
-            puma_olido
+            jaguar_olido
             and
             self.sentidos.objetivo_olor
             is not None
@@ -1162,7 +1162,7 @@ class AgenteCazador:
 
             self.estado = (
 
-                "Siguiendo el rastro del Puma "
+                "Siguiendo el rastro del Jaguar "
 
                 f"({self.sentidos.intensidad_olor})"
 
@@ -1175,14 +1175,14 @@ class AgenteCazador:
 
 
         # ==========================================
-        # 7. RECUERDA AL PUMA
+        # 7. RECUERDA AL JAGUAR
         # ==========================================
 
         elif (
-            self.mundo.puma_vivo
+            self.mundo.jaguar_vivo
             and
             self.memoria
-            .ultima_posicion_puma
+            .ultima_posicion_jaguar
             is not None
         ):
 
@@ -1199,10 +1199,10 @@ class AgenteCazador:
                 self.posicion,
 
                 self.memoria
-                .ultima_posicion_puma,
+                .ultima_posicion_jaguar,
 
                 self.memoria
-                .penultima_posicion_puma,
+                .penultima_posicion_jaguar,
 
                 self.mundo,
 
@@ -1222,17 +1222,17 @@ class AgenteCazador:
 
                 self.estado = (
                     "Siguiendo hacia donde "
-                    "huyó el Puma"
+                    "huyó el Jaguar"
                 )
 
 
             # ======================================
-            # LLEGÓ Y EL PUMA NO ESTÁ
+            # LLEGÓ Y EL JAGUAR NO ESTÁ
             # ======================================
 
             else:
 
-                self.memoria.olvidar_puma()
+                self.memoria.olvidar_jaguar()
 
 
                 self.memoria.objetivo_busqueda = (
@@ -1241,7 +1241,7 @@ class AgenteCazador:
 
 
                 self.estado = (
-                    "El Puma ya no está aquí. "
+                    "El Jaguar ya no está aquí. "
                     "Continuando búsqueda"
                 )
 
@@ -1257,11 +1257,11 @@ class AgenteCazador:
 
 
         # ==========================================
-        # 7.1 YA CAZÓ AL PUMA:
+        # 7.1 YA CAZÓ AL JAGUAR:
         # REGRESAR A LA CABAÑA
         # ==========================================
 
-        elif not self.mundo.puma_vivo:
+        elif not self.mundo.jaguar_vivo:
 
             meta = (
                 self.mundo.campamento
@@ -1287,7 +1287,7 @@ class AgenteCazador:
 
 
             self.estado = (
-                "¡Puma cazado! "
+                "¡Jaguar cazado! "
                 "Regresando a la cabaña"
             )
 
@@ -1456,17 +1456,17 @@ class AgenteCazador:
 
 
             # ======================================
-            # 16. COMPROBAR SI CAZÓ AL PUMA
+            # 16. COMPROBAR SI CAZÓ AL JAGUAR
             # ======================================
 
             if (
-                self.mundo.puma_vivo
+                self.mundo.jaguar_vivo
                 and
-                self.posicion == posicion_puma
+                self.posicion == posicion_jaguar
             ):
 
-                self.comprobar_caza_puma(
-                    posicion_puma
+                self.comprobar_caza_jaguar(
+                    posicion_jaguar
                 )
 
 
@@ -1480,8 +1480,8 @@ class AgenteCazador:
             # misma casilla donde está parado.
             # ======================================
 
-            self.percibir_puma(
-                posicion_puma
+            self.percibir_jaguar(
+                posicion_jaguar
             )
 
 

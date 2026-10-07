@@ -12,7 +12,7 @@ C:.
 │       memoria.py
 │       sentidos.py
 │
-├───Agente_Puma
+├───Agente_Jaguar
 │       agente.py
 │
 ├───Algoritmos
@@ -35,7 +35,7 @@ C:.
     │   bayas.py
     │   campamento.py
     │   cazador.py
-    │   puma.py
+    │   jaguar.py
     │   raton.py
     │
     └───images
@@ -64,20 +64,20 @@ Contiene los algoritmos utilizados para controlar diferentes comportamientos y f
 
 -`a_Estrella.py`: Contiene el algoritmo A* para encontrar rutas dentro del tablero. Usa costos por suelo
  y una lista de nodos cerrados para no expandir dos veces el mismo nodo.
--`huida.py`: Comportamiento de escape. El puma elige la casilla vecina que más lo aleja del cazador,
+-`huida.py`: Comportamiento de escape. El jaguar elige la casilla vecina que más lo aleja del cazador,
  prefiriendo casillas con varias salidas (para no quedar acorralado) y evitando la arena.
 -`persecucion.py`: Comportamiento de persecución. Calcula un punto de intercepción: en lugar de ir
- a donde está el puma, el cazador apunta a donde va a estar, según la dirección en que se mueve.
+ a donde está el jaguar, el cazador apunta a donde va a estar, según la dirección en que se mueve.
 
-`Agente_Puma/`
+`Agente_Jaguar/`
 
--`agente.py`: El puma también es un agente. Detecta al cazador a 4 casillas (lo huele y lo oye, los árboles
+-`agente.py`: El jaguar también es un agente. Detecta al cazador a 4 casillas (lo huele y lo oye, los árboles
  no lo tapan). Si lo detecta, huye usando `huida.py`. Si no, descansa o merodea al azar (evitando la arena
  y el campamento). Si ninguna casilla lo aleja, queda "Acorralado".
 
 `Fisica/`
 
--`cinematica.py`: Masa y física cinemática del cazador y del puma (ver "Masa y física cinemática").
+-`cinematica.py`: Masa y física cinemática del cazador y del jaguar (ver "Masa y física cinemática").
 
 `Interfaz/`
 Contiene los elementos encargados de mostrar visualmente el mundo y la información del agente.
@@ -99,7 +99,7 @@ Contiene las clases encargadas de dibujar los diferentes elementos que aparecen 
 -`bayas.py`: Dibuja las bayas buenas (rojas) y malas (azules).
 -`campamento.py`: Dibuja el campamento.
 -`cazador.py`: Dibuja al cazador. El sprite cambia según la dirección en la que se mueve.
--`puma.py`: Dibuja al puma (sprite de jaguar). El sprite cambia según la dirección en la que se mueve.
+-`jaguar.py`: Dibuja al jaguar (sprite de jaguar). El sprite cambia según la dirección en la que se mueve.
 -`raton.py`: Dibuja al ratón.
 -`images/`: Sprites (imágenes .png) que usan las clases anteriores: árbol, arena movediza,
  bayas buenas y malas, campamento, ratón, y el cazador y el jaguar en 4 direcciones
@@ -113,23 +113,23 @@ y se muestran en el panel superior de la interfaz.
 Alcance de cada sentido (se cambia en el __init__ de `sentidos.py`):
 -Vista: 4 casillas (`rango_vista`).
 -Oído: 2 casillas (`rango_oido`).
--Olfato: 1 casilla (`rango_olfato`), para el puma y para las bayas.
+-Olfato: 1 casilla (`rango_olfato`), para el jaguar y para las bayas.
 
-Cada sentido detecta al puma por su cuenta, dentro de su propio alcance. Por eso pueden detectarlo
+Cada sentido detecta al jaguar por su cuenta, dentro de su propio alcance. Por eso pueden detectarlo
 varios sentidos al mismo tiempo (por ejemplo, a 1 casilla lo ve, lo oye y lo huele). Para decidir,
 el agente usa primero la vista, después el oído y al final el olfato.
 
 -Vista: Ve hasta 4 casillas de distancia. Los árboles tapan la vista: si hay un árbol entre el cazador
  y una casilla, no la puede ver (en diagonal solo se tapa si los dos lados son árboles).
- Además de buscar al puma, se fija en el terreno que tiene enfrente y guarda en memoria dónde hay
+ Además de buscar al jaguar, se fija en el terreno que tiene enfrente y guarda en memoria dónde hay
  arena movediza y bayas. De las bayas solo ve el color (rojas o azules): no sabe si son buenas
  o malas hasta que las prueba.
--Oído: Escucha al puma hasta 2 casillas, aunque haya árboles en medio (el sonido sí pasa entre ellos).
+-Oído: Escucha al jaguar hasta 2 casillas, aunque haya árboles en medio (el sonido sí pasa entre ellos).
  Es útil cuando un árbol le tapa la vista. Da la dirección del sonido en 8 direcciones
  (NORTE, SUR, ESTE, OESTE, NORESTE, NOROESTE, SURESTE, SUROESTE) y su intensidad:
  "fuerte" a 1 casilla y "débil" a 2.
 -Olfato: Tiene dos usos.
- 1. Puma: lo huele a 1 casilla ("Olor fuerte"). El olor pasa entre los árboles.
+ 1. Jaguar: lo huele a 1 casilla ("Olor fuerte"). El olor pasa entre los árboles.
     No da la posición exacta, solo hacia qué casilla vecina el olor es más fuerte, y el agente sigue ese rastro.
     Si los árboles bloquean el rastro, el agente sigue explorando.
  2. Bayas: huele las bayas a 1 casilla, pero solo sigue el olor de un color que ya aprendió
@@ -157,7 +157,7 @@ En el mundo actual las rojas son buenas y las azules son malas (ver los sprites 
 
 Memoria del terreno (`Agente_Cazador/memoria.py`)
 
-Además de las celdas revisadas y la última posición del puma, la memoria guarda:
+Además de las celdas revisadas y la última posición del jaguar, la memoria guarda:
 -Bayas que ha visto y de qué color son.
 -Lo que ha aprendido de cada color de baya: "buena", "mala" o todavía sin probar.
 -Arena movediza que ha visto o sentido.
@@ -173,11 +173,11 @@ Prioridad de decisiones del agente:
    a. Si recuerda una baya de color bueno más cerca que el campamento, va por ella.
    b. Si no, pero huele bayas de color bueno y el campamento está lejos, sigue ese olor.
    c. Si no, regresa al campamento.
-2. Si ve al puma, lo persigue apuntando a donde va a estar (persecución).
+2. Si ve al jaguar, lo persigue apuntando a donde va a estar (persecución).
 3. Si lo escucha, va hacia la dirección del sonido.
 4. Si lo huele, sigue el rastro del olor.
 5. Si recuerda dónde lo vio, va hacia donde huyó (2 casillas más adelante en su dirección).
-6. Si ya cazó al puma, regresa a su cabaña (el campamento). Al llegar recupera su energía,
+6. Si ya cazó al jaguar, regresa a su cabaña (el campamento). Al llegar recupera su energía,
    se queda ahí y en el estado aparece "En la cabaña: ¡misión cumplida!".
 7. Si no percibe nada, explora zonas que todavía no ha revisado.
 
@@ -189,10 +189,10 @@ Panel de la interfaz
 
 -Fila 1: Energía y estado del agente.
 -Fila 2: Vista, Oído (dirección e intensidad) y Memoria (celdas revisadas).
--Fila 3: Tacto, Gusto y Olfato (puma o bayas de color bueno).
+-Fila 3: Tacto, Gusto y Olfato (jaguar o bayas de color bueno).
 -Fila 4: Controles, Arena cerca (N, S, E, O) y lo que ha aprendido de las bayas
  ("Rojas: buena  Azules: mala"; "?" si todavía no las prueba).
--Fila 5: Masa y velocidad del cazador, estado y velocidad del puma, y pasos (y cuántos fueron repetidos).
+-Fila 5: Masa y velocidad del cazador, estado y velocidad del jaguar, y pasos (y cuántos fueron repetidos).
 
 En el tablero se marca el alcance de cada sentido alrededor del cazador, con el mismo color que su texto
 en el panel. Cada cuadro va un poco más adentro de la casilla para que se vean aunque compartan casillas:
@@ -206,17 +206,17 @@ Requisitos del proyecto
 |---------------------------------|-------------------------------------------------------------------------|
 | Memoria                         | `Agente_Cazador/memoria.py`                                             |
 | Sentidos                        | `Agente_Cazador/sentidos.py` (vista, oído, olfato, tacto y gusto)       |
-| Objetivos                       | `Agente_Cazador/agente.py` (cazar al puma, explorar, comer, descansar)  |
+| Objetivos                       | `Agente_Cazador/agente.py` (cazar al jaguar, explorar, comer, descansar)  |
 | Suelo y costos                  | `Algoritmos/a_Estrella.py`, energía en `agente.py`, rozamiento en `Fisica/` |
 | Eficiencia (no repetir nodos)   | Nodos cerrados en A* y costo extra a casillas ya pisadas               |
 | Obstáculos                      | Árboles: no se pueden cruzar y tapan la vista                          |
 | Persecución                     | `Algoritmos/persecucion.py`                                             |
-| Escape                          | `Algoritmos/huida.py` y `Agente_Puma/agente.py`                         |
+| Escape                          | `Algoritmos/huida.py` y `Agente_Jaguar/agente.py`                         |
 | Masa / física cinemática        | `Fisica/cinematica.py`                                                  |
 
 Objetivos del cazador
--Principal: cazar al puma (estar en la misma casilla que él).
--Al terminar: regresar a su cabaña (el campamento) después de cazar al puma.
+-Principal: cazar al jaguar (estar en la misma casilla que él).
+-Al terminar: regresar a su cabaña (el campamento) después de cazar al jaguar.
 -Sobrevivir: no quedarse sin energía (regresa al campamento o come bayas buenas).
 -Explorar: revisar las zonas del mapa que todavía no ha visto.
 
@@ -235,15 +235,15 @@ Eficiencia de movimientos (no repetir nodos)
  costo real de llegar a cada casilla no revisada y le resta cuántas casillas nuevas vería desde ahí.
  Elige la de menor puntaje: cerca, sin repetir camino y que descubra mucho terreno.
 -En pruebas (60 mundos) los pasos repetidos bajaron de 32% a 20%. Explorando repite solo 8-10%.
- El resto viene de perseguir al puma (que da vueltas) y de regresar al campamento, que casi siempre
+ El resto viene de perseguir al jaguar (que da vueltas) y de regresar al campamento, que casi siempre
  es por donde ya pasó; esas repeticiones no se pueden evitar del todo.
 -El panel muestra los pasos y cuántos fueron repetidos.
 
 Persecución y escape
--Cuando el cazador ve al puma, usa `persecucion.py` para cortarle el paso ("Cortándole el paso").
+-Cuando el cazador ve al jaguar, usa `persecucion.py` para cortarle el paso ("Cortándole el paso").
 -Si lo pierde de vista, sigue 2 casillas más adelante de donde lo vio por última vez, en la
- dirección en que huía ("Siguiendo hacia donde huyó el Puma").
--El puma huye con `huida.py` cuando el cazador está a 4 casillas o menos.
+ dirección en que huía ("Siguiendo hacia donde huyó el Jaguar").
+-El jaguar huye con `huida.py` cuando el cazador está a 4 casillas o menos.
 -Lo atrapa cuando los dos están en la misma casilla.
 
 Masa y física cinemática (`Fisica/cinematica.py`)
@@ -263,9 +263,9 @@ Los personajes no saltan de casilla en casilla: aceleran, alcanzan una velocidad
 |           | Masa  | Fuerza | v_max en pasto | v_max en arena |
 |-----------|-------|--------|----------------|----------------|
 | Cazador   | 75 kg | 400 N  | 2.72 m/s       | 0.88 m/s       |
-| Puma      | 55 kg | 330 N  | 2.30 m/s       | 0.95 m/s       |
+| Jaguar      | 55 kg | 330 N  | 2.30 m/s       | 0.95 m/s       |
 
-El puma es más ligero: acelera más rápido y en arena es más rápido, pero en pasto su velocidad máxima
+El jaguar es más ligero: acelera más rápido y en arena es más rápido, pero en pasto su velocidad máxima
 es menor, por eso el cazador lo puede alcanzar. Cada agente decide su siguiente paso cuando su cuerpo
 llega a la casilla, así que cada uno va a su propio ritmo.
 

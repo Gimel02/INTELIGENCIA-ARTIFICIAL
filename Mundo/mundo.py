@@ -49,11 +49,11 @@ class MundoSelva:
         self.inicio_cazador = None
         self.posicion_cazador = None
 
-        self.inicio_puma = None
-        self.posicion_puma = None
+        self.inicio_jaguar = None
+        self.posicion_jaguar = None
 
-        # Estado del puma
-        self.puma_vivo = True
+        # Estado del jaguar
+        self.jaguar_vivo = True
 
 
         # =========================================
@@ -133,12 +133,12 @@ class MundoSelva:
         )
 
     # =========================================
-        # PUMA
+        # JAGUAR
         # =========================================
 
-        self.puma_vivo = True
+        self.jaguar_vivo = True
 
-        self.inicio_puma = (
+        self.inicio_jaguar = (
             self.posicion_aleatoria_valida(
                 exclude=[
                     self.campamento
@@ -146,8 +146,8 @@ class MundoSelva:
             )
         )
 
-        self.posicion_puma = (
-            self.inicio_puma
+        self.posicion_jaguar = (
+            self.inicio_jaguar
         )
 
 
@@ -325,10 +325,10 @@ class MundoSelva:
 
 
     # =========================================
-    # MOVER PUMA
+    # MOVER JAGUAR
     # =========================================
 
-    def mover_puma(
+    def mover_jaguar(
         self,
         nueva_posicion
     ):
@@ -340,7 +340,7 @@ class MundoSelva:
             return False
 
 
-        self.posicion_puma = (
+        self.posicion_jaguar = (
             nueva_posicion
         )
 
@@ -348,16 +348,16 @@ class MundoSelva:
 
 
     # =========================================
-    # CAZAR PUMA
+    # CAZAR JAGUAR
     # =========================================
 
-    def cazar_puma(self):
+    def cazar_jaguar(self):
 
-        if not self.puma_vivo:
+        if not self.jaguar_vivo:
 
             return False
 
-        self.puma_vivo = False
+        self.jaguar_vivo = False
 
         return True
 

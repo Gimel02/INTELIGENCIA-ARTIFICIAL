@@ -35,14 +35,14 @@ class Sentidos:
         # VISTA
         # ==========================================
 
-        # Cada sentido detecta al puma por su
+        # Cada sentido detecta al jaguar por su
         # cuenta, dentro de su propio alcance.
 
         # Los árboles tapan la vista
 
         self.rango_vista = 4
 
-        self.ve_puma = False
+        self.ve_jaguar = False
 
 
         # ==========================================
@@ -53,7 +53,7 @@ class Sentidos:
 
         self.rango_oido = 2
 
-        self.escucha_puma = False
+        self.escucha_jaguar = False
 
         self.direccion_sonido = None
 
@@ -89,11 +89,11 @@ class Sentidos:
         # OLFATO
         # ==========================================
 
-        # Olor del puma
+        # Olor del jaguar
 
         self.rango_olfato = 1
 
-        self.huele_puma = False
+        self.huele_jaguar = False
 
         self.intensidad_olor = None
 
@@ -521,7 +521,7 @@ class Sentidos:
     def usar_vista(
         self,
         posicion_agente,
-        posicion_puma
+        posicion_jaguar
     ):
 
         visibles = (
@@ -532,16 +532,16 @@ class Sentidos:
 
 
         # ======================================
-        # ¿PUMA DENTRO DEL RANGO?
+        # ¿JAGUAR DENTRO DEL RANGO?
         # ======================================
 
-        if posicion_puma in visibles:
+        if posicion_jaguar in visibles:
 
-            self.ve_puma = True
+            self.ve_jaguar = True
 
         else:
 
-            self.ve_puma = False
+            self.ve_jaguar = False
 
 
         # ======================================
@@ -567,7 +567,7 @@ class Sentidos:
         return {
 
             "detectado":
-                self.ve_puma,
+                self.ve_jaguar,
 
             "celdas_visibles":
                 visibles,
@@ -585,7 +585,7 @@ class Sentidos:
     def usar_oido(
         self,
         posicion_agente,
-        posicion_puma
+        posicion_jaguar
     ):
 
         distancia = (
@@ -593,7 +593,7 @@ class Sentidos:
 
                 posicion_agente,
 
-                posicion_puma
+                posicion_jaguar
 
             )
         )
@@ -609,7 +609,7 @@ class Sentidos:
             self.rango_oido
         ):
 
-            self.escucha_puma = False
+            self.escucha_jaguar = False
 
             self.direccion_sonido = None
 
@@ -621,20 +621,20 @@ class Sentidos:
 
 
         # ======================================
-        # ESCUCHA AL PUMA
+        # ESCUCHA AL JAGUAR
         # ======================================
 
-        self.escucha_puma = True
+        self.escucha_jaguar = True
 
 
         diferencia_filas = (
-            posicion_puma[0]
+            posicion_jaguar[0]
             -
             posicion_agente[0]
         )
 
         diferencia_columnas = (
-            posicion_puma[1]
+            posicion_jaguar[1]
             -
             posicion_agente[1]
         )
@@ -962,13 +962,13 @@ class Sentidos:
 
 
     # ==========================================
-    # USAR OLFATO (PUMA)
+    # USAR OLFATO (JAGUAR)
     # ==========================================
 
     def usar_olfato(
         self,
         posicion_agente,
-        posicion_puma
+        posicion_jaguar
     ):
 
         distancia = (
@@ -976,7 +976,7 @@ class Sentidos:
 
                 posicion_agente,
 
-                posicion_puma
+                posicion_jaguar
 
             )
         )
@@ -992,7 +992,7 @@ class Sentidos:
             self.rango_olfato
         ):
 
-            self.huele_puma = False
+            self.huele_jaguar = False
 
             self.intensidad_olor = None
 
@@ -1002,10 +1002,10 @@ class Sentidos:
 
 
         # ======================================
-        # HUELE AL PUMA
+        # HUELE AL JAGUAR
         # ======================================
 
-        self.huele_puma = True
+        self.huele_jaguar = True
 
 
         # ======================================
@@ -1040,7 +1040,7 @@ class Sentidos:
         self.objetivo_olor = (
             self.crear_objetivo_olor(
                 posicion_agente,
-                posicion_puma
+                posicion_jaguar
             )
         )
 

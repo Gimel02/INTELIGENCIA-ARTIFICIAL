@@ -6,7 +6,7 @@ class Persecucion:
     # ==========================================
     # PUNTO DE INTERCEPCIÓN
     #
-    # Si el puma se está moviendo, ir a donde
+    # Si el jaguar se está moviendo, ir a donde
     # está ahora no sirve: cuando el cazador
     # llegue, ya se habrá ido.
     #
