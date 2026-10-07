@@ -469,17 +469,56 @@ class Interfaz:
 
     def dibujar_panel(self):
 
+        # Fondo estilo madera del panel superior
+
         pygame.draw.rect(
 
             self.pantalla,
 
-            (35, 70, 40),
+            self.C_MADERA_FONDO,
 
             (
                 0,
                 0,
                 self.ancho,
                 self.alto_panel
+            )
+
+        )
+
+
+        # Líneas decorativas tipo madera
+
+        for x in range(0, self.ancho, 150):
+
+            pygame.draw.line(
+
+                self.pantalla,
+
+                (20, 12, 8),
+
+                (x, 0),
+
+                (x, self.alto_panel),
+
+                3
+
+            )
+
+
+        # Línea dorada inferior
+
+        pygame.draw.rect(
+
+            self.pantalla,
+
+            self.C_ORO_PURO,
+
+            (
+                0,
+                self.alto_panel - 6,
+                self.ancho,
+                6
             )
 
         )
