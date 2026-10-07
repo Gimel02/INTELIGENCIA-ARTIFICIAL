@@ -1585,88 +1585,88 @@ class Interfaz:
         )
 
             # =====================================
-            # BOTONES
-            # =====================================
+        # BOTONES
+        # =====================================
 
-            ancho_boton = (
-                ancho_der - 55
-            ) // 2
+        ancho_boton = (
+            ancho_der - 55
+        ) // 2
 
 
-            self.rect_btn_pausa = pygame.Rect(
-                x_der + 20,
-                137,
-                ancho_boton,
-                25
+        self.rect_btn_pausa = pygame.Rect(
+            x_der + 20,
+            137,
+            ancho_boton,
+            25
+        )
+
+        self.rect_btn_reiniciar = pygame.Rect(
+            x_der
+            +
+            35
+            +
+            ancho_boton,
+            137,
+            ancho_boton,
+            25
+        )
+
+
+        if self.en_curso:
+
+            texto_pausa = "PAUSAR"
+
+            color_pausa = (
+                150,
+                45,
+                45
             )
 
-            self.rect_btn_reiniciar = pygame.Rect(
-                x_der
-                +
-                35
-                +
-                ancho_boton,
-                137,
-                ancho_boton,
-                25
+            color_pausa_hover = (
+                220,
+                70,
+                70
             )
 
+        else:
 
-            if self.en_curso:
+            texto_pausa = "INICIAR"
 
-                texto_pausa = "PAUSAR"
+            color_pausa = (
+                40,
+                130,
+                65
+            )
 
-                color_pausa = (
-                    150,
-                    45,
-                    45
-                )
-
-                color_pausa_hover = (
-                    220,
-                    70,
-                    70
-                )
-
-            else:
-
-                texto_pausa = "INICIAR"
-
-                color_pausa = (
-                    40,
-                    130,
-                    65
-                )
-
-                color_pausa_hover = (
-                    60,
-                    200,
-                    90
-                )
-
-
-            self.dibujar_boton(
-                self.rect_btn_pausa,
-                texto_pausa,
-                color_pausa,
-                color_pausa_hover
+            color_pausa_hover = (
+                60,
+                200,
+                90
             )
 
 
-            self.dibujar_boton(
-                self.rect_btn_reiniciar,
-                "REINICIAR",
-                (
-                    40,
-                    90,
-                    160
-                ),
-                (
-                    70,
-                    140,
-                    230
-                )
+        self.dibujar_boton(
+            self.rect_btn_pausa,
+            texto_pausa,
+            color_pausa,
+            color_pausa_hover
+        )
+
+
+        self.dibujar_boton(
+            self.rect_btn_reiniciar,
+            "REINICIAR",
+            (
+                40,
+                90,
+                160
+            ),
+            (
+                70,
+                140,
+                230
             )
+        )
         
 
     def dibujar_alcance(
