@@ -1137,6 +1137,7 @@ class Interfaz:
 
     def dibujar_tablero(self):
 
+
         # =====================================
         # ZONA DEL MUNDO CENTRADA
         # =====================================
@@ -1431,4 +1432,84 @@ class Interfaz:
 
         self.pantalla.set_clip(
             None
+        )
+        # =====================================
+        # MARCO ALREDEDOR DEL MAPA
+        # =====================================
+
+        marco_rect = pygame.Rect(
+
+            self.offset_mapa_x - 10,
+
+            self.offset_mapa_y - 10,
+
+            self.mundo.ancho + 20,
+
+            self.mundo.alto + 20
+        )
+
+        self.dibujar_marco_hueco_mapa(
+
+            marco_rect,
+
+            self.C_MADERA_BASE,
+
+            self.C_MADERA_LUZ,
+
+            self.C_MADERA_SOMBRA,
+
+            grosor_madera=6
+        )
+
+    def dibujar_marco_hueco_mapa(
+        self,
+        rect,
+        color_base,
+        color_luz,
+        color_sombra,
+        grosor_madera=6
+    ):
+
+        # Sombra exterior
+        pygame.draw.rect(
+
+            self.pantalla,
+
+            (10, 5, 5),
+
+            rect.inflate(8, 8).move(2, 4),
+
+            grosor_madera + 4,
+
+            border_radius=12
+        )
+
+
+        # Base de madera
+        pygame.draw.rect(
+
+            self.pantalla,
+
+            color_base,
+
+            rect.inflate(4, 4),
+
+            grosor_madera,
+
+            border_radius=8
+        )
+
+
+        # Ribete dorado interior
+        pygame.draw.rect(
+
+            self.pantalla,
+
+            self.C_ORO_PURO,
+
+            rect.inflate(-2, -2),
+
+            2,
+
+            border_radius=4
         )
