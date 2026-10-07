@@ -1,5 +1,6 @@
 import pygame
 import os
+import math
 
 from Mundo.mundo import MundoSelva
 import Mundo.mundo as modulo_mundo
@@ -357,11 +358,6 @@ class Interfaz:
 
         self.reloj = pygame.time.Clock()
 
-
-    # =========================================
-    # BUCLE PRINCIPAL
-    # =========================================
-
     def ejecutar(self):
 
         while self.ejecutando:
@@ -404,17 +400,6 @@ class Interfaz:
 
 
         pygame.quit()
-
-
-    # =========================================
-    # ACTUALIZAR SIMULACIÓN
-    #
-    # 1. La física mueve a cada cuerpo.
-    # 2. Cuando un cuerpo llega a su casilla,
-    #    su agente decide el siguiente paso.
-    #    Así cada quien decide a su propio
-    #    ritmo, según su masa y el suelo.
-    # =========================================
 
     def actualizar(
         self,
@@ -509,11 +494,6 @@ class Interfaz:
 
             self.agente.atrapar_jaguar()
 
-
-    # =========================================
-    # EVENTOS
-    # =========================================
-
     def manejar_eventos(self):
 
         for evento in pygame.event.get():
@@ -551,11 +531,6 @@ class Interfaz:
 
                     self.ejecutando = False
 
-
-    # =========================================
-    # DIBUJARTODO
-    # =========================================
-
     def dibujar(self):
 
         # =====================================
@@ -588,6 +563,212 @@ class Interfaz:
         # =====================================
 
         self.dibujar_panel()
+
+    def dibujar_caja_biselada_solida(
+        self,
+        rect,
+        color_base,
+        color_luz,
+        color_sombra,
+        grosor_borde=2
+    ):
+
+        pygame.draw.rect(
+            self.pantalla,
+            color_base,
+            rect,
+            border_radius=8
+        )
+
+        pygame.draw.line(
+            self.pantalla,
+            color_luz,
+            (rect.left + 5, rect.top),
+            (rect.right - 5, rect.top),
+            grosor_borde
+        )
+
+        pygame.draw.line(
+            self.pantalla,
+            color_luz,
+            (rect.left, rect.top + 5),
+            (rect.left, rect.bottom - 5),
+            grosor_borde
+        )
+
+        pygame.draw.line(
+            self.pantalla,
+            color_sombra,
+            (rect.left + 5, rect.bottom),
+            (rect.right - 5, rect.bottom),
+            grosor_borde
+        )
+
+        pygame.draw.line(
+            self.pantalla,
+            color_sombra,
+            (rect.right, rect.top + 5),
+            (rect.right, rect.bottom - 5),
+            grosor_borde
+        )
+
+    def dibujar_slot_sentido_animado(
+        self,
+        x,
+        y,
+        ancho,
+        nombre_sentido,
+        valor_texto,
+        esta_activo,
+        color_activo
+    ):
+
+        alto_slot = 32
+
+        rect_slot = pygame.Rect(
+            x,
+            y,
+            ancho,
+            alto_slot
+        )
+
+        pygame.draw.rect(
+            self.pantalla,
+            (20, 14, 10),
+            rect_slot,
+            border_radius=5
+        )
+
+        pygame.draw.rect(
+            self.pantalla,
+            (45, 30, 20),
+            rect_slot,
+            1,
+            border_radius=5
+        )
+
+        label = self.fuente_UI.render(
+            nombre_sentido,
+            True,
+            self.C_ORO_VIEJO
+        )
+
+        self.pantalla.blit(
+            label,
+            (
+                x + 10,
+                y + 8
+            )
+        )
+
+        if esta_activo:
+
+            color_capsula = color_activo
+            color_texto = (255, 255, 255)
+
+        else:
+
+            color_capsula = (50, 60, 55)
+            color_texto = (150, 160, 155)
+
+        ancho_capsula = ancho - 90
+
+        rect_capsula = pygame.Rect(
+            x + 82,
+            y + 4,
+            ancho_capsula,
+            alto_slot - 8
+        )
+
+        # Glow cuando el sentido está activo
+        if esta_activo:
+
+            tiempo = pygame.time.get_ticks()
+
+            glow_alpha = int(
+                40
+                +
+                30 * math.sin(
+                    tiempo / 150.0
+                )
+            )
+
+            superficie_glow = pygame.Surface(
+                (
+                    ancho_capsula + 6,
+                    alto_slot - 2
+                ),
+                pygame.SRCALPHA
+            )
+
+            pygame.draw.rect(
+                superficie_glow,
+                (
+                    *color_activo,
+                    glow_alpha
+                ),
+                superficie_glow.get_rect(),
+                border_radius=4
+            )
+
+            self.pantalla.blit(
+                superficie_glow,
+                (
+                    rect_capsula.x - 3,
+                    rect_capsula.y - 3
+                )
+            )
+
+        pygame.draw.rect(
+            self.pantalla,
+            color_capsula,
+            rect_capsula,
+            border_radius=4
+        )
+
+        # Evitar textos demasiado largos
+        if len(valor_texto) > 18:
+            valor_texto = (
+                valor_texto[:15]
+                +
+                "..."
+            )
+
+        valor = self.fuente_UI.render(
+            valor_texto,
+            True,
+            color_texto
+        )
+
+        vx = (
+            rect_capsula.x
+            +
+            (
+                rect_capsula.width
+                -
+                valor.get_width()
+            )
+            // 2
+        )
+
+        vy = (
+            rect_capsula.y
+            +
+            (
+                rect_capsula.height
+                -
+                valor.get_height()
+            )
+            // 2
+        )
+
+        self.pantalla.blit(
+            valor,
+            (
+                vx,
+                vy
+            )
+        )
 
     def dibujar_panel(self):
 
@@ -872,121 +1053,133 @@ class Interfaz:
             sentidos.sensacion_gusto
         )
 
+                # =====================================
+        # SLOTS VISUALES DE LOS 5 SENTIDOS
+        # =====================================
 
-        textos = [
+        padding = 15
 
-            (
-                "Visión",
-                vista,
-                self.C_NEON_AMARILLO
-            ),
+        ancho_slot = (
+            ancho_centro
+            -
+            padding * 3
+        ) // 2
 
-            (
-                "Oído",
-                oido,
-                self.C_NEON_AZUL
-            ),
-
-            (
-                "Olfato",
-                olfato,
-                self.C_NEON_MORADO
-            ),
-
-            (
-                "Tacto",
-                tacto,
-                (230, 190, 140)
-            ),
-
-            (
-                "Gusto",
-                gusto,
-                self.C_NEON_VERDE
-            )
-        ]
-
-
-        columna1 = x_centro + 20
-
-        columna2 = (
+        x_col1 = (
             x_centro
             +
-            ancho_centro // 2
+            padding
+        )
+
+        x_col2 = (
+            x_col1
+            +
+            ancho_slot
+            +
+            padding
         )
 
 
-        posiciones = [
+        # =====================================
+        # VISIÓN
+        # =====================================
 
+        self.dibujar_slot_sentido_animado(
+            x_col1,
+            55,
+            ancho_slot,
+            "Visión",
+            vista,
+            sentidos.ve_jaguar,
+            self.C_NEON_ROJO
+        )
+
+
+        # =====================================
+        # OÍDO
+        # =====================================
+
+        self.dibujar_slot_sentido_animado(
+            x_col1,
+            95,
+            ancho_slot,
+            "Oído",
+            oido,
+            sentidos.escucha_jaguar,
+            self.C_NEON_AMARILLO
+        )
+
+
+        # =====================================
+        # OLFATO
+        # =====================================
+
+        olfato_activo = (
+            sentidos.huele_jaguar
+            or
+            sentidos.huele_bayas
+        )
+
+        self.dibujar_slot_sentido_animado(
+            x_col2,
+            55,
+            ancho_slot,
+            "Olfato",
+            olfato,
+            olfato_activo,
+            self.C_NEON_MORADO
+        )
+
+
+        # =====================================
+        # TACTO
+        # =====================================
+
+        tacto_activo = bool(
+            sentidos.arena_cercana
+        )
+
+        self.dibujar_slot_sentido_animado(
+            x_col2,
+            95,
+            ancho_slot,
+            "Tacto",
+            tacto,
+            tacto_activo,
+            self.C_NEON_AZUL
+        )
+
+
+        # =====================================
+        # GUSTO
+        # =====================================
+
+        gusto_activo = (
+            gusto != "Sin alimento"
+        )
+
+        x_gusto = (
+            x_centro
+            +
             (
-                columna1,
-                60
-            ),
-
-            (
-                columna1,
-                95
-            ),
-
-            (
-                columna2,
-                60
-            ),
-
-            (
-                columna2,
-                95
-            ),
-
-            (
-                columna2,
-                130
+                ancho_centro
+                -
+                ancho_slot
             )
-        ]
+            // 2
+        )
 
+        self.dibujar_slot_sentido_animado(
+            x_gusto,
+            132,
+            ancho_slot,
+            "Gusto",
+            gusto,
+            gusto_activo,
+            self.C_NEON_VERDE
+        )
 
-        for (
-            nombre,
-            valor,
-            color
-        ), (
-            px,
-            py
-        ) in zip(
-            textos,
-            posiciones
-        ):
-
-            etiqueta = self.fuente_UI.render(
-                f"{nombre}:",
-                True,
-                self.C_ORO_VIEJO
-            )
-
-            valor_render = (
-                self.fuente_UI.render(
-                    valor,
-                    True,
-                    color
-                )
-            )
-
-            self.pantalla.blit(
-                etiqueta,
-                (
-                    px,
-                    py
-                )
-            )
-
-            self.pantalla.blit(
-                valor_render,
-                (
-                    px + 65,
-                    py
-                )
-            )
-
+            
 
         # =====================================
         # BLOQUE DERECHO
@@ -1145,14 +1338,6 @@ class Interfaz:
             )
         )
 
-    # =========================================
-    # ALCANCE DE UN SENTIDO
-    #
-    # Dibuja el borde de cada celda.
-    # margen: cuántos píxeles hacia adentro
-    # de la celda va el cuadro.
-    # =========================================
-
     def dibujar_alcance(
         self,
         celdas,
@@ -1190,11 +1375,6 @@ class Interfaz:
                 rect,
                 2
             )
-
-
-    # =========================================
-    # TABLERO
-    # =========================================
 
     def dibujar_tablero(self):
 
@@ -1522,6 +1702,8 @@ class Interfaz:
             grosor_madera=6
         )
 
+        # =========================================
+
     def dibujar_marco_hueco_mapa(
         self,
         rect,
@@ -1575,51 +1757,3 @@ class Interfaz:
             border_radius=4
         )
 
-
-    def dibujar_caja_biselada_solida(
-        self,
-        rect,
-        color_base,
-        color_luz,
-        color_sombra,
-        grosor_borde=2
-    ):
-
-        pygame.draw.rect(
-            self.pantalla,
-            color_base,
-            rect,
-            border_radius=8
-        )
-
-        pygame.draw.line(
-            self.pantalla,
-            color_luz,
-            (rect.left + 5, rect.top),
-            (rect.right - 5, rect.top),
-            grosor_borde
-        )
-
-        pygame.draw.line(
-            self.pantalla,
-            color_luz,
-            (rect.left, rect.top + 5),
-            (rect.left, rect.bottom - 5),
-            grosor_borde
-        )
-
-        pygame.draw.line(
-            self.pantalla,
-            color_sombra,
-            (rect.left + 5, rect.bottom),
-            (rect.right - 5, rect.bottom),
-            grosor_borde
-        )
-
-        pygame.draw.line(
-            self.pantalla,
-            color_sombra,
-            (rect.right, rect.top + 5),
-            (rect.right, rect.bottom - 5),
-            grosor_borde
-        )
