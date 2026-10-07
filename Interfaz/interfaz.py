@@ -358,6 +358,155 @@ class Interfaz:
 
         self.reloj = pygame.time.Clock()
 
+    def reiniciar_simulacion(self):
+
+        # =========================================
+        # CREAR MUNDO NUEVO
+        # =========================================
+
+        self.mundo = MundoSelva()
+
+
+        # =========================================
+        # RECALCULAR TAMAÑO DEL MAPA
+        # =========================================
+
+        espacio_disponible_x = (
+            self.ancho
+            -
+            120
+        )
+
+        espacio_disponible_y = (
+            self.alto
+            -
+            self.alto_panel
+            -
+            80
+        )
+
+        tamano_posible_x = (
+            espacio_disponible_x
+            //
+            self.mundo.columnas
+        )
+
+        tamano_posible_y = (
+            espacio_disponible_y
+            //
+            self.mundo.filas
+        )
+
+        self.mundo.tamano_celda = min(
+            tamano_posible_x,
+            tamano_posible_y
+        )
+
+        self.mundo.ancho = (
+            self.mundo.columnas
+            *
+            self.mundo.tamano_celda
+        )
+
+        self.mundo.alto = (
+            self.mundo.filas
+            *
+            self.mundo.tamano_celda
+        )
+
+
+        # =========================================
+        # CENTRAR NUEVO MAPA
+        # =========================================
+
+        self.offset_mapa_x = (
+            self.ancho
+            -
+            self.mundo.ancho
+        ) // 2
+
+        self.offset_mapa_y = (
+            self.alto_panel
+            +
+            (
+                (
+                    self.alto
+                    -
+                    self.alto_panel
+                    -
+                    self.mundo.alto
+                )
+                //
+                2
+            )
+        )
+
+
+        # =========================================
+        # NUEVOS AGENTES
+        # =========================================
+
+        self.agente = AgenteCazador(
+            self.mundo
+        )
+
+        self.agente_jaguar = AgenteJaguar(
+            self.mundo
+        )
+
+
+        # =========================================
+        # NUEVA FÍSICA
+        # =========================================
+
+        self.cuerpo_cazador = CuerpoFisico(
+            masa=75,
+            fuerza_motriz=400,
+            coeficiente_arrastre=120,
+            posicion=self.agente.posicion
+        )
+
+        self.cuerpo_jaguar = CuerpoFisico(
+            masa=55,
+            fuerza_motriz=330,
+            coeficiente_arrastre=120,
+            posicion=self.mundo.posicion_jaguar
+        )
+
+
+        # =========================================
+        # RECURSOS GRÁFICOS
+        # =========================================
+
+        self.arbol = Arbol(
+            self.mundo.tamano_celda
+        )
+
+        self.baya = Baya(
+            self.mundo.tamano_celda
+        )
+
+        self.arena = ArenaMovediza(
+            self.mundo.tamano_celda
+        )
+
+        self.campamento = Campamento(
+            self.mundo.tamano_celda
+        )
+
+        self.cazador = Cazador(
+            self.mundo.tamano_celda
+        )
+
+        self.jaguar = Jaguar(
+            self.mundo.tamano_celda
+        )
+
+
+        # Al reiniciar queda pausado
+        self.en_curso = False
+
+    
     def ejecutar(self):
 
         while self.ejecutando:
@@ -513,10 +662,7 @@ class Interfaz:
 
             elif evento.type == pygame.KEYDOWN:
 
-
-                # ESPACIO
-                # Iniciar / Pausar
-
+                # ESPACIO = pausa / continuar
                 if evento.key == pygame.K_SPACE:
 
                     self.en_curso = (
@@ -524,12 +670,57 @@ class Interfaz:
                     )
 
 
-                # ESC
-                # Cerrar programa
+                # R = reiniciar
+                elif evento.key == pygame.K_r:
 
+                    self.reiniciar_simulacion()
+
+
+                # ESC = salir
                 elif evento.key == pygame.K_ESCAPE:
 
                     self.ejecutando = False
+
+
+            # =====================================
+            # CLIC DEL MOUSE
+            # =====================================
+
+            elif evento.type == pygame.MOUSEBUTTONDOWN:
+
+                if evento.button == 1:
+
+                    posicion_mouse = evento.pos
+
+
+                    if (
+                        hasattr(
+                            self,
+                            "rect_btn_pausa"
+                        )
+                        and
+                        self.rect_btn_pausa.collidepoint(
+                            posicion_mouse
+                        )
+                    ):
+
+                        self.en_curso = (
+                            not self.en_curso
+                        )
+
+
+                    if (
+                        hasattr(
+                            self,
+                            "rect_btn_reiniciar"
+                        )
+                        and
+                        self.rect_btn_reiniciar.collidepoint(
+                            posicion_mouse
+                        )
+                    ):
+
+                        self.reiniciar_simulacion()
 
     def dibujar(self):
 
@@ -767,6 +958,81 @@ class Interfaz:
             (
                 vx,
                 vy
+            )
+        )
+
+    def dibujar_boton(
+        self,
+        rect,
+        texto,
+        color_base,
+        color_hover
+    ):
+
+        mouse = pygame.mouse.get_pos()
+
+        esta_sobre = rect.collidepoint(
+            mouse
+        )
+
+        if esta_sobre:
+
+            color = color_hover
+
+        else:
+
+            color = color_base
+
+
+        pygame.draw.rect(
+            self.pantalla,
+            color,
+            rect,
+            border_radius=6
+        )
+
+        pygame.draw.rect(
+            self.pantalla,
+            self.C_ORO_VIEJO,
+            rect,
+            2,
+            border_radius=6
+        )
+
+
+        texto_render = self.fuente_UI.render(
+            texto,
+            True,
+            (255, 255, 255)
+        )
+
+        x_texto = (
+            rect.x
+            +
+            (
+                rect.width
+                -
+                texto_render.get_width()
+            )
+            // 2
+        )
+
+        y_texto = (
+            rect.y
+            +
+            (
+                rect.height
+                -
+                texto_render.get_height()
+            )
+            // 2
+        )
+
+        self.pantalla.blit(
+            texto_render,
+            (
+                x_texto,
+                y_texto
             )
         )
 
@@ -1318,25 +1584,90 @@ class Interfaz:
             )
         )
 
+            # =====================================
+            # BOTONES
+            # =====================================
 
-        control = self.fuente_pequena.render(
-            (
-                "ESPACIO: Pausar"
-                if self.en_curso
-                else
-                "ESPACIO: Iniciar"
-            ),
-            True,
-            (180, 240, 180)
-        )
+            ancho_boton = (
+                ancho_der - 55
+            ) // 2
 
-        self.pantalla.blit(
-            control,
-            (
+
+            self.rect_btn_pausa = pygame.Rect(
                 x_der + 20,
-                142
+                137,
+                ancho_boton,
+                25
             )
-        )
+
+            self.rect_btn_reiniciar = pygame.Rect(
+                x_der
+                +
+                35
+                +
+                ancho_boton,
+                137,
+                ancho_boton,
+                25
+            )
+
+
+            if self.en_curso:
+
+                texto_pausa = "PAUSAR"
+
+                color_pausa = (
+                    150,
+                    45,
+                    45
+                )
+
+                color_pausa_hover = (
+                    220,
+                    70,
+                    70
+                )
+
+            else:
+
+                texto_pausa = "INICIAR"
+
+                color_pausa = (
+                    40,
+                    130,
+                    65
+                )
+
+                color_pausa_hover = (
+                    60,
+                    200,
+                    90
+                )
+
+
+            self.dibujar_boton(
+                self.rect_btn_pausa,
+                texto_pausa,
+                color_pausa,
+                color_pausa_hover
+            )
+
+
+            self.dibujar_boton(
+                self.rect_btn_reiniciar,
+                "REINICIAR",
+                (
+                    40,
+                    90,
+                    160
+                ),
+                (
+                    70,
+                    140,
+                    230
+                )
+            )
+        
 
     def dibujar_alcance(
         self,
