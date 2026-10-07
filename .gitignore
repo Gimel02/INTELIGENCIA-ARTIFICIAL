@@ -1,0 +1,6 @@
+# Archivos temporales que Python genera al ejecutar el programa
+__pycache__/
+*.pyc
+
+# Archivos del sistema de macOS
+.DS_Store

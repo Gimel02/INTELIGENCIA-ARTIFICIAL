@@ -2,7 +2,7 @@ import pygame
 import os
 
 
-class Puma:
+class Jaguar:
 
     def __init__(self, tamano_celda):
 
@@ -12,7 +12,7 @@ class Puma:
         # CARGAR SPRITES
         # =========================================
 
-        # Obtiene la carpeta donde está este archivo puma.py
+        # Obtiene la carpeta donde está este archivo jaguar.py
         carpeta_recursos = os.path.dirname(
             os.path.abspath(__file__)
         )
@@ -108,7 +108,7 @@ class Puma:
 
         self.direccion = "abajo"
 
-        # Guarda la posición anterior del puma
+        # Guarda la posición anterior del jaguar
         # para detectar hacia dónde se movió.
         self.posicion_anterior = None
 
@@ -120,7 +120,7 @@ class Puma:
     ):
 
         # Si es la primera vez que dibujamos
-        # al puma, todavía no sabemos hacia
+        # al jaguar, todavía no sabemos hacia
         # dónde se movió.
         if self.posicion_anterior is None:
 
@@ -238,7 +238,7 @@ class Puma:
         )
 
         # =========================================
-        # DIBUJAR PUMA
+        # DIBUJAR JAGUAR
         # =========================================
 
         pantalla.blit(

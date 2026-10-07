@@ -1,689 +1,668 @@
 import pygame
-
 import os
-
 import math
 
-
-
-# =========================================
-# FORZAR PANTALLA COMPLETA SIN BORDES 
-# =========================================
-
-# Esto asegura que la ventana se ancle en el 
-# pixel 0,0 de tu monitor.
-
-os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
-
-
-
 from Mundo.mundo import MundoSelva
-
 import Mundo.mundo as modulo_mundo
-
-
-
 print(
     "ARCHIVO MUNDO QUE PYTHON ESTÁ USANDO:"
 )
-
 
 print(
      modulo_mundo.__file__
 )
 
-
-
 from Agente_Cazador.agente import AgenteCazador
+from Agente_Cazador.sentidos import PLURAL_COLORES
+from Agente_Jaguar.agente import AgenteJaguar
 
+from Fisica.cinematica import CuerpoFisico
 
 
 from Recursos.arbol import Arbol
-
 from Recursos.bayas import Baya
-
 from Recursos.arena import ArenaMovediza
-
 from Recursos.campamento import Campamento
-
 from Recursos.cazador import Cazador
-
-from Recursos.puma import Puma
-
-
+from Recursos.jaguar import Jaguar
 
 class Interfaz:
 
     def __init__(self):
 
-
-        # =========================================
-        # INICIALIZACIÓN DE PYGAME
-        # =========================================
-
         pygame.init()
-        
-        
-        pygame.font.init()
-
 
 
         # =========================================
-        # DETECCIÓN DE RESOLUCIÓN NATIVA
-        # =========================================
-        
-        info_pantalla = pygame.display.Info()
-        
-        
-        self.ancho = (
-            info_pantalla.current_w
-        )
-        
-        
-        self.alto = (
-            info_pantalla.current_h
-        )
-
-
-
-        # =========================================
-        # CREACIÓN DE LA VENTANA BORDERLESS
-        # =========================================
-
-        self.pantalla = pygame.display.set_mode(
-            
-            (
-                self.ancho, 
-                self.alto
-            ), 
-            
-            pygame.NOFRAME
-            
-        )
-
-
-        pygame.display.set_caption(
-            "Expedición Selva - Animada y Amigable"
-        )
-
-
-
-        # =========================================
-        # DIMENSIONES DEL PANEL SUPERIOR
-        # =========================================
-        
-        self.alto_panel = 190
-
-
-
-        # =========================================
-        # MUNDO Y CÁLCULO MATEMÁTICO DE CELDAS
+        # MUNDO
         # =========================================
 
         self.mundo = MundoSelva()
 
-        
-        # Espacio exacto para el mapa con márgenes
-        
+
+        # =========================================
+        # AGENTE INTELIGENTE
+        # =========================================
+
+        self.agente = AgenteCazador(
+            self.mundo
+        )
+
+
+        # =========================================
+        # JAGUAR (huye cuando detecta al cazador)
+        # =========================================
+
+        self.agente_jaguar = AgenteJaguar(
+            self.mundo
+        )
+
+
+        # =========================================
+        # CUERPOS FÍSICOS
+        #
+        # masa (kg), fuerza motriz (N),
+        # coeficiente de arrastre (N·s/m)
+        #
+        # El jaguar es más ligero: acelera más
+        # rápido, pero su fuerza es menor y su
+        # velocidad máxima también. Así el
+        # cazador lo puede alcanzar.
+        # =========================================
+
+        self.cuerpo_cazador = CuerpoFisico(
+
+            masa=75,
+
+            fuerza_motriz=400,
+
+            coeficiente_arrastre=120,
+
+            posicion=self.agente.posicion
+
+        )
+
+
+        self.cuerpo_jaguar = CuerpoFisico(
+
+            masa=55,
+
+            fuerza_motriz=330,
+
+            coeficiente_arrastre=120,
+
+            posicion=self.mundo.posicion_jaguar
+
+        )
+
+
+        # Segundos que espera quieto cuando
+        # decide no moverse
+
+        self.pausa_cazador = 0.3
+
+        self.pausa_jaguar = 0.4
+
+
+       # =========================================
+        # PANEL SUPERIOR
+        # =========================================
+
+        self.alto_panel = 190
+
+
+        # =========================================
+        # RESOLUCIÓN NATIVA
+        # =========================================
+
+        info_pantalla = pygame.display.Info()
+
+        self.ancho = info_pantalla.current_w
+        self.alto = info_pantalla.current_h
+
+
+        # =========================================
+        # AJUSTAR TAMAÑO DEL MAPA
+        # =========================================
+
         margen_lateral = 120
-        
-        
         margen_inferior = 80
-        
-        
+
         espacio_disponible_x = (
-            
-            self.ancho 
-            - 
+            self.ancho
+            -
             margen_lateral
-            
         )
-        
-        
+
         espacio_disponible_y = (
-            
-            self.alto 
-            - 
-            self.alto_panel 
-            - 
+            self.alto
+            -
+            self.alto_panel
+            -
             margen_inferior
-            
         )
-        
-        
+
         tamano_posible_x = (
-            
-            espacio_disponible_x 
-            // 
+            espacio_disponible_x
+            //
             self.mundo.columnas
-            
         )
-        
-        
+
         tamano_posible_y = (
-            
-            espacio_disponible_y 
-            // 
+            espacio_disponible_y
+            //
             self.mundo.filas
-            
         )
-        
-        
-        # Celda cuadrada perfecta
-        
+
         self.mundo.tamano_celda = min(
-            
-            tamano_posible_x, 
-            
+            tamano_posible_x,
             tamano_posible_y
-            
         )
-        
-        
+
         self.mundo.ancho = (
-            
-            self.mundo.columnas 
-            * 
+            self.mundo.columnas
+            *
             self.mundo.tamano_celda
-            
         )
-        
-        
+
         self.mundo.alto = (
-            
-            self.mundo.filas 
-            * 
+            self.mundo.filas
+            *
             self.mundo.tamano_celda
-            
         )
 
 
+        # =========================================
+        # CENTRAR MAPA
+        # =========================================
 
-        # =========================================
-        # CENTRADO ABSOLUTO DEL TABLERO
-        # =========================================
-        
         self.offset_mapa_x = (
-            
-            (self.ancho - self.mundo.ancho) 
-            // 
+            (self.ancho - self.mundo.ancho)
+            //
             2
-            
         )
-        
-        
+
         self.offset_mapa_y = (
-            
             self.alto_panel
             +
             (
                 (
-                    self.alto 
-                    - 
-                    self.alto_panel 
-                    - 
+                    self.alto
+                    -
+                    self.alto_panel
+                    -
                     self.mundo.alto
-                ) 
-                // 
+                )
+                //
                 2
             )
-            
         )
 
 
-
         # =========================================
-        # INICIALIZACIÓN DEL AGENTE
+        # PANTALLA
         # =========================================
 
-        self.agente = AgenteCazador(
-            
-            self.mundo
-            
+        self.pantalla = pygame.display.set_mode(
+            (
+                self.ancho,
+                self.alto
+            ),
+            pygame.NOFRAME
         )
 
+        pygame.display.set_caption(
+            "Agente Cazador vs Jaguar"
+        )
+
+        # =========================================
+        # FONDO VISUAL DE MAIN
+        # =========================================
+
+        ruta_fondo = os.path.join(
+            "Recursos",
+            "images",
+            "fondo.jpg"
+        )
+
+        try:
+
+            imagen_raw = pygame.image.load(
+                ruta_fondo
+            ).convert()
+
+            self.fondo_juego = pygame.transform.smoothscale(
+                imagen_raw,
+                (
+                    self.ancho,
+                    self.alto
+                )
+            )
+
+            self.usa_fondo_img = True
+
+        except Exception:
+
+            print(
+                "No se encontró fondo.jpg. Usando color base."
+            )
+
+            self.usa_fondo_img = False
+
+
+        
 
 
         # =========================================
-        # INICIALIZACIÓN DE RECURSOS ESCALADOS
+        # RECURSOS GRÁFICOS
         # =========================================
 
         self.arbol = Arbol(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.baya = Baya(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.arena = ArenaMovediza(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.campamento = Campamento(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.cazador = Cazador(
             self.mundo.tamano_celda
         )
-        
-        
-        self.puma = Puma(
-            self.mundo.tamano_celda
+
+        self.jaguar = Jaguar(
+        self.mundo.tamano_celda
         )
-
-
-
-        # =========================================
-        # CARGA DE FONDOS CON ANTI-CRASH
-        # =========================================
-        
-        ruta_fondo = os.path.join(
-            
-            "Recursos", 
-            "images", 
-            "fondo.jpg"
-            
-        )
-        
-        
-        try:
-            
-            imagen_raw = pygame.image.load(
-                ruta_fondo
-            ).convert()
-            
-            
-            self.fondo_juego = pygame.transform.smoothscale(
-                
-                imagen_raw, 
-                
-                (
-                    self.ancho, 
-                    self.alto
-                )
-                
-            )
-            
-            
-            self.usa_fondo_img = True
-            
-            
-        except Exception as e:
-            
-            print(
-                "No se encontró el fondo. Usando color base."
-            )
-            
-            self.usa_fondo_img = False
-
 
 
         # =========================================
-        # PALETA DE COLORES LUXURY / EXPEDITION
+        # FUENTES
         # =========================================
 
-        # Maderas Finas
-        
-        self.C_MADERA_FONDO = (
-            28, 19, 14
-        )
-        
-        self.C_MADERA_BASE = (
-            42, 28, 22
-        )
-        
-        self.C_MADERA_LUZ = (
-            65, 45, 33
-        )
-        
-        self.C_MADERA_SOMBRA = (
-            15, 10, 8
-        )
-        
-        
-        # Metales y Ornamentos
-        
-        self.C_ORO_PURO = (
-            255, 215, 0
-        )
-        
-        self.C_ORO_VIEJO = (
-            184, 134, 11
-        )
-        
-        self.C_BRONCE = (
-            140, 95, 30
-        )
-        
-        
-        # Luces Neón para Indicadores
-        
-        self.C_NEON_ROJO = (
-            255, 60, 60
-        )
-        
-        self.C_NEON_VERDE = (
-            50, 255, 100
-        )
-        
-        self.C_NEON_AZUL = (
-            60, 180, 255
-        )
-        
-        self.C_NEON_AMARILLO = (
-            255, 220, 50
-        )
-        
-        self.C_NEON_MORADO = (
-            200, 80, 255
+        self.fuente = pygame.font.SysFont(
+            "Arial",
+            18,
+            bold=True
         )
 
-
-
-        # =========================================
-        # MOTOR TIPOGRÁFICO CON SOPORTE EMOJI
-        # =========================================
+        self.fuente_pequena = pygame.font.SysFont(
+            "Arial",
+            15
+        )
 
         self.fuente_titulo = pygame.font.SysFont(
-            
-            "trebuchetms,georgia", 
-            28, 
+            "Arial",
+            24,
             bold=True
-            
         )
-
-
-        self.fuente_subtitulo = pygame.font.SysFont(
-            
-            "trebuchetms,georgia", 
-            13, 
-            bold=True
-            
-        )
-
-
-        self.fuente_UI = pygame.font.SysFont(
-            
-            "segoe ui emoji, apple color emoji, trebuchetms, arial", 
-            14, 
-            bold=True
-            
-        )
-        
-        
-        self.fuente_numeros = pygame.font.SysFont(
-            
-            "impact,arialblack", 
-            18
-            
-        )
-        
-        
-        self.fuente_pequena = pygame.font.SysFont(
-            
-            "trebuchetms,arial", 
-            11, 
-            bold=True
-            
-        )
-
-
 
         # =========================================
-        # CONTROL DE SIMULACIÓN Y ANIMACIONES
+        # FUENTES DEL VISUAL DE MAIN
+        # =========================================
+
+        self.fuente_subtitulo = pygame.font.SysFont(
+            "trebuchetms,georgia",
+            13,
+            bold=True
+        )
+
+        self.fuente_UI = pygame.font.SysFont(
+            "trebuchetms,arial",
+            14,
+            bold=True
+        )
+
+        self.fuente_numeros = pygame.font.SysFont(
+            "impact,arialblack",
+            18
+        )
+
+        # =========================================
+        # COLORES DEL VISUAL DE MAIN
+        # =========================================
+
+        self.C_MADERA_FONDO = (28, 19, 14)
+        self.C_MADERA_BASE = (42, 28, 22)
+        self.C_MADERA_LUZ = (65, 45, 33)
+        self.C_MADERA_SOMBRA = (15, 10, 8)
+
+        self.C_ORO_PURO = (255, 215, 0)
+        self.C_ORO_VIEJO = (184, 134, 11)
+        self.C_BRONCE = (140, 95, 30)
+
+        self.C_NEON_ROJO = (255, 60, 60)
+        self.C_NEON_VERDE = (50, 255, 100)
+        self.C_NEON_AZUL = (60, 180, 255)
+        self.C_NEON_AMARILLO = (255, 220, 50)
+        self.C_NEON_MORADO = (200, 80, 255)
+
+        # =========================================
+        # SIMULACIÓN para que se empiece a mover 
         # =========================================
 
         self.ejecutando = True
 
-
         self.en_curso = True
 
 
-        self.intervalo_agente = 500
-
-
-        self.ultimo_movimiento = (
-            pygame.time.get_ticks()
-        )
-
+        # =========================================
+        # RELOJ
+        # =========================================
 
         self.reloj = pygame.time.Clock()
-        
-        
-        # Posición del ratón para botones interactivos
-        
-        self.mouse_x = 0
-        
-        self.mouse_y = 0
 
-
-
-    # =========================================
-    # FUNCIÓN DE REINICIO TOTAL
-    # =========================================
-    
     def reiniciar_simulacion(self):
-        
-        print(
-            "Iniciando secuencia de reinicio del mundo..."
-        )
-        
-        
+
+        # =========================================
+        # CREAR MUNDO NUEVO
+        # =========================================
+
         self.mundo = MundoSelva()
-        
-        
+
+
+        # =========================================
+        # RECALCULAR TAMAÑO DEL MAPA
+        # =========================================
+
         espacio_disponible_x = (
-            
-            self.ancho 
-            - 
+            self.ancho
+            -
             120
-            
         )
-        
-        
+
         espacio_disponible_y = (
-            
-            self.alto 
-            - 
-            self.alto_panel 
-            - 
+            self.alto
+            -
+            self.alto_panel
+            -
             80
-            
         )
-        
-        
+
         tamano_posible_x = (
-            
-            espacio_disponible_x 
-            // 
+            espacio_disponible_x
+            //
             self.mundo.columnas
-            
         )
-        
-        
+
         tamano_posible_y = (
-            
-            espacio_disponible_y 
-            // 
+            espacio_disponible_y
+            //
             self.mundo.filas
-            
         )
-        
-        
+
         self.mundo.tamano_celda = min(
-            
-            tamano_posible_x, 
-            
+            tamano_posible_x,
             tamano_posible_y
-            
         )
-        
-        
+
         self.mundo.ancho = (
-            
-            self.mundo.columnas 
-            * 
+            self.mundo.columnas
+            *
             self.mundo.tamano_celda
-            
         )
-        
-        
+
         self.mundo.alto = (
-            
-            self.mundo.filas 
-            * 
+            self.mundo.filas
+            *
             self.mundo.tamano_celda
-            
         )
-        
-        
+
+
+        # =========================================
+        # CENTRAR NUEVO MAPA
+        # =========================================
+
         self.offset_mapa_x = (
-            
-            (self.ancho - self.mundo.ancho) 
-            // 
-            2
-            
-        )
-        
-        
+            self.ancho
+            -
+            self.mundo.ancho
+        ) // 2
+
         self.offset_mapa_y = (
-            
-            self.alto_panel 
-            + 
+            self.alto_panel
+            +
             (
                 (
-                    self.alto 
-                    - 
-                    self.alto_panel 
-                    - 
+                    self.alto
+                    -
+                    self.alto_panel
+                    -
                     self.mundo.alto
-                ) 
-                // 
+                )
+                //
                 2
             )
-            
         )
-            
-            
+
+
+        # =========================================
+        # NUEVOS AGENTES
+        # =========================================
+
         self.agente = AgenteCazador(
-            
             self.mundo
-            
         )
-        
-        
+
+        self.agente_jaguar = AgenteJaguar(
+            self.mundo
+        )
+
+
+        # =========================================
+        # NUEVA FÍSICA
+        # =========================================
+
+        self.cuerpo_cazador = CuerpoFisico(
+            masa=75,
+            fuerza_motriz=400,
+            coeficiente_arrastre=120,
+            posicion=self.agente.posicion
+        )
+
+        self.cuerpo_jaguar = CuerpoFisico(
+            masa=55,
+            fuerza_motriz=330,
+            coeficiente_arrastre=120,
+            posicion=self.mundo.posicion_jaguar
+        )
+
+
+        # =========================================
+        # RECURSOS GRÁFICOS
+        # =========================================
+
         self.arbol = Arbol(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.baya = Baya(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.arena = ArenaMovediza(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.campamento = Campamento(
             self.mundo.tamano_celda
         )
-        
-        
+
         self.cazador = Cazador(
             self.mundo.tamano_celda
         )
-        
-        
-        self.puma = Puma(
+
+        self.jaguar = Jaguar(
             self.mundo.tamano_celda
         )
-        
-        
-        self.ultimo_movimiento = (
-            pygame.time.get_ticks()
-        )
-        
-        
+
+
+        # Al reiniciar queda pausado
         self.en_curso = False
 
-
-
-    # =========================================
-    # BUCLE DE JUEGO (GAME LOOP)
-    # =========================================
-
+    
     def ejecutar(self):
 
         while self.ejecutando:
 
+            # Eventos
             self.manejar_eventos()
 
 
-            tiempo_actual = (
-                pygame.time.get_ticks()
+            # =====================================
+            # TIEMPO DESDE EL CUADRO ANTERIOR
+            #
+            # La interfaz corre a 60 FPS.
+            # dt se limita para que una pausa
+            # larga no haga "saltar" a nadie.
+            # =====================================
+
+            dt = min(
+
+                self.reloj.tick(60) / 1000,
+
+                0.05
+
             )
 
 
             if self.en_curso:
 
-                if (
-                    
-                    tiempo_actual 
-                    - 
-                    self.ultimo_movimiento 
-                    >= 
-                    self.intervalo_agente
-                    
-                ):
+                self.actualizar(
+                    dt
+                )
 
-                    self.agente.tomar_decision(
-                        
-                        self.mundo.posicion_puma
-                        
-                    )
 
-                    self.ultimo_movimiento = (
-                        tiempo_actual
-                    )
-
+            # =====================================
+            # DIBUJAR
+            # =====================================
 
             self.dibujar()
-
 
             pygame.display.flip()
 
 
-            self.reloj.tick(60)
-
-
         pygame.quit()
 
+    def actualizar(
+        self,
+        dt
+    ):
+
+        grid = self.mundo.grid
 
 
-    # =========================================
-    # GESTOR DE EVENTOS (INPUTS)
-    # =========================================
+        # =====================================
+        # CAZADOR
+        # =====================================
+
+        cuerpo = self.cuerpo_cazador
+
+        cuerpo.actualizar(
+            dt,
+            grid[cuerpo.destino]
+        )
+
+
+        if cuerpo.en_reposo():
+
+            antes = self.agente.posicion
+
+
+            self.agente.tomar_decision(
+                self.mundo.posicion_jaguar
+            )
+
+
+            if self.agente.posicion != antes:
+
+                cuerpo.mover_a(
+                    self.agente.posicion
+                )
+
+            else:
+
+                cuerpo.detener(
+                    self.pausa_cazador
+                )
+
+
+        # =====================================
+        # JAGUAR
+        # =====================================
+
+        if self.mundo.jaguar_vivo:
+
+            cuerpo = self.cuerpo_jaguar
+
+            cuerpo.actualizar(
+                dt,
+                grid[cuerpo.destino]
+            )
+
+
+            if cuerpo.en_reposo():
+
+                destino = (
+                    self.agente_jaguar.tomar_decision(
+                        self.agente.posicion
+                    )
+                )
+
+
+                if destino is not None:
+
+                    cuerpo.mover_a(
+                        destino
+                    )
+
+                else:
+
+                    cuerpo.detener(
+                        self.pausa_jaguar
+                    )
+
+
+        # =====================================
+        # ¿LO ATRAPÓ?
+        # =====================================
+
+        if (
+            self.mundo.jaguar_vivo
+            and
+            self.agente.posicion
+            ==
+            self.mundo.posicion_jaguar
+        ):
+
+            self.agente.atrapar_jaguar()
 
     def manejar_eventos(self):
 
         for evento in pygame.event.get():
+
+            # =====================================
+            # CERRAR
+            # =====================================
 
             if evento.type == pygame.QUIT:
 
                 self.ejecutando = False
 
 
+            # =====================================
+            # TECLADO
+            # =====================================
+
             elif evento.type == pygame.KEYDOWN:
 
+                # ESPACIO = pausa / continuar
                 if evento.key == pygame.K_SPACE:
 
                     self.en_curso = (
@@ -691,635 +670,140 @@ class Interfaz:
                     )
 
 
-                elif evento.key == pygame.K_ESCAPE:
-
-                    self.ejecutando = False
-                    
-                    
+                # R = reiniciar
                 elif evento.key == pygame.K_r:
-                    
+
                     self.reiniciar_simulacion()
 
 
-            elif evento.type == pygame.MOUSEMOTION:
-                
-                # Guardamos la posición del mouse para animaciones
-                
-                self.mouse_x, self.mouse_y = evento.pos
+                # ESC = salir
+                elif evento.key == pygame.K_ESCAPE:
 
+                    self.ejecutando = False
+
+
+            # =====================================
+            # CLIC DEL MOUSE
+            # =====================================
 
             elif evento.type == pygame.MOUSEBUTTONDOWN:
-                
+
                 if evento.button == 1:
-                    
-                    # Calcular posición de botones interactivos
-                    
-                    ancho_bloque_der = 400
-                    
-                    
-                    margen_x_derecho = (
-                        
-                        self.ancho 
-                        - 
-                        ancho_bloque_der 
-                        - 
-                        20
-                        
-                    )
-                    
-                    
-                    ancho_btn = (
-                        
-                        (ancho_bloque_der - 60) 
-                        // 
-                        2
-                        
-                    )
-                    
-                    
-                    rect_btn_pausa = pygame.Rect(
-                        
-                        margen_x_derecho + 20, 
-                        85, 
-                        ancho_btn, 
-                        50
-                        
-                    )
-                    
-                    
-                    if rect_btn_pausa.collidepoint(evento.pos):
-                        
+
+                    posicion_mouse = evento.pos
+
+
+                    if (
+                        hasattr(
+                            self,
+                            "rect_btn_pausa"
+                        )
+                        and
+                        self.rect_btn_pausa.collidepoint(
+                            posicion_mouse
+                        )
+                    ):
+
                         self.en_curso = (
                             not self.en_curso
                         )
-                        
-                        
-                    rect_btn_reinicio = pygame.Rect(
-                        
-                        margen_x_derecho + 40 + ancho_btn, 
-                        85, 
-                        ancho_btn, 
-                        50
-                        
-                    )
-                    
-                    
-                    if rect_btn_reinicio.collidepoint(evento.pos):
-                        
+
+
+                    if (
+                        hasattr(
+                            self,
+                            "rect_btn_reiniciar"
+                        )
+                        and
+                        self.rect_btn_reiniciar.collidepoint(
+                            posicion_mouse
+                        )
+                    ):
+
                         self.reiniciar_simulacion()
-
-
-
-    # =========================================
-    # MOTOR DE DIBUJO (RENDERIZADO PRINCIPAL)
-    # =========================================
 
     def dibujar(self):
 
-        # Capa 1: Limpieza
-        
-        self.pantalla.fill(
-            
-            self.C_MADERA_SOMBRA
-            
-        )
+        # =====================================
+        # FONDO GENERAL
+        # =====================================
+
+        if self.usa_fondo_img:
+
+            self.pantalla.blit(
+                self.fondo_juego,
+                (0, 0)
+            )
+
+        else:
+
+            self.pantalla.fill(
+                self.C_MADERA_SOMBRA
+            )
 
 
-        # Capa 2: Tablero, Mapa y Marco Hueco
-        
+        # =====================================
+        # MUNDO
+        # =====================================
+
         self.dibujar_tablero()
 
 
-        # Capa 3: Interfaz Superior Amigable
-        
+        # =====================================
+        # PANEL
+        # =====================================
+
         self.dibujar_panel()
 
-
-
-    # =========================================
-    # ELEMENTOS GRÁFICOS COMPLEJOS Y ANIMADOS
-    # =========================================
-
     def dibujar_caja_biselada_solida(
-        
-        self, 
-        rect, 
+        self,
+        rect,
         color_base,
         color_luz,
         color_sombra,
         grosor_borde=2
-        
     ):
-        
-        """ 
-        Dibuja una caja sólida para los menús superiores.
-        No usar esta función para tapar el mapa.
-        """
 
-        for i in range(1, 6):
-            
-            pygame.draw.rect(
-                
-                self.pantalla, 
-                
-                (0, 0, 0, 80 - (i*15)), 
-                
-                rect.inflate(i, i).move(0, i), 
-                
-                border_radius=10
-                
-            )
-            
-        
         pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            color_base, 
-            
-            rect, 
-            
+            self.pantalla,
+            color_base,
+            rect,
             border_radius=8
-            
         )
-        
-        
+
         pygame.draw.line(
-            
-            self.pantalla, 
-            
-            color_luz, 
-            
-            (rect.left + 5, rect.top), 
-            
-            (rect.right - 5, rect.top), 
-            
+            self.pantalla,
+            color_luz,
+            (rect.left + 5, rect.top),
+            (rect.right - 5, rect.top),
             grosor_borde
-            
         )
-        
-        
+
         pygame.draw.line(
-            
-            self.pantalla, 
-            
-            color_luz, 
-            
-            (rect.left, rect.top + 5), 
-            
-            (rect.left, rect.bottom - 5), 
-            
+            self.pantalla,
+            color_luz,
+            (rect.left, rect.top + 5),
+            (rect.left, rect.bottom - 5),
             grosor_borde
-            
         )
-        
-        
+
         pygame.draw.line(
-            
-            self.pantalla, 
-            
-            color_sombra, 
-            
-            (rect.left + 5, rect.bottom), 
-            
-            (rect.right - 5, rect.bottom), 
-            
+            self.pantalla,
+            color_sombra,
+            (rect.left + 5, rect.bottom),
+            (rect.right - 5, rect.bottom),
             grosor_borde
-            
         )
-        
-        
+
         pygame.draw.line(
-            
-            self.pantalla, 
-            
-            color_sombra, 
-            
-            (rect.right, rect.top + 5), 
-            
-            (rect.right, rect.bottom - 5), 
-            
+            self.pantalla,
+            color_sombra,
+            (rect.right, rect.top + 5),
+            (rect.right, rect.bottom - 5),
             grosor_borde
-            
         )
-        
-        
-        lista_esquinas = [
-            
-            (rect.left + 8, rect.top + 8), 
-            
-            (rect.right - 8, rect.top + 8),
-            
-            (rect.left + 8, rect.bottom - 8), 
-            
-            (rect.right - 8, rect.bottom - 8)
-            
-        ]
-        
-        
-        for px, py in lista_esquinas:
-            
-            pygame.draw.circle(
-                
-                self.pantalla, 
-                
-                self.C_MADERA_SOMBRA, 
-                
-                (px, py), 
-                
-                5
-                
-            )
-            
-            pygame.draw.circle(
-                
-                self.pantalla, 
-                
-                self.C_BRONCE, 
-                
-                (px, py), 
-                
-                4
-                
-            )
-            
-            pygame.draw.circle(
-                
-                self.pantalla, 
-                
-                self.C_ORO_PURO, 
-                
-                (px - 1, py - 1), 
-                
-                1
-                
-            )
-
-
-
-    def dibujar_marco_hueco_mapa(
-        
-        self, 
-        rect, 
-        color_base,
-        color_luz,
-        color_sombra,
-        grosor_madera=6
-        
-    ):
-        
-        """ 
-        DIBUJA UN MARCO COMPLETAMENTE HUECO EN EL CENTRO
-        Soluciona el bug de la caja que tapaba todo el mapa.
-        """
-
-        # Sombra exterior
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            (10, 5, 5), 
-            
-            rect.inflate(8, 8).move(2, 4), 
-            
-            grosor_madera + 4, 
-            
-            border_radius=12
-            
-        )
-        
-        
-        # Base de madera (solo los bordes)
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            color_base, 
-            
-            rect.inflate(4, 4), 
-            
-            grosor_madera, 
-            
-            border_radius=8
-            
-        )
-        
-        
-        # Ribete interno de Oro
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            self.C_ORO_PURO, 
-            
-            rect.inflate(-2, -2), 
-            
-            2, 
-            
-            border_radius=4
-            
-        )
-
-
-
-    def dibujar_barra_animada(
-        
-        self, 
-        x, 
-        y, 
-        ancho, 
-        alto, 
-        ratio, 
-        color_fluido, 
-        texto_interior
-        
-    ):
-        
-        radio_medallon = (
-            (alto // 2) + 8
-        )
-        
-        
-        cx = (
-            x + radio_medallon
-        )
-        
-        
-        cy = (
-            y + alto // 2
-        )
-        
-        
-        ancho_tubo = (
-            ancho - radio_medallon
-        )
-        
-        
-        rect_tubo = pygame.Rect(
-            
-            cx, 
-            y, 
-            ancho_tubo, 
-            alto
-            
-        )
-        
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            (15, 10, 10), 
-            
-            rect_tubo, 
-            
-            border_radius = alto // 2
-            
-        )
-        
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            self.C_ORO_VIEJO, 
-            
-            rect_tubo, 
-            
-            2, 
-            
-            border_radius = alto // 2
-            
-        )
-
-
-        progreso = max(
-            0, min(1, ratio)
-        )
-        
-        
-        ancho_relleno = int(
-            progreso * (ancho_tubo - 6)
-        )
-        
-        
-        if ancho_relleno > 10:
-            
-            rect_relleno = pygame.Rect(
-                
-                cx + 3, 
-                y + 3, 
-                ancho_relleno, 
-                alto - 6
-                
-            )
-            
-            pygame.draw.rect(
-                
-                self.pantalla, 
-                
-                color_fluido, 
-                
-                rect_relleno, 
-                
-                border_radius = (alto - 6) // 2
-                
-            )
-            
-            
-            # Animación de brillo fluyendo
-            
-            tiempo = pygame.time.get_ticks()
-            
-            
-            brillo_alpha = int(
-                
-                90 
-                + 
-                40 
-                * 
-                math.sin(tiempo / 200.0)
-                
-            )
-            
-            
-            rect_brillo = pygame.Rect(
-                
-                cx + 5, 
-                y + 4, 
-                ancho_relleno - 4, 
-                (alto - 6) // 2
-                
-            )
-            
-            
-            superficie_brillo = pygame.Surface(
-                
-                (rect_brillo.width, rect_brillo.height), 
-                
-                pygame.SRCALPHA
-                
-            )
-            
-            
-            superficie_brillo.fill(
-                
-                (255, 255, 255, brillo_alpha)
-                
-            )
-            
-            
-            self.pantalla.blit(
-                
-                superficie_brillo, 
-                
-                rect_brillo
-                
-            )
-
-
-        pygame.draw.circle(
-            
-            self.pantalla, 
-            
-            self.C_MADERA_SOMBRA, 
-            
-            (cx, cy + 3), 
-            
-            radio_medallon
-            
-        )
-        
-        
-        pygame.draw.circle(
-            
-            self.pantalla, 
-            
-            self.C_ORO_PURO, 
-            
-            (cx, cy), 
-            
-            radio_medallon
-            
-        )
-        
-        
-        pygame.draw.circle(
-            
-            self.pantalla, 
-            
-            self.C_ORO_VIEJO, 
-            
-            (cx, cy), 
-            
-            radio_medallon - 2
-            
-        )
-        
-        
-        pygame.draw.circle(
-            
-            self.pantalla, 
-            
-            self.C_MADERA_FONDO, 
-            
-            (cx, cy), 
-            
-            radio_medallon - 5
-            
-        )
-        
-        
-        pygame.draw.circle(
-            
-            self.pantalla, 
-            
-            color_fluido, 
-            
-            (cx, cy), 
-            
-            radio_medallon - 8
-            
-        )
-        
-        
-        pygame.draw.circle(
-            
-            self.pantalla, 
-            
-            (255, 255, 255), 
-            
-            (cx - 2, cy - 2), 
-            
-            2
-            
-        )
-
-
-        texto_rend = self.fuente_numeros.render(
-            
-            texto_interior, 
-            
-            True, 
-            
-            (255, 255, 255)
-            
-        )
-        
-        
-        texto_sombra = self.fuente_numeros.render(
-            
-            texto_interior, 
-            
-            True, 
-            
-            (0, 0, 0)
-            
-        )
-        
-        
-        tx = (
-            cx 
-            + 
-            (ancho_tubo - texto_rend.get_width()) 
-            // 
-            2
-        )
-        
-        
-        ty = (
-            y 
-            + 
-            (alto - texto_rend.get_height()) 
-            // 
-            2
-        )
-        
-        
-        self.pantalla.blit(
-            
-            texto_sombra, 
-            
-            (tx + 2, ty + 2)
-            
-        )
-        
-        
-        self.pantalla.blit(
-            
-            texto_rend, 
-            
-            (tx, ty)
-            
-        )
-
-
 
     def dibujar_slot_sentido_animado(
-        
         self,
         x,
         y,
@@ -1328,1308 +812,1279 @@ class Interfaz:
         valor_texto,
         esta_activo,
         color_activo
-        
     ):
-        
+
         alto_slot = 32
-        
-        
+
         rect_slot = pygame.Rect(
-            
-            x, 
-            y, 
-            ancho, 
+            x,
+            y,
+            ancho,
             alto_slot
-            
-        )
-        
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            (20, 14, 10), 
-            
-            rect_slot, 
-            
-            border_radius=5
-            
-        )
-        
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            (45, 30, 20), 
-            
-            rect_slot, 
-            
-            1, 
-            
-            border_radius=5
-            
         )
 
-        
+        pygame.draw.rect(
+            self.pantalla,
+            (20, 14, 10),
+            rect_slot,
+            border_radius=5
+        )
+
+        pygame.draw.rect(
+            self.pantalla,
+            (45, 30, 20),
+            rect_slot,
+            1,
+            border_radius=5
+        )
+
         label = self.fuente_UI.render(
-            
-            nombre_sentido, 
-            
-            True, 
-            
+            nombre_sentido,
+            True,
             self.C_ORO_VIEJO
-            
-        )
-        
-        
-        self.pantalla.blit(
-            
-            label, 
-            
-            (x + 10, y + (alto_slot - 14) // 2)
-            
-        )
-        
-        
-        if esta_activo:
-            
-            color_capsula = color_activo
-            
-            color_texto = (255, 255, 255)
-            
-        else:
-            
-            color_capsula = (50, 60, 55)
-            
-            color_texto = (150, 160, 155)
-            
-            
-        ancho_capsula = (
-            ancho - 85
-        )
-            
-            
-        rect_capsula = pygame.Rect(
-            
-            x + 75, 
-            y + 4, 
-            ancho_capsula, 
-            alto_slot - 8
-            
-        )
-        
-        
-        # Animación de Glow palpitante
-        
-        if esta_activo:
-            
-            tiempo = pygame.time.get_ticks()
-            
-            
-            glow_alpha = int(
-                
-                40 
-                + 
-                30 
-                * 
-                math.sin(tiempo / 150.0)
-                
-            )
-            
-            
-            superficie_glow = pygame.Surface(
-                
-                (ancho_capsula + 6, alto_slot - 2), 
-                
-                pygame.SRCALPHA
-                
-            )
-            
-            
-            pygame.draw.rect(
-                
-                superficie_glow, 
-                
-                (*color_activo, glow_alpha), 
-                
-                superficie_glow.get_rect(), 
-                
-                border_radius=4
-                
-            )
-            
-            
-            self.pantalla.blit(
-                
-                superficie_glow, 
-                
-                (rect_capsula.x - 3, rect_capsula.y - 3)
-                
-            )
-        
-        
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            color_capsula, 
-            
-            rect_capsula, 
-            
-            border_radius=4
-            
-        )
-        
-        
-        valor_rend = self.fuente_UI.render(
-            
-            valor_texto, 
-            
-            True, 
-            
-            color_texto
-            
-        )
-        
-        
-        vx = (
-            rect_capsula.x 
-            + 
-            (rect_capsula.width - valor_rend.get_width()) 
-            // 
-            2
-        )
-        
-        
-        vy = (
-            rect_capsula.y 
-            + 
-            (rect_capsula.height - valor_rend.get_height()) 
-            // 
-            2
-        )
-        
-        
-        self.pantalla.blit(
-            
-            valor_rend, 
-            
-            (vx, vy)
-            
         )
 
-
-
-    def dibujar_boton_interactivo(
-        
-        self,
-        rect_boton,
-        color_base,
-        color_luz,
-        color_sombra,
-        texto_boton
-        
-    ):
-        
-        esta_sobre = rect_boton.collidepoint(
-            
-            (self.mouse_x, self.mouse_y)
-            
-        )
-        
-        
-        if esta_sobre:
-            
-            color_usar = color_luz
-            
-            
-            pygame.draw.rect(
-                
-                self.pantalla, 
-                
-                (*color_luz, 100), 
-                
-                rect_boton.inflate(6, 6), 
-                
-                border_radius=12
-                
-            )
-            
-        else:
-            
-            color_usar = color_base
-            
-            
-        self.dibujar_caja_biselada_solida(
-            
-            rect_boton, 
-            
-            color_usar, 
-            
-            color_luz, 
-            
-            color_sombra, 
-            
-            grosor_borde=3
-            
-        )
-        
-        
-        t_rend = self.fuente_UI.render(
-            
-            texto_boton, 
-            
-            True, 
-            
-            (255, 255, 255)
-            
-        )
-        
-        
         self.pantalla.blit(
-            
-            t_rend, 
-            
+            label,
             (
-                rect_boton.x + (rect_boton.width - t_rend.get_width()) // 2, 
-                rect_boton.y + 16
+                x + 10,
+                y + 8
             )
-            
+        )
+
+        if esta_activo:
+
+            color_capsula = color_activo
+            color_texto = (255, 255, 255)
+
+        else:
+
+            color_capsula = (50, 60, 55)
+            color_texto = (150, 160, 155)
+
+        ancho_capsula = ancho - 90
+
+        rect_capsula = pygame.Rect(
+            x + 82,
+            y + 4,
+            ancho_capsula,
+            alto_slot - 8
+        )
+
+        # Glow cuando el sentido está activo
+        if esta_activo:
+
+            tiempo = pygame.time.get_ticks()
+
+            glow_alpha = int(
+                40
+                +
+                30 * math.sin(
+                    tiempo / 150.0
+                )
+            )
+
+            superficie_glow = pygame.Surface(
+                (
+                    ancho_capsula + 6,
+                    alto_slot - 2
+                ),
+                pygame.SRCALPHA
+            )
+
+            pygame.draw.rect(
+                superficie_glow,
+                (
+                    *color_activo,
+                    glow_alpha
+                ),
+                superficie_glow.get_rect(),
+                border_radius=4
+            )
+
+            self.pantalla.blit(
+                superficie_glow,
+                (
+                    rect_capsula.x - 3,
+                    rect_capsula.y - 3
+                )
+            )
+
+        pygame.draw.rect(
+            self.pantalla,
+            color_capsula,
+            rect_capsula,
+            border_radius=4
+        )
+
+        # Evitar textos demasiado largos
+        if len(valor_texto) > 18:
+            valor_texto = (
+                valor_texto[:15]
+                +
+                "..."
+            )
+
+        valor = self.fuente_UI.render(
+            valor_texto,
+            True,
+            color_texto
+        )
+
+        vx = (
+            rect_capsula.x
+            +
+            (
+                rect_capsula.width
+                -
+                valor.get_width()
+            )
+            // 2
+        )
+
+        vy = (
+            rect_capsula.y
+            +
+            (
+                rect_capsula.height
+                -
+                valor.get_height()
+            )
+            // 2
+        )
+
+        self.pantalla.blit(
+            valor,
+            (
+                vx,
+                vy
+            )
+        )
+
+    def dibujar_boton(
+        self,
+        rect,
+        texto,
+        color_base,
+        color_hover
+    ):
+
+        mouse = pygame.mouse.get_pos()
+
+        esta_sobre = rect.collidepoint(
+            mouse
+        )
+
+        if esta_sobre:
+
+            color = color_hover
+
+        else:
+
+            color = color_base
+
+
+        pygame.draw.rect(
+            self.pantalla,
+            color,
+            rect,
+            border_radius=6
+        )
+
+        pygame.draw.rect(
+            self.pantalla,
+            self.C_ORO_VIEJO,
+            rect,
+            2,
+            border_radius=6
         )
 
 
+        texto_render = self.fuente_UI.render(
+            texto,
+            True,
+            (255, 255, 255)
+        )
 
-    # =========================================
-    # RENDERIZADO DEL PANEL SUPERIOR COMPLETO
-    # =========================================
+        x_texto = (
+            rect.x
+            +
+            (
+                rect.width
+                -
+                texto_render.get_width()
+            )
+            // 2
+        )
+
+        y_texto = (
+            rect.y
+            +
+            (
+                rect.height
+                -
+                texto_render.get_height()
+            )
+            // 2
+        )
+
+        self.pantalla.blit(
+            texto_render,
+            (
+                x_texto,
+                y_texto
+            )
+        )
 
     def dibujar_panel(self):
 
-        rect_panel_base = pygame.Rect(
-            
-            0, 
-            0, 
-            self.ancho, 
-            self.alto_panel
-            
-        )
-        
-        
+        # =====================================
+        # FONDO GENERAL
+        # =====================================
+
         pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            self.C_MADERA_FONDO, 
-            
-            rect_panel_base
-            
-        )
-        
-        
-        for i in range(0, self.ancho, 150):
-            
-            pygame.draw.line(
-                
-                self.pantalla, 
-                
-                (20, 12, 8), 
-                
-                (i, 0), 
-                
-                (i, self.alto_panel), 
-                
-                3
-                
+            self.pantalla,
+            self.C_MADERA_FONDO,
+            (
+                0,
+                0,
+                self.ancho,
+                self.alto_panel
             )
-            
-            
-        pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            self.C_ORO_PURO, 
-            
-            (0, self.alto_panel - 6, self.ancho, 6)
-            
         )
-        
-        
+
+        for x in range(
+            0,
+            self.ancho,
+            150
+        ):
+
+            pygame.draw.line(
+                self.pantalla,
+                (20, 12, 8),
+                (x, 0),
+                (x, self.alto_panel),
+                3
+            )
+
+
         pygame.draw.rect(
-            
-            self.pantalla, 
-            
-            self.C_MADERA_SOMBRA, 
-            
-            (0, self.alto_panel - 8, self.ancho, 2)
-            
+            self.pantalla,
+            self.C_ORO_PURO,
+            (
+                0,
+                self.alto_panel - 6,
+                self.ancho,
+                6
+            )
         )
 
 
         # =====================================
-        # CÁLCULO DE MÁRGENES PERFECTOS
+        # TAMAÑOS DE BLOQUES
         # =====================================
-        
-        espacio_entre_bloques = 25
-        
-        
-        ancho_bloque_izq = 330
-        
-        
-        ancho_bloque_der = 400
-        
-        
-        ancho_bloque_cen = (
-            
-            self.ancho 
-            - 
-            ancho_bloque_izq 
-            - 
-            ancho_bloque_der 
-            - 
-            (espacio_entre_bloques * 4)
-            
+
+        margen = 25
+        separacion = 25
+
+        ancho_izq = 330
+        ancho_der = 400
+
+        ancho_centro = (
+            self.ancho
+            -
+            ancho_izq
+            -
+            ancho_der
+            -
+            margen * 2
+            -
+            separacion * 2
         )
-        
-        
-        x_izq = espacio_entre_bloques
-        
-        
-        x_cen = (
-            
-            x_izq 
-            + 
-            ancho_bloque_izq 
-            + 
-            espacio_entre_bloques
-            
+
+        x_izq = margen
+
+        x_centro = (
+            x_izq
+            +
+            ancho_izq
+            +
+            separacion
         )
-        
-        
+
         x_der = (
-            
-            self.ancho 
-            - 
-            ancho_bloque_der 
-            - 
-            espacio_entre_bloques
-            
+            x_centro
+            +
+            ancho_centro
+            +
+            separacion
         )
 
 
         # =====================================
-        # BLOQUE 1: IDENTIFICACIÓN Y ESTADO
+        # BLOQUE IZQUIERDO
         # =====================================
-        
-        rect_bloque_izq = pygame.Rect(
-            
-            x_izq, 
-            20, 
-            ancho_bloque_izq, 
+
+        rect_izq = pygame.Rect(
+            x_izq,
+            20,
+            ancho_izq,
             145
-            
         )
-        
-        
+
         self.dibujar_caja_biselada_solida(
-            
-            rect_bloque_izq, 
-            
-            self.C_MADERA_BASE, 
-            
-            self.C_MADERA_LUZ, 
-            
+            rect_izq,
+            self.C_MADERA_BASE,
+            self.C_MADERA_LUZ,
             self.C_MADERA_SOMBRA
-            
         )
-        
-        
-        txt_ag = self.fuente_titulo.render(
-            
-            "AGENTE", 
-            
-            True, 
-            
+
+
+        titulo1 = self.fuente_titulo.render(
+            "AGENTE",
+            True,
             (255, 255, 255)
-            
         )
-        
-        
-        txt_cz = self.fuente_titulo.render(
-            
-            " CAZADOR", 
-            
-            True, 
-            
+
+        titulo2 = self.fuente_titulo.render(
+            " CAZADOR",
+            True,
             self.C_ORO_PURO
-            
         )
-        
-        
+
         self.pantalla.blit(
-            
-            txt_ag, 
-            
-            (x_izq + 25, 40)
-            
+            titulo1,
+            (
+                x_izq + 20,
+                35
+            )
         )
-        
-        
+
         self.pantalla.blit(
-            
-            txt_cz, 
-            
-            (x_izq + 25 + txt_ag.get_width(), 40)
-            
+            titulo2,
+            (
+                x_izq + 20 + titulo1.get_width(),
+                35
+            )
         )
-        
-        
-        tiempo = pygame.time.get_ticks()
-        
-        
-        color_online = (
-            
-            50, 
-            
-            int(150 + 100 * math.sin(tiempo / 300.0)), 
-            
-            100
-            
+
+
+        estado = str(
+            self.agente.estado
         )
-        
-        
-        sys_lbl = self.fuente_pequena.render(
-            
-            "SISTEMA AUTÓNOMO ONLINE", 
-            
-            True, 
-            
-            color_online
-            
-        )
-        
-        
-        self.pantalla.blit(
-            
-            sys_lbl, 
-            
-            (x_izq + 28, 75)
-            
-        )
-        
-        
-        estado_str = str(
-            
-            getattr(self.agente, 'estado', 'Iniciando')
-            
-        )
-        
-        
-        if len(estado_str) > 28:
-            
-            estado_str = estado_str[:25] + "..."
-            
-            
-        estado_rend = self.fuente_UI.render(
-            
-            f"ESTADO: {estado_str}", 
-            
-            True, 
-            
+
+        if len(estado) > 32:
+            estado = estado[:29] + "..."
+
+
+        texto_estado = self.fuente_UI.render(
+            f"Estado: {estado}",
+            True,
             self.C_ORO_VIEJO
-            
         )
-        
-        
+
         self.pantalla.blit(
-            
-            estado_rend, 
-            
-            (x_izq + 25, 115)
-            
+            texto_estado,
+            (
+                x_izq + 20,
+                75
+            )
+        )
+
+
+        if self.mundo.jaguar_vivo:
+
+            texto_jaguar = (
+                f"Jaguar: "
+                f"{self.agente_jaguar.estado}"
+            )
+
+        else:
+
+            texto_jaguar = (
+                "Jaguar: cazado"
+            )
+
+
+        jaguar = self.fuente_UI.render(
+            texto_jaguar,
+            True,
+            (240, 180, 120)
+        )
+
+        self.pantalla.blit(
+            jaguar,
+            (
+                x_izq + 20,
+                105
+            )
+        )
+
+
+        fisica = self.fuente_pequena.render(
+            (
+                f"Cazador {self.cuerpo_cazador.velocidad:.1f} m/s"
+                f"   Jaguar {self.cuerpo_jaguar.velocidad:.1f} m/s"
+            ),
+            True,
+            (210, 210, 220)
+        )
+
+        self.pantalla.blit(
+            fisica,
+            (
+                x_izq + 20,
+                135
+            )
         )
 
 
         # =====================================
-        # BLOQUE 2: MATRIZ DE LOS 5 SENTIDOS
+        # BLOQUE CENTRAL - SENTIDOS
         # =====================================
-        
-        rect_bloque_cen = pygame.Rect(
-            
-            x_cen, 
-            20, 
-            ancho_bloque_cen, 
+
+        rect_centro = pygame.Rect(
+            x_centro,
+            20,
+            ancho_centro,
             145
-            
         )
-        
-        
+
         self.dibujar_caja_biselada_solida(
-            
-            rect_bloque_cen, 
-            
-            self.C_MADERA_BASE, 
-            
-            self.C_MADERA_LUZ, 
-            
+            rect_centro,
+            self.C_MADERA_BASE,
+            self.C_MADERA_LUZ,
             self.C_MADERA_SOMBRA
-            
         )
-        
-        
-        tit_sens = self.fuente_subtitulo.render(
-            
-            "MATRIZ SENSORIAL", 
-            
-            True, 
-            
-            self.C_ORO_PURO
-            
+
+
+        titulo_sentidos = (
+            self.fuente_subtitulo.render(
+                "MATRIZ SENSORIAL",
+                True,
+                self.C_ORO_PURO
+            )
         )
-        
-        
+
         self.pantalla.blit(
-            
-            tit_sens, 
-            
-            (x_cen + 20, 30)
-            
+            titulo_sentidos,
+            (
+                x_centro + 20,
+                30
+            )
         )
-        
-        
-        padding_sens = 15
-        
-        
+
+
+        sentidos = self.agente.sentidos
+
+
+        vista = (
+            "Jaguar detectado"
+            if sentidos.ve_jaguar
+            else "Sin detección"
+        )
+
+
+        oido = (
+            str(sentidos.direccion_sonido)
+            if sentidos.escucha_jaguar
+            else "Silencio"
+        )
+
+
+        if sentidos.huele_jaguar:
+
+            olfato = "Jaguar"
+
+        elif sentidos.huele_bayas:
+
+            olfato = (
+                "Bayas "
+                +
+                PLURAL_COLORES[
+                    sentidos.color_olor_bayas
+                ]
+            )
+
+        else:
+
+            olfato = "Sin detección"
+
+
+        tacto = str(
+            sentidos.sensacion_tacto
+        )
+
+        gusto = str(
+            sentidos.sensacion_gusto
+        )
+
+                # =====================================
+        # SLOTS VISUALES DE LOS 5 SENTIDOS
+        # =====================================
+
+        padding = 15
+
         ancho_slot = (
-            
-            (ancho_bloque_cen - (padding_sens * 3)) 
-            // 
-            2
-            
+            ancho_centro
+            -
+            padding * 3
+        ) // 2
+
+        x_col1 = (
+            x_centro
+            +
+            padding
         )
-        
-        
-        x_col1 = x_cen + padding_sens
-        
-        
-        x_col2 = x_col1 + ancho_slot + padding_sens
-        
-        
-        # --- 1. VISIÓN (👁️) ---
-        
-        si_ve = getattr(
-            self.agente.sentidos, 've_puma', False
+
+        x_col2 = (
+            x_col1
+            +
+            ancho_slot
+            +
+            padding
         )
-        
-        
-        txt_ve = "ALERTA: PUMA" if si_ve else "Despejado"
-        
-        
+
+
+        # =====================================
+        # VISIÓN
+        # =====================================
+
         self.dibujar_slot_sentido_animado(
-            
-            x_col1, 
-            55, 
-            ancho_slot, 
-            "👁️ Visión", 
-            txt_ve, 
-            si_ve, 
+            x_col1,
+            55,
+            ancho_slot,
+            "Visión",
+            vista,
+            sentidos.ve_jaguar,
             self.C_NEON_ROJO
-            
         )
-        
-        
-        # --- 2. OÍDO (👂) ---
-        
-        si_escucha = getattr(
-            self.agente.sentidos, 'escucha_puma', False
-        )
-        
-        
-        dir_son = str(
-            getattr(self.agente.sentidos, 'direccion_sonido', 'NULA')
-        ).upper()
-        
-        
-        txt_oido = dir_son if si_escucha else "Silencio"
-        
-        
+
+
+        # =====================================
+        # OÍDO
+        # =====================================
+
         self.dibujar_slot_sentido_animado(
-            
-            x_col1, 
-            95, 
-            ancho_slot, 
-            "👂 Oído", 
-            txt_oido, 
-            si_escucha, 
+            x_col1,
+            95,
+            ancho_slot,
+            "Oído",
+            oido,
+            sentidos.escucha_jaguar,
             self.C_NEON_AMARILLO
-            
         )
-        
-        
-        # --- 3. OLFATO (👃) ---
-        
-        si_huele = getattr(
-            self.agente.sentidos, 'percibe_olor', False
+
+
+        # =====================================
+        # OLFATO
+        # =====================================
+
+        olfato_activo = (
+            sentidos.huele_jaguar
+            or
+            sentidos.huele_bayas
         )
-        
-        
-        txt_huele = "Fuerte" if si_huele else "Normal"
-        
-        
+
         self.dibujar_slot_sentido_animado(
-            
-            x_col2, 
-            55, 
-            ancho_slot, 
-            "👃 Olfato", 
-            txt_huele, 
-            si_huele, 
+            x_col2,
+            55,
+            ancho_slot,
+            "Olfato",
+            olfato,
+            olfato_activo,
             self.C_NEON_MORADO
-            
         )
-        
-        
-        # --- 4. TACTO (🖐️) ---
-        
-        si_siente = getattr(
-            self.agente.sentidos, 'siente_vibracion', False
+
+
+        # =====================================
+        # TACTO
+        # =====================================
+
+        tacto_activo = bool(
+            sentidos.arena_cercana
         )
-        
-        
-        txt_siente = "Vibración" if si_siente else "Estable"
-        
-        
+
         self.dibujar_slot_sentido_animado(
-            
-            x_col2, 
-            95, 
-            ancho_slot, 
-            "🖐️ Tacto", 
-            txt_siente, 
-            si_siente, 
+            x_col2,
+            95,
+            ancho_slot,
+            "Tacto",
+            tacto,
+            tacto_activo,
             self.C_NEON_AZUL
-            
         )
-        
-        
-        # --- 5. GUSTO (👅) ---
-        
-        si_sabor = getattr(
-            self.agente.sentidos, 'saborea_baya', False
+
+
+        # =====================================
+        # GUSTO
+        # =====================================
+
+        gusto_activo = (
+            gusto != "Sin alimento"
         )
-        
-        
-        txt_sabor = "Ácido" if si_sabor else "Neutro"
-        
-        
-        x_col3 = (
-            
-            x_cen 
-            + 
-            (ancho_bloque_cen - ancho_slot) 
-            // 
-            2
-            
+
+        x_gusto = (
+            x_centro
+            +
+            (
+                ancho_centro
+                -
+                ancho_slot
+            )
+            // 2
         )
-        
-        
+
         self.dibujar_slot_sentido_animado(
-            
-            x_col3, 
-            132, 
-            ancho_slot, 
-            "👅 Gusto", 
-            txt_sabor, 
-            si_sabor, 
+            x_gusto,
+            132,
+            ancho_slot,
+            "Gusto",
+            gusto,
+            gusto_activo,
             self.C_NEON_VERDE
-            
         )
 
+            
 
         # =====================================
-        # BLOQUE 3: BARRAS Y CONTROLES
+        # BLOQUE DERECHO
         # =====================================
-        
-        rect_bloque_der = pygame.Rect(
-            
-            x_der, 
-            20, 
-            ancho_bloque_der, 
+
+        rect_der = pygame.Rect(
+            x_der,
+            20,
+            ancho_der,
             145
-            
         )
-        
-        
+
         self.dibujar_caja_biselada_solida(
-            
-            rect_bloque_der, 
-            
-            self.C_MADERA_BASE, 
-            
-            self.C_MADERA_LUZ, 
-            
+            rect_der,
+            self.C_MADERA_BASE,
+            self.C_MADERA_LUZ,
             self.C_MADERA_SOMBRA
-            
         )
-        
-        
-        # ----------- BARRA ENERGÍA -----------
-        
+
+
         energia = self.agente.energia
-        
-        
+
+
+        titulo_energia = (
+            self.fuente_UI.render(
+                f"ENERGÍA: {int(energia)}%",
+                True,
+                self.C_ORO_PURO
+            )
+        )
+
+        self.pantalla.blit(
+            titulo_energia,
+            (
+                x_der + 20,
+                35
+            )
+        )
+
+
+        # Fondo barra energía
+
+        barra_fondo = pygame.Rect(
+            x_der + 20,
+            65,
+            ancho_der - 40,
+            20
+        )
+
+        pygame.draw.rect(
+            self.pantalla,
+            (15, 10, 10),
+            barra_fondo,
+            border_radius=10
+        )
+
+
+        ancho_energia = int(
+            (
+                ancho_der - 46
+            )
+            *
+            max(
+                0,
+                min(
+                    energia / 100,
+                    1
+                )
+            )
+        )
+
+
         if energia > 30:
-            
-            color_en = self.C_ORO_PURO
-            
+
+            color_energia = (
+                self.C_NEON_VERDE
+            )
+
         else:
-            
-            color_en = self.C_NEON_ROJO
-            
-            
-        self.dibujar_barra_animada(
-            
-            x_der + 20, 
-            35, 
-            ancho_bloque_der - 40, 
-            28, 
-            energia / 100.0, 
-            color_en, 
-            f"ENERGÍA: {int(energia)}%"
-            
+
+            color_energia = (
+                self.C_NEON_ROJO
+            )
+
+
+        barra_energia = pygame.Rect(
+            x_der + 23,
+            68,
+            ancho_energia,
+            14
         )
-        
-        
-        # ----------- BOTONES INTERACTIVOS -----------
-        
-        ancho_btn = (
-            
-            (ancho_bloque_der - 60) 
-            // 
-            2
-            
+
+        pygame.draw.rect(
+            self.pantalla,
+            color_energia,
+            barra_energia,
+            border_radius=7
         )
-        
-        
-        rect_btn_1 = pygame.Rect(
-            
-            x_der + 20, 
-            85, 
-            ancho_btn, 
-            50
-            
+
+
+        memoria = self.agente.memoria
+
+
+        info1 = self.fuente_pequena.render(
+            (
+                f"Memoria: "
+                f"{len(memoria.celdas_revisadas)} celdas"
+            ),
+            True,
+            (220, 220, 220)
         )
-        
-        
+
+        self.pantalla.blit(
+            info1,
+            (
+                x_der + 20,
+                100
+            )
+        )
+
+
+        info2 = self.fuente_pequena.render(
+            (
+                f"Pasos: {memoria.pasos} "
+                f"| Repetidos: {memoria.pasos_repetidos}"
+            ),
+            True,
+            (220, 220, 220)
+        )
+
+        self.pantalla.blit(
+            info2,
+            (
+                x_der + 20,
+                120
+            )
+        )
+
+            # =====================================
+        # BOTONES
+        # =====================================
+
+        ancho_boton = (
+            ancho_der - 55
+        ) // 2
+
+
+        self.rect_btn_pausa = pygame.Rect(
+            x_der + 20,
+            137,
+            ancho_boton,
+            25
+        )
+
+        self.rect_btn_reiniciar = pygame.Rect(
+            x_der
+            +
+            35
+            +
+            ancho_boton,
+            137,
+            ancho_boton,
+            25
+        )
+
+
         if self.en_curso:
-            
-            c_base1 = (200, 50, 50)
-            
-            c_luz1 = (255, 100, 100)
-            
-            c_sombra1 = (100, 20, 20)
-            
-            txt1 = "PAUSAR (ESP)"
-            
+
+            texto_pausa = "PAUSAR"
+
+            color_pausa = (
+                150,
+                45,
+                45
+            )
+
+            color_pausa_hover = (
+                220,
+                70,
+                70
+            )
+
         else:
-            
-            c_base1 = (50, 180, 80)
-            
-            c_luz1 = (100, 255, 120)
-            
-            c_sombra1 = (20, 80, 30)
-            
-            txt1 = "INICIAR (ESP)"
-            
-            
-        self.dibujar_boton_interactivo(
-            
-            rect_btn_1, 
-            
-            c_base1, 
-            
-            c_luz1, 
-            
-            c_sombra1, 
-            
-            txt1
-            
-        )
-        
-        
-        rect_btn_2 = pygame.Rect(
-            
-            x_der + 40 + ancho_btn, 
-            85, 
-            ancho_btn, 
-            50
-            
-        )
-        
-        
-        c_base2 = (40, 100, 200)
-        
-        c_luz2 = (100, 180, 255)
-        
-        c_sombra2 = (20, 40, 100)
-        
-        txt2 = "REINICIAR (R)"
-        
-        
-        self.dibujar_boton_interactivo(
-            
-            rect_btn_2, 
-            
-            c_base2, 
-            
-            c_luz2, 
-            
-            c_sombra2, 
-            
-            txt2
-            
+
+            texto_pausa = "INICIAR"
+
+            color_pausa = (
+                40,
+                130,
+                65
+            )
+
+            color_pausa_hover = (
+                60,
+                200,
+                90
+            )
+
+
+        self.dibujar_boton(
+            self.rect_btn_pausa,
+            texto_pausa,
+            color_pausa,
+            color_pausa_hover
         )
 
 
+        self.dibujar_boton(
+            self.rect_btn_reiniciar,
+            "REINICIAR",
+            (
+                40,
+                90,
+                160
+            ),
+            (
+                70,
+                140,
+                230
+            )
+        )
+        
 
-    # =========================================
-    # TABLERO DE JUEGO (MAPA Y ENTIDADES)
-    # =========================================
+    def dibujar_alcance(
+        self,
+        celdas,
+        color,
+        margen
+    ):
+
+        tamano = self.mundo.tamano_celda
+
+        for fila, columna in celdas:
+
+            rect = pygame.Rect(
+
+                self.offset_mapa_x
+                +
+                columna * tamano
+                +
+                margen,
+
+                self.offset_mapa_y
+                +
+                fila * tamano
+                +
+                margen,
+
+                tamano - 2 * margen,
+
+                tamano - 2 * margen
+
+            )
+
+            pygame.draw.rect(
+                self.pantalla,
+                color,
+                rect,
+                2
+            )
 
     def dibujar_tablero(self):
 
+
+        # =====================================
+        # ZONA DEL MUNDO CENTRADA
+        # =====================================
+
         zona_mundo = pygame.Rect(
-            
+
             self.offset_mapa_x,
-            
             self.offset_mapa_y,
-            
             self.mundo.ancho,
-            
             self.mundo.alto
-            
+
         )
 
 
         # =====================================
-        # FONDO COMPLETO DE PANTALLA
+        # FONDO DEL MAPA
         # =====================================
 
-        if self.usa_fondo_img:
-            
-            self.pantalla.blit(
-                
-                self.fondo_juego, 
-                
-                (0, 0)
-                
-            )
-            
-            
-            capa_oscura = pygame.Surface(
-                
-                (
-                    self.mundo.ancho, 
-                    self.mundo.alto
-                ), 
-                
-                pygame.SRCALPHA
-                
-            )
-            
-            
-            capa_oscura.fill(
-                
-                (10, 20, 15, 140)
-                
-            )
-            
-            
-            self.pantalla.blit(
-                
-                capa_oscura, 
-                
-                (self.offset_mapa_x, self.offset_mapa_y)
-                
-            )
-            
-        else:
-            
-            pygame.draw.rect(
-                
-                self.pantalla,
-                
-                (35, 75, 45),
-                
-                zona_mundo
-                
-            )
+        pygame.draw.rect(
 
+            self.pantalla,
 
-        # =====================================
-        # APLICAR CLIPPING
-        # =====================================
-        
-        self.pantalla.set_clip(
-            
+            (67, 160, 71),
+
             zona_mundo
-            
+
         )
 
 
         # =====================================
-        # CUADRÍCULA DE CRISTAL
+        # CLIPPING
         # =====================================
 
-        color_linea = (200, 255, 200, 40)
+        self.pantalla.set_clip(
+            zona_mundo
+        )
 
 
-        for col in range(
+        # =====================================
+        # CUADRÍCULA VERTICAL
+        # =====================================
+
+        for columna in range(
             self.mundo.columnas + 1
         ):
-            
-            px = (
-                
-                self.offset_mapa_x 
-                + 
-                (col * self.mundo.tamano_celda)
-                
+
+            x = (
+                self.offset_mapa_x
+                +
+                columna * self.mundo.tamano_celda
             )
-            
-            
+
             pygame.draw.line(
-                
-                self.pantalla, 
-                
-                color_linea, 
-                
-                (px, self.offset_mapa_y), 
-                
-                (px, self.offset_mapa_y + self.mundo.alto), 
-                
+
+                self.pantalla,
+
+                (45, 120, 55),
+
+                (
+                    x,
+                    self.offset_mapa_y
+                ),
+
+                (
+                    x,
+                    self.offset_mapa_y
+                    +
+                    self.mundo.alto
+                ),
+
                 1
-                
             )
 
 
-        for fil in range(
+        # =====================================
+        # CUADRÍCULA HORIZONTAL
+        # =====================================
+
+        for fila in range(
             self.mundo.filas + 1
         ):
-            
-            py = (
-                
-                self.offset_mapa_y 
-                + 
-                (fil * self.mundo.tamano_celda)
-                
+
+            y = (
+                self.offset_mapa_y
+                +
+                fila * self.mundo.tamano_celda
             )
-            
-            
+
             pygame.draw.line(
-                
-                self.pantalla, 
-                
-                color_linea, 
-                
-                (self.offset_mapa_x, py), 
-                
-                (self.offset_mapa_x + self.mundo.ancho, py), 
-                
-                1
-                
-            )
-            
-            
-        # =====================================
-        # RANGO DE OÍDO (SONAR AZUL)
-        # =====================================
 
-        celdas_oido = self.agente.sentidos.obtener_celdas_oido(
-            
-            self.agente.posicion
-            
-        )
-
-
-        sup_oido = pygame.Surface(
-            
-            (
-                self.mundo.tamano_celda, 
-                self.mundo.tamano_celda
-            ), 
-            
-            pygame.SRCALPHA
-            
-        )
-        
-        
-        sup_oido.fill(
-            
-            (100, 200, 255, 30)
-            
-        )
-        
-
-        for f, c in celdas_oido:
-            
-            px = (
-                self.offset_mapa_x 
-                + 
-                (c * self.mundo.tamano_celda)
-            )
-            
-            py = (
-                self.offset_mapa_y 
-                + 
-                (f * self.mundo.tamano_celda)
-            )
-
-            self.pantalla.blit(
-                
-                sup_oido, 
-                
-                (px, py)
-                
-            )
-
-            pygame.draw.rect(
-                
                 self.pantalla,
-                
-                (100, 200, 255, 100),
-                
-                (px, py, self.mundo.tamano_celda, self.mundo.tamano_celda),
-                
+
+                (45, 120, 55),
+
+                (
+                    self.offset_mapa_x,
+                    y
+                ),
+
+                (
+                    self.offset_mapa_x
+                    +
+                    self.mundo.ancho,
+                    y
+                ),
+
                 1
-                
             )
 
 
         # =====================================
-        # RANGO DE VISIÓN (LUZ AMARILLA)
+        # SENTIDOS
         # =====================================
 
-        celdas_visibles = self.agente.sentidos.obtener_celdas_visibles(
-            
-            self.agente.posicion
-            
-        )
-        
-        
-        sup_vis = pygame.Surface(
-            
-            (
-                self.mundo.tamano_celda, 
-                self.mundo.tamano_celda
-            ), 
-            
-            pygame.SRCALPHA
-            
-        )
-        
-        
-        sup_vis.fill(
-            
-            (255, 220, 50, 45)
-            
+        sentidos = self.agente.sentidos
+        posicion = self.agente.posicion
+
+        self.dibujar_alcance(
+
+            sentidos.obtener_celdas_visibles(
+                posicion
+            ),
+
+            (240, 220, 80),
+
+            0
         )
 
+        self.dibujar_alcance(
 
-        for f, c in celdas_visibles:
+            sentidos.obtener_celdas_oido(
+                posicion
+            ),
 
-            px = (
-                self.offset_mapa_x 
-                + 
-                (c * self.mundo.tamano_celda)
-            )
-            
-            py = (
-                self.offset_mapa_y 
-                + 
-                (f * self.mundo.tamano_celda)
-            )
-            
-            self.pantalla.blit(
-                
-                sup_vis, 
-                
-                (px, py)
-                
-            )
+            (190, 195, 200),
 
-            pygame.draw.rect(
-                
-                self.pantalla,
-                
-                (255, 200, 50, 150),
-                
-                (px, py, self.mundo.tamano_celda, self.mundo.tamano_celda),
-                
-                2
-                
-            )
+            5
+        )
+
+        self.dibujar_alcance(
+
+            sentidos.obtener_celdas_olfato(
+                posicion
+            ),
+
+            (110, 200, 245),
+
+            10
+        )
 
 
         # =====================================
-        # ENTIDADES DEL JUEGO
+        # SUPERFICIE DE ENTIDADES
         # =====================================
-        
+
         sup_entidades = pygame.Surface(
-            
+
             (
-                self.mundo.ancho, 
+                self.mundo.ancho,
                 self.mundo.alto
-            ), 
-            
+            ),
+
             pygame.SRCALPHA
-            
+
         )
 
 
-        for (f, c), tipo in self.mundo.grid.items():
+        # =====================================
+        # RECURSOS
+        # =====================================
+
+        for (
+            fila,
+            columna
+        ), tipo in self.mundo.grid.items():
 
             if tipo == 1:
-                
+
                 self.arbol.dibujar(
-                    
-                    sup_entidades, 
-                    f, 
-                    c, 
+                    sup_entidades,
+                    fila,
+                    columna,
                     0
-                    
                 )
 
             elif tipo == 4:
-                
+
                 self.arena.dibujar(
-                    
-                    sup_entidades, 
-                    f, 
-                    c, 
+                    sup_entidades,
+                    fila,
+                    columna,
                     0
-                    
                 )
 
             elif tipo == 5:
-                
+
                 self.baya.dibujar(
-                    
-                    sup_entidades, 
-                    f, 
-                    c, 
-                    True, 
+                    sup_entidades,
+                    fila,
+                    columna,
+                    True,
                     0
-                    
                 )
 
             elif tipo == 6:
-                
+
                 self.baya.dibujar(
-                    
-                    sup_entidades, 
-                    f, 
-                    c, 
-                    False, 
+                    sup_entidades,
+                    fila,
+                    columna,
+                    False,
                     0
-                    
                 )
 
 
-        # Campamento
-        
-        fc, cc = self.mundo.campamento
-        
-        
+        # =====================================
+        # CAMPAMENTO
+        # =====================================
+
+        fila, columna = self.mundo.campamento
+
         self.campamento.dibujar(
-            
-            sup_entidades, 
-            fc, 
-            cc, 
+
+            sup_entidades,
+
+            fila,
+            columna,
             0
-            
+
         )
 
 
-        # Puma
-        
-        if self.mundo.puma_vivo:
-            
-            fp, cp = self.mundo.posicion_puma
-            
-            self.puma.dibujar(
-                
-                sup_entidades, 
-                fp, 
-                cp, 
+        # =====================================
+        # JAGUAR
+        # =====================================
+
+        if self.mundo.jaguar_vivo:
+
+            fila_jaguar, columna_jaguar = (
+                self.cuerpo_jaguar.posicion_visual()
+            )
+
+            self.jaguar.dibujar(
+
+                sup_entidades,
+
+                fila_jaguar,
+                columna_jaguar,
                 0
-                
+
             )
 
 
-        # Cazador
-        
-        fa, ca = self.agente.posicion
-        
-        
+        # =====================================
+        # CAZADOR
+        # =====================================
+
+        fila, columna = (
+            self.cuerpo_cazador.posicion_visual()
+        )
+
         self.cazador.dibujar(
-            
-            sup_entidades, 
-            fa, 
-            ca, 
+
+            sup_entidades,
+
+            fila,
+            columna,
             0
-            
+
         )
 
 
-        # Pegar entidades
-        
+        # =====================================
+        # PEGAR ENTIDADES EN EL MAPA CENTRADO
+        # =====================================
+
         self.pantalla.blit(
-            
-            sup_entidades, 
-            
-            (self.offset_mapa_x, self.offset_mapa_y)
-            
+
+            sup_entidades,
+
+            (
+                self.offset_mapa_x,
+                self.offset_mapa_y
+            )
+
         )
 
 
-        # Retirar el clipping
-        
+        # =====================================
+        # QUITAR CLIPPING
+        # =====================================
+
         self.pantalla.set_clip(
-            
             None
-            
         )
-
-
         # =====================================
-        # MARCO MAJESTUOSO ALREDEDOR DEL MAPA
+        # MARCO ALREDEDOR DEL MAPA
         # =====================================
-        
-        # AQUÍ USAMOS LA FUNCIÓN DE MARCO HUECO
-        
+
         marco_rect = pygame.Rect(
-            
+
             self.offset_mapa_x - 10,
-            
+
             self.offset_mapa_y - 10,
-            
+
             self.mundo.ancho + 20,
-            
+
             self.mundo.alto + 20
-            
         )
-        
-        
+
         self.dibujar_marco_hueco_mapa(
-            
-            marco_rect, 
-            
-            self.C_MADERA_BASE, 
-            
-            self.C_MADERA_LUZ, 
-            
+
+            marco_rect,
+
+            self.C_MADERA_BASE,
+
+            self.C_MADERA_LUZ,
+
             self.C_MADERA_SOMBRA,
-            
+
             grosor_madera=6
-            
         )
+
+        # =========================================
+
+    def dibujar_marco_hueco_mapa(
+        self,
+        rect,
+        color_base,
+        color_luz,
+        color_sombra,
+        grosor_madera=6
+    ):
+
+        # Sombra exterior
+        pygame.draw.rect(
+
+            self.pantalla,
+
+            (10, 5, 5),
+
+            rect.inflate(8, 8).move(2, 4),
+
+            grosor_madera + 4,
+
+            border_radius=12
+        )
+
+
+        # Base de madera
+        pygame.draw.rect(
+
+            self.pantalla,
+
+            color_base,
+
+            rect.inflate(4, 4),
+
+            grosor_madera,
+
+            border_radius=8
+        )
+
+
+        # Ribete dorado interior
+        pygame.draw.rect(
+
+            self.pantalla,
+
+            self.C_ORO_PURO,
+
+            rect.inflate(-2, -2),
+
+            2,
+
+            border_radius=4
+        )
+

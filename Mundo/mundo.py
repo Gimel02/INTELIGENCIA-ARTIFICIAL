@@ -11,10 +11,8 @@ class MundoSelva:
 
         self.tamano_celda = 50
 
-        self.filas = 15
+        self.filas = 11
         self.columnas = 20
-
-        
 
         self.ancho = (
             self.columnas
@@ -51,11 +49,11 @@ class MundoSelva:
         self.inicio_cazador = None
         self.posicion_cazador = None
 
-        self.inicio_puma = None
-        self.posicion_puma = None
+        self.inicio_jaguar = None
+        self.posicion_jaguar = None
 
-        # Estado del puma
-        self.puma_vivo = True
+        # Estado del jaguar
+        self.jaguar_vivo = True
 
 
         # =========================================
@@ -135,12 +133,12 @@ class MundoSelva:
         )
 
     # =========================================
-        # PUMA
+        # JAGUAR
         # =========================================
 
-        self.puma_vivo = True
+        self.jaguar_vivo = True
 
-        self.inicio_puma = (
+        self.inicio_jaguar = (
             self.posicion_aleatoria_valida(
                 exclude=[
                     self.campamento
@@ -148,8 +146,8 @@ class MundoSelva:
             )
         )
 
-        self.posicion_puma = (
-            self.inicio_puma
+        self.posicion_jaguar = (
+            self.inicio_jaguar
         )
 
 
@@ -327,23 +325,39 @@ class MundoSelva:
 
 
     # =========================================
-    # MOVER PUMA
+    # MOVER JAGUAR
     # =========================================
 
-    
+    def mover_jaguar(
+        self,
+        nueva_posicion
+    ):
 
-    
-    # =========================================
-    # CAZAR PUMA
-    # =========================================
-
-    def cazar_puma(self):
-
-        if not self.puma_vivo:
+        if not self.es_transitable(
+            nueva_posicion
+        ):
 
             return False
 
-        self.puma_vivo = False
+
+        self.posicion_jaguar = (
+            nueva_posicion
+        )
+
+        return True
+
+
+    # =========================================
+    # CAZAR JAGUAR
+    # =========================================
+
+    def cazar_jaguar(self):
+
+        if not self.jaguar_vivo:
+
+            return False
+
+        self.jaguar_vivo = False
 
         return True
 
