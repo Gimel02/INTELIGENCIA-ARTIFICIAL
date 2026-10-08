@@ -46,8 +46,41 @@ def generar_cromosoma(longitud=8):
 
 
 # ==========================================
-# MOSTRAR CROMOSOMA CON SÍMBOLOS
+# GENERAR UNA POBLACIÓN
 # ==========================================
+
+def generar_poblacion(
+    cantidad=10,
+    longitud_cromosoma=8
+):
+
+    poblacion = []
+
+    for _ in range(cantidad):
+
+        cromosoma = generar_cromosoma(
+            longitud_cromosoma
+        )
+
+        poblacion.append(
+            cromosoma
+        )
+
+    return poblacion
+
+def calcular_aptitud(
+    distancia_objetivo,
+    numero_colisiones,
+    peso_colision=0.2
+):
+
+    aptitud = (
+        1 / (distancia_objetivo + 1)
+        -
+        (numero_colisiones * peso_colision)
+    )
+
+    return aptitud
 
 def cromosoma_a_simbolos(cromosoma):
 
@@ -70,24 +103,42 @@ def cromosoma_a_simbolos(cromosoma):
 
 if __name__ == "__main__":
 
-    cromosoma = generar_cromosoma(
-        longitud=8
+    poblacion = generar_poblacion(
+        cantidad=10,
+        longitud_cromosoma=8
     )
 
     print(
-        "Cromosoma:"
+        "POBLACIÓN INICIAL"
     )
 
     print(
-        cromosoma
+        "================="
     )
 
-    print(
-        "Movimientos:"
-    )
+    for numero, cromosoma in enumerate(
+        poblacion,
+        start=1
+    ):
 
-    print(
-        cromosoma_a_simbolos(
-            cromosoma
+        print(
+            f"Individuo {numero}:",
+            cromosoma_a_simbolos(
+                cromosoma
+            )
         )
+
+    print()
+    print("PRUEBA DE APTITUD")
+    print("==================")
+
+    aptitud_prueba = calcular_aptitud(
+        distancia_objetivo=3,
+        numero_colisiones=1,
+        peso_colision=0.2
+    )
+
+    print(
+        "Aptitud:",
+        aptitud_prueba
     )
