@@ -4,6 +4,11 @@ from Agente_Cazador.sentidos import Sentidos, PLURAL_COLORES
 from Algoritmos.a_Estrella import AEstrella
 from Algoritmos.persecucion import Persecucion
 
+from Algoritmos.genetico import (
+    elegir_accion_genetica,
+    DESPLAZAMIENTOS
+)
+
 
 class AgenteCazador:
 
@@ -1352,23 +1357,85 @@ class AgenteCazador:
             return
 
 
+                # ==========================================
+        # 10. DECISIÓN MEDIANTE ALGORITMO GENÉTICO
         # ==========================================
-        # 10. CALCULAR CAMINO CON A*
-        # ==========================================
 
-        camino = AEstrella.buscar(
-
-            self.posicion,
-
-            meta,
-
-            self.mundo,
-
-            self.memoria.bayas_malas,
-
-            self.memoria.visitas
-
+        accion_genetica = elegir_accion_genetica(
+            mundo=self.mundo,
+            posicion_inicial=self.posicion,
+            posicion_objetivo=meta
         )
+
+
+        siguiente_posicion_genetica = None
+
+
+        if accion_genetica is not None:
+
+            cambio_fila, cambio_columna = (
+                DESPLAZAMIENTOS[
+                    accion_genetica
+                ]
+            )
+
+
+            siguiente_posicion_genetica = (
+                self.posicion[0] + cambio_fila,
+                self.posicion[1] + cambio_columna
+            )
+
+
+        # ==========================================
+        # SI EL AG ENCONTRÓ UN MOVIMIENTO VÁLIDO
+        # ==========================================
+
+        if (
+            siguiente_posicion_genetica is not None
+            and
+            self.mundo.es_transitable(
+                siguiente_posicion_genetica
+            )
+        ):
+
+            print(
+                "[AG]",
+                "Posición:",
+                self.posicion,
+                "| Meta:",
+                meta,
+                "| Acción:",
+                accion_genetica,
+                "| Siguiente:",
+                siguiente_posicion_genetica
+            )
+
+            camino = [
+                siguiente_posicion_genetica
+            ]
+
+            self.estado += (
+                " | Decisión genética: "
+                f"{accion_genetica}"
+            )
+
+
+        # ==========================================
+        # RESPALDO CON A*
+        #
+        # Si el AG no produce una acción válida,
+        # utilizamos el sistema anterior.
+        # ==========================================
+
+        else:
+
+            camino = AEstrella.buscar(
+                self.posicion,
+                meta,
+                self.mundo,
+                self.memoria.bayas_malas,
+                self.memoria.visitas
+            )
 
 
         # ==========================================
