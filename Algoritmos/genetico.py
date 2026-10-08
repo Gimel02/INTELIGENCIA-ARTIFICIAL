@@ -226,6 +226,18 @@ def evaluar_poblacion(
     return resultados
 
 
+def seleccionar_mejores(
+    resultados,
+    cantidad_padres=2
+):
+
+    padres = resultados[
+        :cantidad_padres
+    ]
+
+    return padres
+
+
 def cromosoma_a_simbolos(cromosoma):
 
     simbolos = []
@@ -375,4 +387,37 @@ if __name__ == "__main__":
             f"   Distancia: {individuo['distancia']} | "
             f"Colisiones: {individuo['colisiones']} | "
             f"Aptitud: {individuo['aptitud']:.4f}"
+        )
+
+    print()
+    print("PADRES SELECCIONADOS")
+    print("====================")
+
+
+    padres = seleccionar_mejores(
+        resultados,
+        cantidad_padres=2
+    )
+
+
+    for numero_padre, padre in enumerate(
+        padres,
+        start=1
+    ):
+
+        print(
+            f"Padre {numero_padre}: "
+            f"Individuo {padre['numero']}"
+        )
+
+        print(
+            "   Cromosoma:",
+            cromosoma_a_simbolos(
+                padre["cromosoma"]
+            )
+        )
+
+        print(
+            f"   Aptitud: "
+            f"{padre['aptitud']:.4f}"
         )
