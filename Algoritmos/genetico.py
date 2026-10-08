@@ -182,6 +182,50 @@ def simular_cromosoma(
     }
 
 
+def evaluar_poblacion(
+    mundo,
+    poblacion,
+    posicion_inicial,
+    posicion_objetivo,
+    peso_colision=0.2
+):
+
+    resultados = []
+
+    for numero, cromosoma in enumerate(
+        poblacion,
+        start=1
+    ):
+
+        resultado = simular_cromosoma(
+            mundo=mundo,
+            posicion_inicial=posicion_inicial,
+            posicion_objetivo=posicion_objetivo,
+            cromosoma=cromosoma,
+            peso_colision=peso_colision
+        )
+
+        resultados.append(
+            {
+                "numero": numero,
+                "cromosoma": cromosoma,
+                "posicion_final": resultado["posicion_final"],
+                "distancia": resultado["distancia"],
+                "colisiones": resultado["colisiones"],
+                "aptitud": resultado["aptitud"]
+            }
+        )
+
+
+    # Ordenar de mejor a peor
+    resultados.sort(
+        key=lambda individuo: individuo["aptitud"],
+        reverse=True
+    )
+
+    return resultados
+
+
 def cromosoma_a_simbolos(cromosoma):
 
     simbolos = []
@@ -302,3 +346,33 @@ if __name__ == "__main__":
             4
         )
     )
+
+    print()
+    print("EVALUACIÓN DE LA POBLACIÓN")
+    print("===========================")
+
+
+    resultados = evaluar_poblacion(
+        mundo=mundo,
+        poblacion=poblacion,
+        posicion_inicial=mundo.posicion_cazador,
+        posicion_objetivo=mundo.posicion_jaguar
+    )
+
+
+    for posicion_ranking, individuo in enumerate(
+        resultados,
+        start=1
+    ):
+
+        print(
+            f"{posicion_ranking}. "
+            f"Individuo {individuo['numero']}: "
+            f"{cromosoma_a_simbolos(individuo['cromosoma'])}"
+        )
+
+        print(
+            f"   Distancia: {individuo['distancia']} | "
+            f"Colisiones: {individuo['colisiones']} | "
+            f"Aptitud: {individuo['aptitud']:.4f}"
+        )
