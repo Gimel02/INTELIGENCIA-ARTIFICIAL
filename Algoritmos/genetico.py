@@ -1,5 +1,5 @@
 import random
-
+from Mundo.mundo import MundoSelva
 
 # ==========================================
 # ALGORITMO GENÉTICO
@@ -21,6 +21,13 @@ SIMBOLOS = {
     "ABAJO": "v",
     "IZQUIERDA": "<",
     "DERECHA": ">"
+}
+
+DESPLAZAMIENTOS = {
+    "ARRIBA": (-1, 0),
+    "ABAJO": (1, 0),
+    "IZQUIERDA": (0, -1),
+    "DERECHA": (0, 1)
 }
 
 
@@ -82,6 +89,99 @@ def calcular_aptitud(
 
     return aptitud
 
+# ==========================================
+# SIMULAR UN CROMOSOMA
+# ==========================================
+
+def simular_cromosoma(
+    mundo,
+    posicion_inicial,
+    posicion_objetivo,
+    cromosoma,
+    peso_colision=0.2
+):
+
+    posicion_actual = posicion_inicial
+
+    colisiones = 0
+
+
+    for accion in cromosoma:
+
+        fila, columna = posicion_actual
+
+        cambio_fila, cambio_columna = (
+            DESPLAZAMIENTOS[accion]
+        )
+
+        nueva_posicion = (
+            fila + cambio_fila,
+            columna + cambio_columna
+        )
+
+
+        # Si la casilla es transitable,
+        # el agente puede avanzar.
+
+        if mundo.es_transitable(
+            nueva_posicion
+        ):
+
+            posicion_actual = (
+                nueva_posicion
+            )
+
+
+        # Si intenta atravesar un árbol
+        # o salir del mapa, cuenta colisión.
+
+        else:
+
+            colisiones += 1
+
+
+    # ======================================
+    # DISTANCIA MANHATTAN AL OBJETIVO
+    # ======================================
+
+    fila_actual, columna_actual = (
+        posicion_actual
+    )
+
+    fila_objetivo, columna_objetivo = (
+        posicion_objetivo
+    )
+
+    distancia = (
+        abs(
+            fila_actual
+            -
+            fila_objetivo
+        )
+        +
+        abs(
+            columna_actual
+            -
+            columna_objetivo
+        )
+    )
+
+
+    aptitud = calcular_aptitud(
+        distancia_objetivo=distancia,
+        numero_colisiones=colisiones,
+        peso_colision=peso_colision
+    )
+
+
+    return {
+        "posicion_final": posicion_actual,
+        "distancia": distancia,
+        "colisiones": colisiones,
+        "aptitud": aptitud
+    }
+
+
 def cromosoma_a_simbolos(cromosoma):
 
     simbolos = []
@@ -141,4 +241,64 @@ if __name__ == "__main__":
     print(
         "Aptitud:",
         aptitud_prueba
+    )
+
+
+    print()
+    print("SIMULACIÓN DE CROMOSOMA")
+    print("=======================")
+
+
+    mundo = MundoSelva()
+
+
+    cromosoma_prueba = poblacion[0]
+
+
+    resultado = simular_cromosoma(
+        mundo=mundo,
+        posicion_inicial=mundo.posicion_cazador,
+        posicion_objetivo=mundo.posicion_jaguar,
+        cromosoma=cromosoma_prueba
+    )
+
+
+    print(
+        "Cromosoma:",
+        cromosoma_a_simbolos(
+            cromosoma_prueba
+        )
+    )
+
+    print(
+        "Inicio:",
+        mundo.posicion_cazador
+    )
+
+    print(
+        "Jaguar:",
+        mundo.posicion_jaguar
+    )
+
+    print(
+        "Final:",
+        resultado["posicion_final"]
+    )
+
+    print(
+        "Distancia:",
+        resultado["distancia"]
+    )
+
+    print(
+        "Colisiones:",
+        resultado["colisiones"]
+    )
+
+    print(
+        "Aptitud:",
+        round(
+            resultado["aptitud"],
+            4
+        )
     )
