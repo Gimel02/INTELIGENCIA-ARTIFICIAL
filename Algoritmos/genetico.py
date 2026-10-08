@@ -413,7 +413,8 @@ def evolucionar(
     cantidad_elite=2,
     cantidad_padres=4,
     probabilidad_mutacion=0.10,
-    peso_colision=0.2
+    peso_colision=0.2,
+    mostrar_progreso=True
 ):
 
     # ======================================
@@ -462,12 +463,13 @@ def evolucionar(
             mejor_global = mejor
 
 
-        print(
-            f"Generación {generacion:02d} | "
-            f"Aptitud: {mejor['aptitud']:.4f} | "
-            f"Distancia: {mejor['distancia']} | "
-            f"Colisiones: {mejor['colisiones']}"
-        )
+        if mostrar_progreso:
+             print(
+                        f"Generación {generacion:02d} | "
+                        f"Aptitud: {mejor['aptitud']:.4f} | "
+                        f"Distancia: {mejor['distancia']} | "
+                        f"Colisiones: {mejor['colisiones']}"
+                    )
 
 
         # ==================================
@@ -481,9 +483,12 @@ def evolucionar(
         ):
 
             print()
-            print(
-                "OBJETIVO ALCANZADO"
-            )
+
+            if mostrar_progreso:
+                print()
+                print(
+                    "OBJETIVO ALCANZADO"
+                )
 
             return (
                 mejor,
@@ -533,7 +538,8 @@ def elegir_accion_genetica(
         max_generaciones=20,
         cantidad_elite=2,
         cantidad_padres=4,
-        probabilidad_mutacion=0.10
+        probabilidad_mutacion=0.10,
+        mostrar_progreso=False
     )
 
 
