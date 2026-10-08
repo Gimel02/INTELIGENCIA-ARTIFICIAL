@@ -78,13 +78,21 @@ def generar_poblacion(
 def calcular_aptitud(
     distancia_objetivo,
     numero_colisiones,
-    peso_colision=0.2
+    numero_arenas=0,
+    numero_repeticiones=0,
+    peso_colision=0.2,
+    peso_arena=0.05,
+    peso_repeticion=0.05
 ):
 
     aptitud = (
         1 / (distancia_objetivo + 1)
         -
         (numero_colisiones * peso_colision)
+        -
+        (numero_arenas * peso_arena)
+        -
+        (numero_repeticiones * peso_repeticion)
     )
 
     return aptitud
@@ -98,15 +106,54 @@ def simular_cromosoma(
     posicion_inicial,
     posicion_objetivo,
     cromosoma,
-    peso_colision=0.2
+    visitas_previas=None,
+    peso_colision=0.2,
+    peso_arena=0.05,
+    peso_repeticion=0.05
 ):
 
     posicion_actual = posicion_inicial
 
     colisiones = 0
+    arenas = 0
+    repeticiones = 0
+
+        # ======================================
+    # DISTANCIA ANTES DEL PRIMER MOVIMIENTO
+    # ======================================
+
+    distancia_inicial = (
+        abs(
+            posicion_inicial[0]
+            -
+            posicion_objetivo[0]
+        )
+        +
+        abs(
+            posicion_inicial[1]
+            -
+            posicion_objetivo[1]
+        )
+    )
 
 
-    for accion in cromosoma:
+    progreso_inmediato = 0
+
+
+    if visitas_previas is None:
+
+        visitas_previas = {}
+
+
+    # Casillas recorridas durante
+    # esta simulación.
+
+    visitas_simuladas = {
+        posicion_inicial
+    }
+
+
+    for indice, accion in enumerate(cromosoma):
 
         fila, columna = posicion_actual
 
@@ -120,14 +167,69 @@ def simular_cromosoma(
         )
 
 
-        # Si la casilla es transitable,
-        # el agente puede avanzar.
+        # ======================================
+        # MOVIMIENTO VÁLIDO
+        # ======================================
 
         if mundo.es_transitable(
             nueva_posicion
         ):
 
             posicion_actual = (
+                nueva_posicion
+            )
+
+                        # ==================================
+            # EVALUAR EL PRIMER MOVIMIENTO
+            # ==================================
+
+            if indice == 0:
+
+                distancia_primer_paso = (
+                    abs(
+                        posicion_actual[0]
+                        -
+                        posicion_objetivo[0]
+                    )
+                    +
+                    abs(
+                        posicion_actual[1]
+                        -
+                        posicion_objetivo[1]
+                    )
+                )
+
+
+                progreso_inmediato = (
+                    distancia_inicial
+                    -
+                    distancia_primer_paso
+                )
+
+
+            # ==================================
+            # ARENA MOVEDIZA
+            # ==================================
+
+            if mundo.grid[nueva_posicion] == 4:
+
+                arenas += 1
+
+
+            # ==================================
+            # CASILLA REPETIDA
+            # ==================================
+
+            if (
+                nueva_posicion in visitas_previas
+                or
+                nueva_posicion in visitas_simuladas
+            ):
+
+                repeticiones += 1
+
+
+            visitas_simuladas.add(
                 nueva_posicion
             )
 
@@ -141,8 +243,9 @@ def simular_cromosoma(
                 break
 
 
-        # Si intenta atravesar un árbol
-        # o salir del mapa, cuenta colisión.
+        # ======================================
+        # COLISIÓN
+        # ======================================
 
         else:
 
@@ -150,7 +253,7 @@ def simular_cromosoma(
 
 
     # ======================================
-    # DISTANCIA MANHATTAN AL OBJETIVO
+    # DISTANCIA MANHATTAN
     # ======================================
 
     fila_actual, columna_actual = (
@@ -176,30 +279,62 @@ def simular_cromosoma(
     )
 
 
+    # ======================================
+    # APTITUD
+    # ======================================
+
     aptitud = calcular_aptitud(
         distancia_objetivo=distancia,
         numero_colisiones=colisiones,
-        peso_colision=peso_colision
+        numero_arenas=arenas,
+        numero_repeticiones=repeticiones,
+        peso_colision=peso_colision,
+        peso_arena=peso_arena,
+        peso_repeticion=peso_repeticion
     )
 
+        # ======================================
+    # PREMIO A LA DECISIÓN INMEDIATA
+    # ======================================
+
+    aptitud += (
+        progreso_inmediato
+        *
+        0.20
+    )
+    
 
     return {
         "posicion_final": posicion_actual,
         "distancia": distancia,
         "colisiones": colisiones,
+        "arenas": arenas,
+        "repeticiones": repeticiones,
         "aptitud": aptitud
     }
 
+
+# ==========================================
+# EVALUAR TODA LA POBLACIÓN
+# ==========================================
 
 def evaluar_poblacion(
     mundo,
     poblacion,
     posicion_inicial,
     posicion_objetivo,
-    peso_colision=0.2
+    visitas_previas=None,
+    peso_colision=0.2,
+    peso_arena=0.05,
+    peso_repeticion=0.05
 ):
 
     resultados = []
+
+    if visitas_previas is None:
+
+        visitas_previas = {}
+
 
     for numero, cromosoma in enumerate(
         poblacion,
@@ -211,8 +346,12 @@ def evaluar_poblacion(
             posicion_inicial=posicion_inicial,
             posicion_objetivo=posicion_objetivo,
             cromosoma=cromosoma,
-            peso_colision=peso_colision
+            visitas_previas=visitas_previas,
+            peso_colision=peso_colision,
+            peso_arena=peso_arena,
+            peso_repeticion=peso_repeticion
         )
+
 
         resultados.append(
             {
@@ -221,16 +360,20 @@ def evaluar_poblacion(
                 "posicion_final": resultado["posicion_final"],
                 "distancia": resultado["distancia"],
                 "colisiones": resultado["colisiones"],
+                "arenas": resultado["arenas"],
+                "repeticiones": resultado["repeticiones"],
                 "aptitud": resultado["aptitud"]
             }
         )
 
 
     # Ordenar de mejor a peor
+
     resultados.sort(
         key=lambda individuo: individuo["aptitud"],
         reverse=True
     )
+
 
     return resultados
 
@@ -414,7 +557,10 @@ def evolucionar(
     cantidad_padres=4,
     probabilidad_mutacion=0.10,
     peso_colision=0.2,
-    mostrar_progreso=True
+    peso_arena=0.05,
+    peso_repeticion=0.05,
+    mostrar_progreso=True,
+    visitas_previas=None
 ):
 
     # ======================================
@@ -444,10 +590,20 @@ def evolucionar(
             poblacion=poblacion,
             posicion_inicial=posicion_inicial,
             posicion_objetivo=posicion_objetivo,
-            peso_colision=peso_colision
+            visitas_previas=visitas_previas,
+            peso_colision=peso_colision,
+            peso_arena=peso_arena,
+            peso_repeticion=peso_repeticion
         )
 
+        if not resultados:
 
+            print(
+                "ERROR: la población no produjo resultados"
+            )
+
+            return None, generacion
+        
         mejor = resultados[0]
 
 
@@ -526,7 +682,8 @@ def evolucionar(
 def elegir_accion_genetica(
     mundo,
     posicion_inicial,
-    posicion_objetivo
+    posicion_objetivo,
+    visitas_previas=None
 ):
 
     mejor_individuo, generaciones = evolucionar(
@@ -539,7 +696,8 @@ def elegir_accion_genetica(
         cantidad_elite=2,
         cantidad_padres=4,
         probabilidad_mutacion=0.10,
-        mostrar_progreso=False
+        mostrar_progreso=False,
+        visitas_previas=visitas_previas
     )
 
 

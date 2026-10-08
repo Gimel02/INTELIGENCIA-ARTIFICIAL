@@ -1357,85 +1357,136 @@ class AgenteCazador:
             return
 
 
+   
                 # ==========================================
-        # 10. DECISIÓN MEDIANTE ALGORITMO GENÉTICO
+        # 10. DECISIÓN DE MOVIMIENTO
         # ==========================================
 
-        accion_genetica = elegir_accion_genetica(
-            mundo=self.mundo,
-            posicion_inicial=self.posicion,
-            posicion_objetivo=meta
+        # Distancia Manhattan entre el cazador
+        # y la posición REAL del Jaguar
+
+        distancia_jaguar = (
+            abs(
+                self.posicion[0]
+                -
+                posicion_jaguar[0]
+            )
+            +
+            abs(
+                self.posicion[1]
+                -
+                posicion_jaguar[1]
+            )
         )
 
 
-        siguiente_posicion_genetica = None
-
-
-        if accion_genetica is not None:
-
-            cambio_fila, cambio_columna = (
-                DESPLAZAMIENTOS[
-                    accion_genetica
-                ]
-            )
-
-
-            siguiente_posicion_genetica = (
-                self.posicion[0] + cambio_fila,
-                self.posicion[1] + cambio_columna
-            )
-
-
         # ==========================================
-        # SI EL AG ENCONTRÓ UN MOVIMIENTO VÁLIDO
+        # JAGUAR AL ALCANCE INMEDIATO
         # ==========================================
 
         if (
-            siguiente_posicion_genetica is not None
+            self.mundo.jaguar_vivo
             and
-            self.mundo.es_transitable(
-                siguiente_posicion_genetica
-            )
+            distancia_jaguar == 1
         ):
 
             print(
-                "[AG]",
+                "[CAZA]",
                 "Posición:",
                 self.posicion,
-                "| Meta:",
-                meta,
-                "| Acción:",
-                accion_genetica,
-                "| Siguiente:",
-                siguiente_posicion_genetica
+                "| Jaguar:",
+                posicion_jaguar,
+                "| Atacando"
             )
 
             camino = [
-                siguiente_posicion_genetica
+                posicion_jaguar
             ]
 
-            self.estado += (
-                " | Decisión genética: "
-                f"{accion_genetica}"
+            self.estado = (
+                "¡Jaguar al alcance! Atacando"
             )
 
 
         # ==========================================
-        # RESPALDO CON A*
-        #
-        # Si el AG no produce una acción válida,
-        # utilizamos el sistema anterior.
+        # ALGORITMO GENÉTICO
         # ==========================================
 
         else:
 
-            camino = AEstrella.buscar(
-                self.posicion,
-                meta,
-                self.mundo,
-                self.memoria.bayas_malas,
-                self.memoria.visitas
+            accion_genetica = elegir_accion_genetica(
+                mundo=self.mundo,
+                posicion_inicial=self.posicion,
+                posicion_objetivo=meta,
+                visitas_previas=self.memoria.visitas
             )
+
+
+            siguiente_posicion_genetica = None
+
+
+            if accion_genetica is not None:
+
+                cambio_fila, cambio_columna = (
+                    DESPLAZAMIENTOS[
+                        accion_genetica
+                    ]
+                )
+
+
+                siguiente_posicion_genetica = (
+                    self.posicion[0] + cambio_fila,
+                    self.posicion[1] + cambio_columna
+                )
+
+
+            # ======================================
+            # MOVIMIENTO GENÉTICO VÁLIDO
+            # ======================================
+
+            if (
+                siguiente_posicion_genetica is not None
+                and
+                self.mundo.es_transitable(
+                    siguiente_posicion_genetica
+                )
+            ):
+
+                print(
+                    "[AG]",
+                    "Posición:",
+                    self.posicion,
+                    "| Meta:",
+                    meta,
+                    "| Acción:",
+                    accion_genetica,
+                    "| Siguiente:",
+                    siguiente_posicion_genetica
+                )
+
+                camino = [
+                    siguiente_posicion_genetica
+                ]
+
+                self.estado += (
+                    " | Decisión genética: "
+                    f"{accion_genetica}"
+                )
+
+
+            # ======================================
+            # RESPALDO CON A*
+            # ======================================
+
+            else:
+
+                camino = AEstrella.buscar(
+                    self.posicion,
+                    meta,
+                    self.mundo,
+                    self.memoria.bayas_malas,
+                    self.memoria.visitas
+                )
 
 
         # ==========================================
@@ -1448,13 +1499,13 @@ class AgenteCazador:
                 "No existe ruta disponible"
             )
 
-
             self.memoria.objetivo_busqueda = (
                 None
             )
 
             return
 
+        
 
         # ==========================================
         # 12. GUARDAR RUTA
