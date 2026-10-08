@@ -270,6 +270,45 @@ def cruzar(
     return hijo1, hijo2
 
 
+# ==========================================
+# MUTACIÓN
+# ==========================================
+
+def mutar(
+    cromosoma,
+    probabilidad_mutacion=0.10
+):
+
+    cromosoma_mutado = (
+        cromosoma.copy()
+    )
+
+    for indice in range(
+        len(cromosoma_mutado)
+    ):
+
+        if random.random() < probabilidad_mutacion:
+
+            accion_anterior = (
+                cromosoma_mutado[indice]
+            )
+
+            acciones_posibles = [
+                accion
+                for accion in ACCIONES
+                if accion != accion_anterior
+            ]
+
+            nueva_accion = random.choice(
+                acciones_posibles
+            )
+
+            cromosoma_mutado[indice] = (
+                nueva_accion
+            )
+
+    return cromosoma_mutado
+
 
 def cromosoma_a_simbolos(cromosoma):
 
@@ -491,5 +530,51 @@ if __name__ == "__main__":
         "Hijo 2:",
         cromosoma_a_simbolos(
             hijo2
+        )
+    )
+
+    print()
+    print("MUTACIÓN")
+    print("========")
+
+
+    hijo1_mutado = mutar(
+        hijo1,
+        probabilidad_mutacion=0.10
+    )
+
+    hijo2_mutado = mutar(
+        hijo2,
+        probabilidad_mutacion=0.10
+    )
+
+
+    print(
+        "Hijo 1 original:",
+        cromosoma_a_simbolos(
+            hijo1
+        )
+    )
+
+    print(
+        "Hijo 1 mutado:  ",
+        cromosoma_a_simbolos(
+            hijo1_mutado
+        )
+    )
+
+    print()
+
+    print(
+        "Hijo 2 original:",
+        cromosoma_a_simbolos(
+            hijo2
+        )
+    )
+
+    print(
+        "Hijo 2 mutado:  ",
+        cromosoma_a_simbolos(
+            hijo2_mutado
         )
     )
