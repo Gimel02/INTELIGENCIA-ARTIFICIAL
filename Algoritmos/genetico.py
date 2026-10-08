@@ -302,7 +302,7 @@ def simular_cromosoma(
         *
         0.20
     )
-    
+
 
     return {
         "posicion_final": posicion_actual,
@@ -628,29 +628,27 @@ def evolucionar(
                     )
 
 
-        # ==================================
-        # SOLUCIÓN PERFECTA
+               # ==================================
+        # OBJETIVO ALCANZADO
+        #
+        # No detenemos la evolución todavía.
+        # Aunque un cromosoma llegue a la meta,
+        # puede existir otro con mejor aptitud
+        # y una mejor primera decisión.
         # ==================================
 
         if (
             mejor["distancia"] == 0
             and
             mejor["colisiones"] == 0
+            and
+            mostrar_progreso
         ):
 
-            print()
-
-            if mostrar_progreso:
-                print()
-                print(
-                    "OBJETIVO ALCANZADO"
-                )
-
-            return (
-                mejor,
-                generacion
+            print(
+                f"Generación {generacion}: "
+                "hay un individuo que alcanza el objetivo"
             )
-
 
         # ==================================
         # CREAR SIGUIENTE GENERACIÓN
@@ -690,9 +688,9 @@ def elegir_accion_genetica(
         mundo=mundo,
         posicion_inicial=posicion_inicial,
         posicion_objetivo=posicion_objetivo,
-        tamano_poblacion=10,
-        longitud_cromosoma=20,
-        max_generaciones=20,
+        tamano_poblacion=20,
+        longitud_cromosoma=10,
+        max_generaciones=25,
         cantidad_elite=2,
         cantidad_padres=4,
         probabilidad_mutacion=0.10,
