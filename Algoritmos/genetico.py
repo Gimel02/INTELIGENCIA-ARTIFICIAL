@@ -514,6 +514,53 @@ def evolucionar(
     )
 
 
+# ==========================================
+# ELEGIR SIGUIENTE ACCIÓN CON AG
+# ==========================================
+
+def elegir_accion_genetica(
+    mundo,
+    posicion_inicial,
+    posicion_objetivo
+):
+
+    mejor_individuo, generaciones = evolucionar(
+        mundo=mundo,
+        posicion_inicial=posicion_inicial,
+        posicion_objetivo=posicion_objetivo,
+        tamano_poblacion=10,
+        longitud_cromosoma=20,
+        max_generaciones=20,
+        cantidad_elite=2,
+        cantidad_padres=4,
+        probabilidad_mutacion=0.10
+    )
+
+
+    if mejor_individuo is None:
+
+        return None
+
+
+    cromosoma = (
+        mejor_individuo["cromosoma"]
+    )
+
+
+    if not cromosoma:
+
+        return None
+
+
+    # Solo ejecutamos el primer movimiento.
+    # Después el entorno puede cambiar y
+    # volveremos a calcular una estrategia.
+
+    accion = cromosoma[0]
+
+    return accion
+
+
 def cromosoma_a_simbolos(cromosoma):
 
     simbolos = []
@@ -881,3 +928,37 @@ if __name__ == "__main__":
         "Generaciones usadas:",
         generaciones_usadas
     )
+
+    print()
+    print("DECISIÓN DINÁMICA")
+    print("==================")
+
+
+    accion = elegir_accion_genetica(
+        mundo=mundo_evolucion,
+        posicion_inicial=mundo_evolucion.posicion_cazador,
+        posicion_objetivo=mundo_evolucion.posicion_jaguar
+    )
+
+
+    print(
+        "Posición cazador:",
+        mundo_evolucion.posicion_cazador
+    )
+
+    print(
+        "Posición Jaguar:",
+        mundo_evolucion.posicion_jaguar
+    )
+
+    print(
+        "Acción elegida:",
+        accion
+    )
+
+    if accion is not None:
+
+        print(
+            "Símbolo:",
+            SIMBOLOS[accion]
+        )
