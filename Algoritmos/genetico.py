@@ -237,6 +237,39 @@ def seleccionar_mejores(
 
     return padres
 
+# ==========================================
+# CRUZA DE DOS CROMOSOMAS
+# ==========================================
+
+def cruzar(
+    padre1,
+    padre2
+):
+
+    cromosoma1 = padre1["cromosoma"]
+    cromosoma2 = padre2["cromosoma"]
+
+    punto_cruza = (
+        len(cromosoma1)
+        //
+        2
+    )
+
+    hijo1 = (
+        cromosoma1[:punto_cruza]
+        +
+        cromosoma2[punto_cruza:]
+    )
+
+    hijo2 = (
+        cromosoma2[:punto_cruza]
+        +
+        cromosoma1[punto_cruza:]
+    )
+
+    return hijo1, hijo2
+
+
 
 def cromosoma_a_simbolos(cromosoma):
 
@@ -421,3 +454,42 @@ if __name__ == "__main__":
             f"   Aptitud: "
             f"{padre['aptitud']:.4f}"
         )
+
+    print()
+    print("CRUZA")
+    print("======")
+
+
+    hijo1, hijo2 = cruzar(
+        padres[0],
+        padres[1]
+    )
+
+
+    print(
+        "Padre 1:",
+        cromosoma_a_simbolos(
+            padres[0]["cromosoma"]
+        )
+    )
+
+    print(
+        "Padre 2:",
+        cromosoma_a_simbolos(
+            padres[1]["cromosoma"]
+        )
+    )
+
+    print(
+        "Hijo 1:",
+        cromosoma_a_simbolos(
+            hijo1
+        )
+    )
+
+    print(
+        "Hijo 2:",
+        cromosoma_a_simbolos(
+            hijo2
+        )
+    )
