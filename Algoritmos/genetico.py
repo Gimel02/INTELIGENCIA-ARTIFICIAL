@@ -132,6 +132,15 @@ def simular_cromosoma(
             )
 
 
+            # ==================================
+            # OBJETIVO ALCANZADO
+            # ==================================
+
+            if posicion_actual == posicion_objetivo:
+
+                break
+
+
         # Si intenta atravesar un árbol
         # o salir del mapa, cuenta colisión.
 
@@ -308,6 +317,201 @@ def mutar(
             )
 
     return cromosoma_mutado
+
+
+def crear_nueva_generacion(
+    resultados,
+    tamano_poblacion=10,
+    cantidad_elite=2,
+    cantidad_padres=4,
+    probabilidad_mutacion=0.10
+):
+
+    nueva_poblacion = []
+
+
+    # ======================================
+    # ELITISMO
+    # ======================================
+    # Los mejores individuos pasan
+    # directamente a la siguiente generación.
+
+    elite = resultados[
+        :cantidad_elite
+    ]
+
+    for individuo in elite:
+
+        nueva_poblacion.append(
+            individuo["cromosoma"].copy()
+        )
+
+
+    # ======================================
+    # SELECCIÓN DE PADRES
+    # ======================================
+
+    padres = resultados[
+        :cantidad_padres
+    ]
+
+
+    # ======================================
+    # GENERAR HIJOS
+    # ======================================
+
+    while len(nueva_poblacion) < tamano_poblacion:
+
+        padre1, padre2 = random.sample(
+            padres,
+            2
+        )
+
+        hijo1, hijo2 = cruzar(
+            padre1,
+            padre2
+        )
+
+
+        hijo1 = mutar(
+            hijo1,
+            probabilidad_mutacion
+        )
+
+        hijo2 = mutar(
+            hijo2,
+            probabilidad_mutacion
+        )
+
+
+        nueva_poblacion.append(
+            hijo1
+        )
+
+
+        if len(nueva_poblacion) < tamano_poblacion:
+
+            nueva_poblacion.append(
+                hijo2
+            )
+
+
+    return nueva_poblacion
+
+
+# ==========================================
+# EVOLUCIÓN GENÉTICA
+# ==========================================
+
+def evolucionar(
+    mundo,
+    posicion_inicial,
+    posicion_objetivo,
+    tamano_poblacion=10,
+    longitud_cromosoma=20,
+    max_generaciones=20,
+    cantidad_elite=2,
+    cantidad_padres=4,
+    probabilidad_mutacion=0.10,
+    peso_colision=0.2
+):
+
+    # ======================================
+    # POBLACIÓN INICIAL ALEATORIA
+    # ======================================
+
+    poblacion = generar_poblacion(
+        cantidad=tamano_poblacion,
+        longitud_cromosoma=longitud_cromosoma
+    )
+
+
+    mejor_global = None
+
+
+    # ======================================
+    # CICLO DE GENERACIONES
+    # ======================================
+
+    for generacion in range(
+        1,
+        max_generaciones + 1
+    ):
+
+        resultados = evaluar_poblacion(
+            mundo=mundo,
+            poblacion=poblacion,
+            posicion_inicial=posicion_inicial,
+            posicion_objetivo=posicion_objetivo,
+            peso_colision=peso_colision
+        )
+
+
+        mejor = resultados[0]
+
+
+        # Guardamos el mejor individuo
+        if (
+            mejor_global is None
+            or
+            mejor["aptitud"]
+            >
+            mejor_global["aptitud"]
+        ):
+
+            mejor_global = mejor
+
+
+        print(
+            f"Generación {generacion:02d} | "
+            f"Aptitud: {mejor['aptitud']:.4f} | "
+            f"Distancia: {mejor['distancia']} | "
+            f"Colisiones: {mejor['colisiones']}"
+        )
+
+
+        # ==================================
+        # SOLUCIÓN PERFECTA
+        # ==================================
+
+        if (
+            mejor["distancia"] == 0
+            and
+            mejor["colisiones"] == 0
+        ):
+
+            print()
+            print(
+                "OBJETIVO ALCANZADO"
+            )
+
+            return (
+                mejor,
+                generacion
+            )
+
+
+        # ==================================
+        # CREAR SIGUIENTE GENERACIÓN
+        # ==================================
+
+        poblacion = crear_nueva_generacion(
+            resultados=resultados,
+            tamano_poblacion=tamano_poblacion,
+            cantidad_elite=cantidad_elite,
+            cantidad_padres=cantidad_padres,
+            probabilidad_mutacion=probabilidad_mutacion
+        )
+
+
+    # ======================================
+    # SI NO ENCONTRÓ SOLUCIÓN PERFECTA
+    # ======================================
+
+    return (
+        mejor_global,
+        max_generaciones
+    )
 
 
 def cromosoma_a_simbolos(cromosoma):
@@ -577,4 +781,103 @@ if __name__ == "__main__":
         cromosoma_a_simbolos(
             hijo2_mutado
         )
+    )
+
+    print()
+    print("GENERACIÓN 2")
+    print("============")
+
+
+    poblacion_2 = crear_nueva_generacion(
+        resultados=resultados,
+        tamano_poblacion=10,
+        cantidad_elite=2,
+        cantidad_padres=4,
+        probabilidad_mutacion=0.10
+    )
+
+
+    resultados_2 = evaluar_poblacion(
+        mundo=mundo,
+        poblacion=poblacion_2,
+        posicion_inicial=mundo.posicion_cazador,
+        posicion_objetivo=mundo.posicion_jaguar
+    )
+
+
+    for posicion_ranking, individuo in enumerate(
+        resultados_2,
+        start=1
+    ):
+
+        print(
+            f"{posicion_ranking}. "
+            f"{cromosoma_a_simbolos(individuo['cromosoma'])}"
+        )
+
+        print(
+            f"   Distancia: {individuo['distancia']} | "
+            f"Colisiones: {individuo['colisiones']} | "
+            f"Aptitud: {individuo['aptitud']:.4f}"
+        )
+
+    print()
+    print("EVOLUCIÓN AUTOMÁTICA")
+    print("====================")
+
+
+    mundo_evolucion = MundoSelva()
+
+
+    mejor_individuo, generaciones_usadas = evolucionar(
+        mundo=mundo_evolucion,
+        posicion_inicial=mundo_evolucion.posicion_cazador,
+        posicion_objetivo=mundo_evolucion.posicion_jaguar,
+        tamano_poblacion=10,
+        longitud_cromosoma=20,
+        max_generaciones=20,
+        cantidad_elite=2,
+        cantidad_padres=4,
+        probabilidad_mutacion=0.10
+    )
+
+
+    print()
+    print(
+        "MEJOR RESULTADO"
+    )
+
+    print(
+        "==============="
+    )
+
+
+    print(
+        "Cromosoma:",
+        cromosoma_a_simbolos(
+            mejor_individuo["cromosoma"]
+        )
+    )
+
+    print(
+        "Distancia:",
+        mejor_individuo["distancia"]
+    )
+
+    print(
+        "Colisiones:",
+        mejor_individuo["colisiones"]
+    )
+
+    print(
+        "Aptitud:",
+        round(
+            mejor_individuo["aptitud"],
+            4
+        )
+    )
+
+    print(
+        "Generaciones usadas:",
+        generaciones_usadas
     )
