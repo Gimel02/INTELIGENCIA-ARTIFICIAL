@@ -1631,16 +1631,34 @@ class AgenteCazador:
                 not in self.memoria.bayas_malas
             ):
 
+                tipo_terreno = (
+                    self.mundo.grid[
+                        siguiente_posicion_genetica
+                    ]
+                )
+
+
+                nombres_terreno = {
+                    0: "NORMAL",
+                    4: "ARENA",
+                    5: "BAYA",
+                    6: "BAYA"
+                }
+
+
                 print(
                     "[AG]",
-                    "Posición:",
-                    self.posicion,
-                    "| Meta:",
-                    meta,
-                    "| Acción:",
-                    accion_genetica,
-                    "| Siguiente:",
-                    siguiente_posicion_genetica
+                    "Posición:", self.posicion,
+                    "| Meta:", meta,
+                    "| Acción:", accion_genetica,
+                    "| Siguiente:", siguiente_posicion_genetica,
+                    "| Terreno:",
+                    nombres_terreno.get(
+                        tipo_terreno,
+                        tipo_terreno
+                    ),
+                    "| Energía:",
+                    self.energia
                 )
 
                 camino = [
