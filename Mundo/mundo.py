@@ -55,6 +55,21 @@ class MundoSelva:
         # Estado del jaguar
         self.jaguar_vivo = True
 
+                # =========================================
+        # RATONES
+        # =========================================
+        #
+        # No son agentes inteligentes.
+        # Son objetivos dinámicos de comida
+        # para el Jaguar.
+        #
+        # Cada ratón recuerda:
+        # - posición actual
+        # - posición anterior
+        # - si sigue vivo
+        # =========================================
+
+        self.ratones = []
 
         # =========================================
         # GENERAR MUNDO UNA SOLA VEZ
@@ -150,6 +165,54 @@ class MundoSelva:
             self.inicio_jaguar
         )
 
+                # =========================================
+        # RATONES
+        # =========================================
+
+        self.ratones = []
+
+
+        posiciones_ocupadas = {
+            self.campamento,
+            self.posicion_jaguar
+        }
+
+
+        for numero_raton in range(3):
+
+            posicion_raton = (
+                self.posicion_aleatoria_valida(
+                    exclude=list(
+                        posiciones_ocupadas
+                    )
+                )
+            )
+
+
+            raton = {
+                "id": numero_raton + 1,
+                "posicion": posicion_raton,
+                "anterior": posicion_raton,
+                "vivo": True
+            }
+
+
+            self.ratones.append(
+                raton
+            )
+
+
+            posiciones_ocupadas.add(
+                posicion_raton
+            )
+            
+        print(
+            "[MUNDO] Ratones:",
+            [
+                raton["posicion"]
+                for raton in self.ratones
+            ]
+        )
 
     # =========================================
     # POSICIÓN ALEATORIA

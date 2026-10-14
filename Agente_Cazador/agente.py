@@ -819,7 +819,7 @@ class AgenteCazador:
             self.mundo.campamento,
             self.mundo,
             self.memoria.bayas_malas,
-            self.memoria.visitas
+            {}
         )
 
 
@@ -1030,6 +1030,19 @@ class AgenteCazador:
         )
 
 
+        # ==========================================
+    # ACTUALIZAR HAMBRE
+    # ==========================================
+
+    def actualizar_hambre(self):
+
+        self.hambre += self.aumento_hambre
+
+        self.hambre = min(
+            self.hambre,
+            self.hambre_max
+        )
+
     # ==========================================
     # TOMAR DECISIÓN
     # ==========================================
@@ -1127,16 +1140,17 @@ class AgenteCazador:
             +
             reserva_seguridad
         )
+        modo_supervivencia = (
+            self.energia
+            <=
+            energia_minima_segura
+        )
 
                 # ==========================================
         # 4. ¿DEBE REGRESAR AL CAMPAMENTO?
         # ==========================================
 
-        if (
-            self.energia
-            <=
-            energia_minima_segura
-        ):
+        if modo_supervivencia:
 
             meta = (
                 self.mundo.campamento
@@ -1535,11 +1549,10 @@ class AgenteCazador:
 
    
                 # ==========================================
-        # 10. DECISIÓN DE MOVIMIENTO
+        # JAGUAR AL ALCANCE INMEDIATO
         # ==========================================
-
-        # Distancia Manhattan entre el cazador
-        # y la posición REAL del Jaguar
+                # Distancia Manhattan entre el cazador
+        # y la posición actual del Jaguar
 
         distancia_jaguar = (
             abs(
@@ -1555,15 +1568,12 @@ class AgenteCazador:
             )
         )
 
-
-        # ==========================================
-        # JAGUAR AL ALCANCE INMEDIATO
-        # ==========================================
-
         if (
             self.mundo.jaguar_vivo
             and
             distancia_jaguar == 1
+            and
+            not modo_supervivencia
         ):
 
             print(
@@ -1585,6 +1595,32 @@ class AgenteCazador:
 
 
         # ==========================================
+        # SUPERVIVENCIA: A* OBLIGATORIO
+        # ==========================================
+
+        elif modo_supervivencia:
+
+            camino = AEstrella.buscar(
+                self.posicion,
+                meta,
+                self.mundo,
+                self.memoria.bayas_malas,
+                {}
+            )
+
+
+            print(
+                "[SUPERVIVENCIA]",
+                "Posición:", self.posicion,
+                "| Meta:", meta,
+                "| Energía:", self.energia,
+                "| Energía regreso:", energia_regreso,
+                "| Ruta:",
+                camino[:5] if camino else []
+            )
+
+
+        # ==========================================
         # ALGORITMO GENÉTICO
         # ==========================================
 
@@ -1596,6 +1632,8 @@ class AgenteCazador:
                 posicion_objetivo=meta,
                 visitas_previas=self.memoria.visitas
             )
+
+            # ... todo lo que ya tienes del AG
 
 
             siguiente_posicion_genetica = None

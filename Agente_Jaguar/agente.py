@@ -25,6 +25,16 @@ class AgenteJaguar:
         # tranquilo (si no, descansa)
 
         self.probabilidad_merodear = 0.35
+                # ==========================================
+        # HAMBRE
+        # ==========================================
+
+        self.hambre = 0
+        self.hambre_max = 100
+
+        # Cuánto aumenta por cada decisión
+        self.aumento_hambre = 2
+        self.estado_hambre = "NORMAL"
 
 
         self.estado = "Descansando"
@@ -46,6 +56,50 @@ class AgenteJaguar:
     # Devuelve la casilla a la que se mueve,
     # o None si se queda quieto.
     # ==========================================
+        # ==========================================
+    # ACTUALIZAR HAMBRE
+    # ==========================================
+
+        # ==========================================
+    # ACTUALIZAR HAMBRE
+    # ==========================================
+
+    def actualizar_hambre(self):
+
+        self.hambre += self.aumento_hambre
+
+        self.hambre = min(
+            self.hambre,
+            self.hambre_max
+        )
+
+
+        # ======================================
+        # NIVEL DE HAMBRE
+        # ======================================
+
+        if self.hambre >= 80:
+
+            self.estado_hambre = (
+                "HAMBRE INDOMABLE"
+            )
+
+        elif self.hambre >= 40:
+
+            self.estado_hambre = (
+                "HAMBRIENTO"
+            )
+
+        else:
+
+            self.estado_hambre = (
+                "NORMAL"
+            )
+
+
+    # ==========================================
+    # TOMAR DECISIÓN
+    # ==========================================
 
     def tomar_decision(
         self,
@@ -56,6 +110,38 @@ class AgenteJaguar:
 
             return None
 
+
+        self.actualizar_hambre()
+
+        print(
+            "[JAGUAR]",
+            "Hambre:",
+            self.hambre,
+            "| Nivel:",
+            self.estado_hambre,
+            "| Conducta:",
+            self.estado
+        )
+
+    def tomar_decision(
+        self,
+        posicion_cazador
+    ):
+
+        if not self.mundo.jaguar_vivo:
+
+            return None
+
+        self.actualizar_hambre()
+
+        #temporal
+        print(
+            "[JAGUAR]",
+            "Hambre:",
+            self.hambre,
+            "| Estado:",
+            self.estado
+        )
 
         distancia = (
             AEstrella.heuristica(

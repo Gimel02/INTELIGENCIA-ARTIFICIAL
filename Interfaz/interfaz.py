@@ -1970,6 +1970,76 @@ class Interfaz:
         )
 
 
+                # =====================================
+        # RATONES
+        # =====================================
+
+        for raton in self.mundo.ratones:
+
+            if not raton["vivo"]:
+
+                continue
+
+
+            fila_raton, columna_raton = (
+                raton["posicion"]
+            )
+
+
+            centro_x = (
+                columna_raton
+                * self.mundo.tamano_celda
+                +
+                self.mundo.tamano_celda // 2
+            )
+
+            centro_y = (
+                fila_raton
+                * self.mundo.tamano_celda
+                +
+                self.mundo.tamano_celda // 2
+            )
+
+
+            radio = max(
+                5,
+                self.mundo.tamano_celda // 6
+            )
+
+
+            pygame.draw.circle(
+                sup_entidades,
+                (160, 160, 160),
+                (
+                    centro_x,
+                    centro_y
+                ),
+                radio
+            )
+
+
+            # Orejas
+
+            pygame.draw.circle(
+                sup_entidades,
+                (190, 190, 190),
+                (
+                    centro_x - radio // 2,
+                    centro_y - radio
+                ),
+                max(2, radio // 3)
+            )
+
+            pygame.draw.circle(
+                sup_entidades,
+                (190, 190, 190),
+                (
+                    centro_x + radio // 2,
+                    centro_y - radio
+                ),
+                max(2, radio // 3)
+            )
+            
         # =====================================
         # JAGUAR
         # =====================================
