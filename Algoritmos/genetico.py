@@ -82,7 +82,7 @@ def calcular_aptitud(
     numero_repeticiones=0,
     peso_colision=0.2,
     peso_arena=0.30,
-    peso_repeticion=0.05
+    peso_repeticion=0.25
 ):
 
     aptitud = (
@@ -109,7 +109,7 @@ def simular_cromosoma(
     visitas_previas=None,
     peso_colision=0.2,
     peso_arena=0.30,
-    peso_repeticion=0.05
+    peso_repeticion=0.25
 ):
 
     posicion_actual = posicion_inicial
@@ -326,7 +326,7 @@ def evaluar_poblacion(
     visitas_previas=None,
     peso_colision=0.2,
     peso_arena=0.30,
-    peso_repeticion=0.05
+    peso_repeticion=0.25
 ):
 
     resultados = []
@@ -558,7 +558,7 @@ def evolucionar(
     probabilidad_mutacion=0.10,
     peso_colision=0.2,
     peso_arena=0.30,
-    peso_repeticion=0.05,
+    peso_repeticion=0.25,
     mostrar_progreso=True,
     visitas_previas=None
 ):

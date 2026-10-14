@@ -100,29 +100,6 @@ class AgenteJaguar:
     # ==========================================
     # TOMAR DECISIÓN
     # ==========================================
-
-    def tomar_decision(
-        self,
-        posicion_cazador
-    ):
-
-        if not self.mundo.jaguar_vivo:
-
-            return None
-
-
-        self.actualizar_hambre()
-
-        print(
-            "[JAGUAR]",
-            "Hambre:",
-            self.hambre,
-            "| Nivel:",
-            self.estado_hambre,
-            "| Conducta:",
-            self.estado
-        )
-
     def tomar_decision(
         self,
         posicion_cazador
@@ -139,7 +116,9 @@ class AgenteJaguar:
             "[JAGUAR]",
             "Hambre:",
             self.hambre,
-            "| Estado:",
+            "| Nivel:",
+            self.estado_hambre,
+            "| Conducta:",
             self.estado
         )
 
