@@ -128,6 +128,14 @@ class AEstrella:
                     continue
 
 
+                # Baya conocida como mala:
+                # no caminar por esa casilla.
+
+                if vecino in evitar:
+
+                    continue
+
+
                 nuevo = (
                     costo
                     +
@@ -258,6 +266,14 @@ class AEstrella:
             for vecino in vecinos:
 
                 if vecino in cerrados:
+
+                    continue
+
+
+                # Baya conocida como mala:
+                # se considera una zona prohibida.
+
+                if vecino in evitar:
 
                     continue
 

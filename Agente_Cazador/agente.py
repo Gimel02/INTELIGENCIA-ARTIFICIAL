@@ -725,9 +725,139 @@ class AgenteCazador:
         return mejor
 
 
+        # ==========================================
+    # BUSCAR BAYA DESCONOCIDA
+    #
+    # El cazador puede investigar una baya
+    # cuyo color todavía no haya probado.
+    # ==========================================
+
+    def buscar_baya_desconocida(self):
+
+        candidatas = []
+
+
+        # ======================================
+        # BAYAS QUE HA VISTO
+        # ======================================
+
+        for posicion, color in (
+            self.memoria.bayas_vistas.items()
+        ):
+
+            conocimiento = (
+                self.memoria
+                .conocimiento_bayas
+                .get(color)
+            )
+
+
+            # Solo queremos colores desconocidos
+
+            if conocimiento is None:
+
+                candidatas.append(
+                    posicion
+                )
+
+
+        if not candidatas:
+
+            return None
+
+
+        # ======================================
+        # BUSCAR LA MÁS CERCANA
+        # ======================================
+
+        mejor = None
+        mejor_largo = None
+
+
+        for baya in candidatas:
+
+            camino = AEstrella.buscar(
+                self.posicion,
+                baya,
+                self.mundo,
+                self.memoria.bayas_malas,
+                self.memoria.visitas
+            )
+
+
+            if not camino:
+
+                continue
+
+
+            if (
+                mejor_largo is None
+                or
+                len(camino) < mejor_largo
+            ):
+
+                mejor = baya
+                mejor_largo = len(camino)
+
+
+        return mejor
+
+        # ==========================================
+    # ENERGÍA NECESARIA PARA REGRESAR
+    # AL CAMPAMENTO
+    # ==========================================
+
+    def energia_para_regresar(self):
+
+        if self.posicion == self.mundo.campamento:
+
+            return 0
+
+
+        camino = AEstrella.buscar(
+            self.posicion,
+            self.mundo.campamento,
+            self.mundo,
+            self.memoria.bayas_malas,
+            self.memoria.visitas
+        )
+
+
+        # Si por alguna razón no encuentra ruta,
+        # usamos una reserva conservadora.
+
+        if not camino:
+
+            return 30
+
+
+        energia_necesaria = 0
+
+
+        for posicion in camino:
+
+            tipo = self.mundo.grid[
+                posicion
+            ]
+
+
+            if tipo == 4:
+
+                # Arena movediza
+                energia_necesaria += 8
+
+            else:
+
+                # Suelo normal / bayas
+                energia_necesaria += 2
+
+
+        return energia_necesaria
+    
     # ==========================================
     # PERCIBIR JAGUAR
     # ==========================================
+
 
     def percibir_jaguar(
         self,
@@ -920,11 +1050,30 @@ class AgenteCazador:
 
         if self.energia <= 0:
 
-            self.estado = (
-                "Murió de agotamiento"
-            )
+            # Si alcanzó el campamento justo
+            # con la última energía, sobrevive.
 
-            return
+            if (
+                self.posicion
+                ==
+                self.mundo.campamento
+            ):
+
+                self.energia = (
+                    self.energia_max
+                )
+
+                self.estado = (
+                    "Energía recuperada"
+                )
+
+            else:
+
+                self.estado = (
+                    "Murió de agotamiento"
+                )
+
+                return
 
 
         # ==========================================
@@ -963,20 +1112,39 @@ class AgenteCazador:
             self.memoria.colores_buenos()
         )
 
+        energia_regreso = (
+            self.energia_para_regresar()
+        )
 
-        # ==========================================
-        # 4. POCA ENERGÍA
+
+        # Reserva para no llegar al límite exacto
+
+        reserva_seguridad = 10
+
+
+        energia_minima_segura = (
+            energia_regreso
+            +
+            reserva_seguridad
+        )
+
+                # ==========================================
+        # 4. ¿DEBE REGRESAR AL CAMPAMENTO?
         # ==========================================
 
-        if self.energia < 30:
+        if (
+            self.energia
+            <=
+            energia_minima_segura
+        ):
 
             meta = (
                 self.mundo.campamento
             )
 
-
             self.estado = (
-                "Regresando al campamento"
+                "Poca energía: "
+                "regresando al campamento"
             )
 
 
@@ -990,11 +1158,9 @@ class AgenteCazador:
                     self.energia_max
                 )
 
-
                 self.estado = (
                     "Energía recuperada"
                 )
-
 
                 self.memoria.objetivo_busqueda = (
                     None
@@ -1004,8 +1170,7 @@ class AgenteCazador:
 
 
             # ======================================
-            # ¿HAY COMIDA MÁS CERCA
-            # QUE EL CAMPAMENTO?
+            # ¿CONOCE UNA BAYA BUENA?
             # ======================================
 
             baya = (
@@ -1019,38 +1184,24 @@ class AgenteCazador:
 
                 self.estado = (
                     "Poca energía: "
-                    "va por bayas que recuerda"
+                    "va por una baya buena"
                 )
 
 
-            elif (
+            # ======================================
+            # SI NO HAY BAYA BUENA,
+            # CONTINUAR AL CAMPAMENTO
+            # ======================================
 
-                self.sentidos.huele_bayas
-
-                and
-
-                self.sentidos.objetivo_olor_bayas
-                is not None
-
-                and
-
-                AEstrella.heuristica(
-                    self.posicion,
-                    self.mundo.campamento
-                )
-                >
-                self.sentidos.rango_olfato_bayas
-
-            ):
+            else:
 
                 meta = (
-                    self.sentidos
-                    .objetivo_olor_bayas
+                    self.mundo.campamento
                 )
 
                 self.estado = (
                     "Poca energía: "
-                    "siguiendo olor dulce"
+                    "regresando al campamento"
                 )
 
 
@@ -1297,51 +1448,76 @@ class AgenteCazador:
             )
 
 
-        # ==========================================
+                # ==========================================
         # 8. EXPLORACIÓN
         # ==========================================
 
         else:
 
-            self.estado = (
-                "Buscando zonas no revisadas"
+            # ======================================
+            # PRIMERO APRENDER DE BAYAS DESCONOCIDAS
+            # ======================================
+
+            baya_desconocida = (
+                self.buscar_baya_desconocida()
             )
 
 
-            # ======================================
-            # CREAR OBJETIVO
-            # ======================================
+            if baya_desconocida is not None:
 
-            if (
+                meta = baya_desconocida
 
-                self.memoria.objetivo_busqueda
-                is None
-
-                or
-
-                self.memoria.fue_revisada(
-
-                    self.memoria
-                    .objetivo_busqueda
-
+                self.estado = (
+                    "Investigando una baya desconocida"
                 )
-
-            ):
 
                 self.memoria.objetivo_busqueda = (
-                    self.seleccionar_objetivo_busqueda()
+                    None
                 )
 
 
-            meta = (
-                self.memoria
-                .objetivo_busqueda
-            )
+            # ======================================
+            # SI NO HAY BAYAS POR INVESTIGAR,
+            # EXPLORACIÓN NORMAL
+            # ======================================
+
+            else:
+
+                self.estado = (
+                    "Buscando zonas no revisadas"
+                )
 
 
-            if meta is None:
+                if (
 
-                return
+                    self.memoria.objetivo_busqueda
+                    is None
+
+                    or
+
+                    self.memoria.fue_revisada(
+
+                        self.memoria
+                        .objetivo_busqueda
+
+                    )
+
+                ):
+
+                    self.memoria.objetivo_busqueda = (
+                        self.seleccionar_objetivo_busqueda()
+                    )
+
+
+                meta = (
+                    self.memoria
+                    .objetivo_busqueda
+                )
+
+
+                if meta is None:
+
+                    return
 
 
         # ==========================================
@@ -1450,6 +1626,9 @@ class AgenteCazador:
                 self.mundo.es_transitable(
                     siguiente_posicion_genetica
                 )
+                and
+                siguiente_posicion_genetica
+                not in self.memoria.bayas_malas
             ):
 
                 print(
@@ -1528,8 +1707,13 @@ class AgenteCazador:
         # 13. COMPROBAR POSICIÓN
         # ==========================================
 
-        if not self.mundo.es_transitable(
+        if (
+            not self.mundo.es_transitable(
+                siguiente_posicion
+            )
+            or
             siguiente_posicion
+            in self.memoria.bayas_malas
         ):
 
             self.estado = (

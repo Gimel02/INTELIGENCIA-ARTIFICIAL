@@ -1549,17 +1549,39 @@ class Interfaz:
         memoria = self.agente.memoria
 
 
-        info1 = self.fuente_pequena.render(
+        # =====================================
+        # CONOCIMIENTO DE LAS BAYAS
+        # =====================================
+
+        conocimiento = (
+            memoria.conocimiento_bayas
+        )
+
+
+        estado_roja = (
+            conocimiento["roja"]
+            if conocimiento["roja"] is not None
+            else "?"
+        )
+
+        estado_azul = (
+            conocimiento["azul"]
+            if conocimiento["azul"] is not None
+            else "?"
+        )
+
+
+        info_bayas = self.fuente_pequena.render(
             (
-                f"Memoria: "
-                f"{len(memoria.celdas_revisadas)} celdas"
+                f"Baya roja: {estado_roja}    "
+                f"Baya azul: {estado_azul}"
             ),
             True,
             (220, 220, 220)
         )
 
         self.pantalla.blit(
-            info1,
+            info_bayas,
             (
                 x_der + 20,
                 100
@@ -1567,22 +1589,28 @@ class Interfaz:
         )
 
 
-        info2 = self.fuente_pequena.render(
+        # =====================================
+        # MEMORIA Y EFICIENCIA
+        # =====================================
+
+        info_memoria = self.fuente_pequena.render(
             (
-                f"Pasos: {memoria.pasos} "
-                f"| Repetidos: {memoria.pasos_repetidos}"
+                f"Memoria: {len(memoria.celdas_revisadas)} "
+                f"| Pasos: {memoria.pasos} "
+                f"| Rep: {memoria.pasos_repetidos}"
             ),
             True,
             (220, 220, 220)
         )
 
         self.pantalla.blit(
-            info2,
+            info_memoria,
             (
                 x_der + 20,
                 120
             )
         )
+
 
             # =====================================
         # BOTONES
