@@ -25,7 +25,7 @@ from Recursos.arena import ArenaMovediza
 from Recursos.campamento import Campamento
 from Recursos.cazador import Cazador
 from Recursos.jaguar import Jaguar
-
+from Recursos.raton import Raton
 class Interfaz:
 
     def __init__(self):
@@ -281,6 +281,10 @@ class Interfaz:
         self.mundo.tamano_celda
         )
 
+        self.raton_sprite = Raton(
+            self.mundo.tamano_celda
+        )
+
 
         # =========================================
         # FUENTES
@@ -502,6 +506,9 @@ class Interfaz:
             self.mundo.tamano_celda
         )
 
+        self.raton_sprite = Raton(
+        self.mundo.tamano_celda
+        )
 
         # Al reiniciar queda pausado
         self.en_curso = False
@@ -1973,72 +1980,28 @@ class Interfaz:
                 # =====================================
         # RATONES
         # =====================================
+    
 
         for raton in self.mundo.ratones:
 
+            # No dibujar ratones muertos
             if not raton["vivo"]:
-
                 continue
 
-
+            # Obtener posición actual del ratón
             fila_raton, columna_raton = (
                 raton["posicion"]
             )
 
-
-            centro_x = (
-                columna_raton
-                * self.mundo.tamano_celda
-                +
-                self.mundo.tamano_celda // 2
-            )
-
-            centro_y = (
-                fila_raton
-                * self.mundo.tamano_celda
-                +
-                self.mundo.tamano_celda // 2
-            )
-
-
-            radio = max(
-                5,
-                self.mundo.tamano_celda // 6
-            )
-
-
-            pygame.draw.circle(
+            # Dibujar la imagen en su celda
+            self.raton_sprite.dibujar(
                 sup_entidades,
-                (160, 160, 160),
-                (
-                    centro_x,
-                    centro_y
-                ),
-                radio
+                fila_raton,
+                columna_raton,
+                0
             )
 
-
-            # Orejas
-
-            pygame.draw.circle(
-                sup_entidades,
-                (190, 190, 190),
-                (
-                    centro_x - radio // 2,
-                    centro_y - radio
-                ),
-                max(2, radio // 3)
-            )
-
-            pygame.draw.circle(
-                sup_entidades,
-                (190, 190, 190),
-                (
-                    centro_x + radio // 2,
-                    centro_y - radio
-                ),
-                max(2, radio // 3)
-            )
+        
             
         # =====================================
         # JAGUAR
