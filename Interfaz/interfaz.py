@@ -1,3 +1,4 @@
+from Recursos import raton
 import pygame
 import os
 import math
@@ -644,57 +645,44 @@ class Interfaz:
                         self.pausa_jaguar
                     )
 
-
+         
         # =====================================
-        # RATONES (agente continuo)
-        #
-        # Se mueven en cada cuadro y huyen del
-        # jaguar si lo perciben.
+        # ACTUALIZAR RATONES
         # =====================================
 
-        if self.mundo.jaguar_vivo:
-
-            posicion_jaguar = (
-                self.cuerpo_jaguar.posicion_visual()
-            )
-
-        else:
-
-            posicion_jaguar = None
-
+        posicion_jaguar = (
+            self.cuerpo_jaguar.posicion_visual()
+            if self.mundo.jaguar_vivo
+            else None
+        )
 
         for raton in self.mundo.ratones:
 
+            # No mover ratones que ya fueron cazados
+            if not raton.vivo:
+                continue
+
+            # Actualizar movimiento y dirección
             raton.actualizar(
                 dt,
                 posicion_jaguar
             )
 
-
-            # ¿El jaguar lo atrapó?
-
-            if (
-                raton.vivo
-                and
-                posicion_jaguar is not None
-            ):
+            # Comprobar si el jaguar alcanza al ratón
+            if posicion_jaguar is not None:
 
                 fila, columna = raton.posicion_visual()
 
-                cercania = (
+                distancia = (
                     (fila - posicion_jaguar[0]) ** 2
-                    +
-                    (columna - posicion_jaguar[1]) ** 2
+                    + (columna - posicion_jaguar[1]) ** 2
                 ) ** 0.5
 
-
-                if cercania < 0.6:
-
+                if distancia < 0.6:
                     raton.vivo = False
-
                     self.agente_jaguar.comer_raton()
-
-
+           
+        
         # =====================================
         # ENCUENTRO CAZADOR - JAGUAR
         #
@@ -2123,33 +2111,35 @@ class Interfaz:
 
         )
 
-
-                # =====================================
-        # RATONES
-        # =====================================
     
+        # =====================================
+        # RATONES
+        # Dibujar todos los ratones vivos
+        # =====================================
 
         for raton in self.mundo.ratones:
 
-            # No dibujar ratones muertos
+            # Ignorar los ratones que ya fueron cazados
             if not raton.vivo:
                 continue
 
-            # Posición continua (con decimales)
+            # Obtener la posición continua del ratón
             fila_raton, columna_raton = (
                 raton.posicion_visual()
             )
 
-            # Dibujar la imagen en su celda
+            # Dibujar la imagen correspondiente a su dirección
             self.raton_sprite.dibujar(
                 sup_entidades,
                 fila_raton,
                 columna_raton,
-                0
+                0,
+                raton.direccion
             )
 
         
-            
+
+        
         # =====================================
         # JAGUAR
         # =====================================

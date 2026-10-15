@@ -180,7 +180,7 @@ class MundoSelva:
         }
 
 
-        for numero_raton in range(3):
+        for numero_raton in range(6):
 
             posicion_raton = (
                 self.posicion_aleatoria_valida(

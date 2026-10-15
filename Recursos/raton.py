@@ -1,4 +1,3 @@
-
 import pygame
 import os
 
@@ -10,43 +9,58 @@ class Raton:
         self.tamano_celda = tamano_celda
 
         # =========================================
-        # RUTA DE LA IMAGEN
+        # RUTAS DE LAS IMAGENES
         # =========================================
 
         carpeta_recursos = os.path.dirname(
             os.path.abspath(__file__)
         )
 
-        ruta_raton = os.path.join(
+        carpeta_images = os.path.join(
             carpeta_recursos,
-            "images",
-            "raton.png"
+            "images"
         )
 
         # =========================================
-        # CARGAR IMAGEN
+        # CARGAR LAS CUATRO DIRECCIONES
         # =========================================
 
-        self.imagen = pygame.image.load(
-            ruta_raton
-        ).convert_alpha()
+        nombres = {
+            "arriba": "raton_arriba.png",
+            "abajo": "raton_abajo.png",
+            "izquierda": "raton_izquierda.png",
+            "derecha": "raton_derecha.png"
+        }
 
-        # =========================================
-        # AJUSTAR TAMAÑO
-        # =========================================
+        self.imagenes = {}
 
-       
-        # Los ratones ocuparán el 60% del tamaño de la celda
-        tamano_raton = int(self.tamano_celda * 0.6)
-
-        self.imagen = pygame.transform.scale(
-        self.imagen,
-        (tamano_raton, tamano_raton)
+        tamano_raton = int(
+            self.tamano_celda * 0.6
         )
 
+        for direccion, nombre in nombres.items():
+
+            ruta = os.path.join(
+                carpeta_images,
+                nombre
+            )
+
+            imagen = pygame.image.load(
+                ruta
+            ).convert_alpha()
+
+            self.imagenes[direccion] = (
+                pygame.transform.scale(
+                    imagen,
+                    (tamano_raton, tamano_raton)
+                )
+            )
+
+        # Direccion inicial
+        self.direccion = "abajo"
 
     # =========================================
-    # DIBUJAR RATON
+    # DIBUJAR RATON SEGUN SU DIRECCION
     # =========================================
 
     def dibujar(
@@ -54,11 +68,18 @@ class Raton:
         pantalla,
         fila,
         columna,
-        desplazamiento_y=0
+        desplazamiento_y=0,
+        direccion=None
     ):
 
-        # Calcular posición en la pantalla
+        # Actualizar direccion si se proporciona
+        if direccion in self.imagenes:
+            self.direccion = direccion
 
+        # Obtener imagen correspondiente
+        imagen = self.imagenes[self.direccion]
+
+        # Calcular posicion en pantalla
         x = columna * self.tamano_celda
 
         y = (
@@ -66,18 +87,16 @@ class Raton:
             + fila * self.tamano_celda
         )
 
-        # Centrar imagen en la celda
-
-        rect_sprite = self.imagen.get_rect(
+        # Centrar el raton
+        rect_sprite = imagen.get_rect(
             center=(
-                x + self.tamano_celda // 2,
-                y + self.tamano_celda // 2
+                int(x + self.tamano_celda / 2),
+                int(y + self.tamano_celda / 2)
             )
         )
 
-        # Dibujar imagen
-
+        # Dibujar imagen transparente
         pantalla.blit(
-            self.imagen,
+            imagen,
             rect_sprite
         )
