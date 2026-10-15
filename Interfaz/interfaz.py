@@ -82,6 +82,11 @@ class Interfaz:
 
         )
 
+        # El cazador conoce su propio cuerpo
+        # (masa, fuerza, velocidad)
+
+        self.agente.cuerpo = self.cuerpo_cazador
+
 
         self.cuerpo_jaguar = CuerpoFisico(
 
@@ -470,6 +475,8 @@ class Interfaz:
             posicion=self.agente.posicion
         )
 
+        self.agente.cuerpo = self.cuerpo_cazador
+
         self.cuerpo_jaguar = CuerpoFisico(
             masa=55,
             fuerza_motriz=330,
@@ -745,6 +752,12 @@ class Interfaz:
                 elif evento.key == pygame.K_r:
 
                     self.reiniciar_simulacion()
+
+
+                # B = imprimir la bitácora del cazador
+                elif evento.key == pygame.K_b:
+
+                    self.agente.imprimir_conciencia()
 
 
                 # ESC = salir
@@ -1107,6 +1120,26 @@ class Interfaz:
             )
         )
 
+    def recortar_texto(self, texto, ancho_maximo):
+
+        # Acorta el texto con "..." si no cabe
+
+        if self.fuente_pequena.size(texto)[0] <= ancho_maximo:
+
+            return texto
+
+        while (
+            texto
+            and
+            self.fuente_pequena.size(texto + "...")[0]
+            > ancho_maximo
+        ):
+
+            texto = texto[:-1]
+
+        return texto + "..."
+
+
     def dibujar_panel(self):
 
         # =====================================
@@ -1288,15 +1321,22 @@ class Interfaz:
             jaguar,
             (
                 x_izq + 20,
-                105
+                99
             )
         )
 
 
+        # Conciencia de su cuerpo: masa y
+        # velocidad
+
         fisica = self.fuente_pequena.render(
-            (
-                f"Cazador {self.cuerpo_cazador.velocidad:.1f} m/s"
-                f"   Jaguar {self.cuerpo_jaguar.velocidad:.1f} m/s"
+            self.recortar_texto(
+                (
+                    f"Cazador {self.cuerpo_cazador.masa} kg, "
+                    f"{self.cuerpo_cazador.velocidad:.1f} m/s"
+                    f"   Jaguar {self.cuerpo_jaguar.velocidad:.1f} m/s"
+                ),
+                ancho_izq - 40
             ),
             True,
             (210, 210, 220)
@@ -1306,7 +1346,48 @@ class Interfaz:
             fisica,
             (
                 x_izq + 20,
-                135
+                120
+            )
+        )
+
+
+        # Autoconciencia: sentido usado, última
+        # acción y problema detectado
+
+        if self.agente.problema_actual:
+
+            texto_conciencia = (
+                f"PROBLEMA: {self.agente.problema_actual}"
+                f" (reaccionando)"
+            )
+
+        else:
+
+            texto_conciencia = (
+                f"Usó: {self.agente.sentido_usado} | "
+                f"{self.agente.ultima_accion} "
+                f"({self.agente.fuente_decision})"
+            )
+
+
+        conciencia = self.fuente_pequena.render(
+            self.recortar_texto(
+                texto_conciencia,
+                ancho_izq - 40
+            ),
+            True,
+            (
+                (255, 140, 120)
+                if self.agente.problema_actual
+                else (180, 230, 180)
+            )
+        )
+
+        self.pantalla.blit(
+            conciencia,
+            (
+                x_izq + 20,
+                141
             )
         )
 
@@ -1671,7 +1752,8 @@ class Interfaz:
             (
                 f"Memoria: {len(memoria.celdas_revisadas)} "
                 f"| Pasos: {memoria.pasos} "
-                f"| Rep: {memoria.pasos_repetidos}"
+                f"| Rep: {memoria.pasos_repetidos} "
+                f"| Puntos: {self.agente.puntos}"
             ),
             True,
             (220, 220, 220)

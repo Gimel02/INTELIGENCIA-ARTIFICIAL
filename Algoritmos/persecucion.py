@@ -24,8 +24,17 @@ class Persecucion:
         posicion_presa,
         posicion_presa_anterior,
         mundo,
-        adelanto=None
+        adelanto=None,
+        prohibidas=None
     ):
+
+        # prohibidas: casillas a las que no
+        # debe apuntar (por ejemplo, bayas que
+        # el perseguidor sabe que son malas)
+
+        if prohibidas is None:
+
+            prohibidas = set()
 
         # Sin dirección conocida: ir directo
 
@@ -112,8 +121,12 @@ class Persecucion:
             )
 
 
-            if mundo.es_transitable(
-                punto
+            if (
+                mundo.es_transitable(
+                    punto
+                )
+                and
+                punto not in prohibidas
             ):
 
                 return punto

@@ -1,8 +1,11 @@
+from collections import deque
+
 from Agente_Cazador.memoria import Memoria
 from Agente_Cazador.sentidos import Sentidos, PLURAL_COLORES
 
 from Algoritmos.a_Estrella import AEstrella
 from Algoritmos.persecucion import Persecucion
+from Algoritmos.huida import Huida
 
 from Algoritmos.genetico import (
     elegir_accion_genetica,
@@ -55,6 +58,102 @@ class AgenteCazador:
         self.vidas = self.vidas_max
 
         self.dano_ataque = 30
+
+
+        # ==========================================
+        # AUTOCONCIENCIA
+        #
+        # El agente sabe:
+        # - qué percibe con cada sentido y cuál
+        #   usó para decidir
+        # - cuánto pesa y qué tan rápido puede ir
+        #   (su cuerpo físico)
+        # - qué acciones ha tomado (bitácora)
+        # - si tiene un problema al decidir, y
+        #   reacciona
+        # ==========================================
+
+        # Cuerpo físico (lo asigna la interfaz)
+
+        self.cuerpo = None
+
+        # Número de decisión
+
+        self.turno = 0
+
+        # Lo que percibe ahora con cada sentido
+
+        self.percepcion = {}
+
+        # Sentido (o motivo) que causó la
+        # última decisión
+
+        self.sentido_usado = "ninguno"
+
+        # Meta y motivo de la última decisión
+
+        self.meta_actual = None
+
+        self.fallo_decision = None
+
+        self.motivo = ""
+
+        # Última acción: ARRIBA, ABAJO, ...,
+        # o QUIETO
+
+        self.ultima_accion = "QUIETO"
+
+        # Quién decidió el paso: "AG", "A*",
+        # "ataque directo" o "-"
+
+        self.fuente_decision = "-"
+
+        # Últimas 40 decisiones
+
+        self.bitacora = deque(
+            maxlen=40
+        )
+
+        # Problema detectado (None si no hay)
+
+        self.problema_actual = None
+
+        # Contadores para detectar problemas
+
+        self.turnos_sin_moverse = 0
+
+        self.fallos_seguidos = 0
+
+        # Reacción a problemas: metas que
+        # descarta por unos turnos
+
+        self.metas_descartadas = {}
+
+
+        # ==========================================
+        # PREMIOS Y CASTIGOS
+        #
+        # Buena decisión del AG: +1 de batería
+        # El AG propone chocar: -2 de batería
+        # Cazar al jaguar: +30 de batería
+        # Ser atacado: -10 puntos
+        # ==========================================
+
+        self.puntos = 0
+
+        self.premio_buena_decision = 1
+
+        self.castigo_choque = 2
+
+        self.premio_cazar = 30
+
+        # El AG propuso chocar en esta decisión
+
+        self.choque_ag = False
+
+        # Texto del último premio o castigo
+
+        self.ultimo_premio = ""
 
 
         # ==========================================
@@ -214,6 +313,15 @@ class AgenteCazador:
 
         self.mundo.cazar_jaguar()
 
+        # Premio: cazar al jaguar
+
+        self.energia = min(
+            self.energia_max,
+            self.energia + self.premio_cazar
+        )
+
+        self.puntos += 50
+
         self.limpiar_informacion_jaguar()
 
         self.estado = (
@@ -239,6 +347,10 @@ class AgenteCazador:
             0,
             self.vidas - 1
         )
+
+        # Castigo: lo atacó el enemigo
+
+        self.puntos -= 10
 
 
         if self.vidas == 0:
@@ -296,6 +408,14 @@ class AgenteCazador:
                 continue
 
 
+            # Metas descartadas por un problema
+            # (por ejemplo, no tenían ruta)
+
+            if posicion in self.metas_descartadas:
+
+                continue
+
+
             # Si ya fue revisada,
             # no necesitamos volver todavía
 
@@ -346,6 +466,11 @@ class AgenteCazador:
                 if posicion in (
                     self.memoria.bayas_malas
                 ):
+
+                    continue
+
+
+                if posicion in self.metas_descartadas:
 
                     continue
 
@@ -1109,10 +1234,742 @@ class AgenteCazador:
         )
 
     # ==========================================
-    # TOMAR DECISIÓN
+    # TOMAR DECISIÓN (CON AUTOCONCIENCIA)
+    #
+    # 1. Revisa lo que percibe y su cuerpo.
+    # 2. Decide y actúa (decidir_y_actuar).
+    # 3. Registra lo que hizo en la bitácora.
+    # 4. Revisa si tuvo un problema y, si lo
+    #    hay, reacciona.
     # ==========================================
 
     def tomar_decision(
+        self,
+        posicion_jaguar
+    ):
+
+        self.turno += 1
+
+        posicion_antes = self.posicion
+
+        energia_antes = self.energia
+
+        self.meta_actual = None
+
+        self.motivo = ""
+
+        # Lo marca decidir_y_actuar si la ruta
+        # falla ("sin ruta" o "bloqueado")
+
+        self.fallo_decision = None
+
+        self.choque_ag = False
+
+        self.ultimo_premio = ""
+
+
+        # Las metas descartadas vuelven a
+        # considerarse después de unos turnos
+
+        for meta in list(self.metas_descartadas):
+
+            self.metas_descartadas[meta] -= 1
+
+            if self.metas_descartadas[meta] <= 0:
+
+                del self.metas_descartadas[meta]
+
+
+        # ==========================================
+        # DECIDIR Y ACTUAR
+        # ==========================================
+
+        self.decidir_y_actuar(
+            posicion_jaguar
+        )
+
+
+        # ==========================================
+        # CONCIENCIA DE SUS SENTIDOS
+        # ==========================================
+
+        self.percepcion = self.resumen_sentidos()
+
+        self.sentido_usado = self.sentido_de_la_decision()
+
+
+        # ==========================================
+        # CONCIENCIA DE SUS ACCIONES
+        # ==========================================
+
+        self.ultima_accion = self.nombre_accion(
+            posicion_antes,
+            self.posicion
+        )
+
+
+        if "genética" in self.estado:
+
+            self.fuente_decision = "AG"
+
+        elif "alcance" in self.estado:
+
+            self.fuente_decision = "ataque directo"
+
+        elif self.posicion != posicion_antes:
+
+            self.fuente_decision = "A*"
+
+        else:
+
+            self.fuente_decision = "-"
+
+
+        if self.posicion != posicion_antes:
+
+            resultado = "avanzó"
+
+        elif self.fallo_decision is not None:
+
+            resultado = self.fallo_decision
+
+        else:
+
+            resultado = "quieto"
+
+
+        # ==========================================
+        # ¿TUVO UN PROBLEMA?
+        # ==========================================
+
+        self.problema_actual = self.detectar_problema(
+            resultado
+        )
+
+
+        if self.problema_actual is not None:
+
+            self.reaccionar_a_problema()
+
+
+        # ==========================================
+        # PREMIOS Y CASTIGOS
+        # ==========================================
+
+        self.aplicar_premios(
+            resultado
+        )
+
+
+        # ==========================================
+        # BITÁCORA
+        # ==========================================
+
+        self.bitacora.append({
+
+            "turno": self.turno,
+            "desde": posicion_antes,
+            "hasta": self.posicion,
+            "accion": self.ultima_accion,
+            "meta": self.meta_actual,
+            "motivo": (
+                self.motivo
+                or self.estado
+            ).split("|")[0].strip(),
+            "sentido": self.sentido_usado,
+            "fuente": self.fuente_decision,
+            "resultado": resultado,
+            "energia": (
+                energia_antes,
+                self.energia
+            ),
+            "problema": self.problema_actual,
+            "premio": self.ultimo_premio
+
+        })
+
+
+    # ==========================================
+    # PREMIOS Y CASTIGOS
+    #
+    # Como en otros proyectos, el premio es más
+    # batería (energía) y el castigo es perderla.
+    # ==========================================
+
+    def aplicar_premios(self, resultado):
+
+        premios = []
+
+
+        # Castigo: el AG propuso chocar
+
+        if self.choque_ag:
+
+            self.energia = max(
+                0,
+                self.energia - self.castigo_choque
+            )
+
+            self.puntos -= self.castigo_choque
+
+            premios.append(
+                f"-{self.castigo_choque} batería (chocó)"
+            )
+
+
+        # Premio: buena decisión del AG (el paso
+        # es válido y lo acerca a su meta)
+
+        if (
+            resultado == "avanzó"
+            and
+            self.fuente_decision == "AG"
+        ):
+
+            self.energia = min(
+                self.energia_max,
+                self.energia + self.premio_buena_decision
+            )
+
+            self.puntos += self.premio_buena_decision
+
+            premios.append(
+                f"+{self.premio_buena_decision} batería "
+                "(buena decisión)"
+            )
+
+
+        self.ultimo_premio = ", ".join(premios)
+
+
+    # ==========================================
+    # RESUMEN DE LO QUE PERCIBE
+    # ==========================================
+
+    def resumen_sentidos(self):
+
+        sentidos = self.sentidos
+
+
+        if sentidos.ve_jaguar:
+
+            vista = "jaguar a la vista"
+
+        else:
+
+            vista = "nada"
+
+
+        if sentidos.escucha_jaguar:
+
+            oido = (
+                f"jaguar al {sentidos.direccion_sonido}"
+            )
+
+        else:
+
+            oido = "nada"
+
+
+        if sentidos.huele_jaguar:
+
+            olfato = "olor a jaguar"
+
+        elif sentidos.huele_bayas:
+
+            olfato = "olor a bayas"
+
+        else:
+
+            olfato = "nada"
+
+
+        return {
+
+            "vista": vista,
+            "oido": oido,
+            "olfato": olfato,
+            "tacto": sentidos.sensacion_tacto,
+            "gusto": sentidos.sensacion_gusto
+
+        }
+
+
+    # ==========================================
+    # ¿QUÉ SENTIDO CAUSÓ LA DECISIÓN?
+    # ==========================================
+
+    def sentido_de_la_decision(self):
+
+        motivo = self.motivo or self.estado
+
+
+        if (
+            "ataca" in motivo
+            or
+            "Acorralado" in motivo
+            or
+            "Acechando" in motivo
+        ):
+
+            return "percepción del enemigo"
+
+        if (
+            "detectado" in motivo
+            or
+            "alcance" in motivo
+        ):
+
+            return "vista"
+
+        if "Escuchó" in motivo:
+
+            return "oído"
+
+        if "rastro" in motivo:
+
+            return "olfato"
+
+        if (
+            "huyó" in motivo
+            or
+            "Investigando" in motivo
+            or
+            "Buscando zonas" in motivo
+        ):
+
+            return "memoria"
+
+        if (
+            "energía" in motivo.lower()
+            or
+            "campamento" in motivo
+            or
+            "cabaña" in motivo
+        ):
+
+            return "energía"
+
+        if "baya" in motivo.lower():
+
+            return "memoria / gusto"
+
+        return "ninguno"
+
+
+    # ==========================================
+    # NOMBRE DE LA ACCIÓN
+    # ==========================================
+
+    @staticmethod
+    def nombre_accion(desde, hasta):
+
+        cambio = (
+            hasta[0] - desde[0],
+            hasta[1] - desde[1]
+        )
+
+        nombres = {
+
+            (-1, 0): "ARRIBA",
+            (1, 0): "ABAJO",
+            (0, -1): "IZQUIERDA",
+            (0, 1): "DERECHA"
+
+        }
+
+        return nombres.get(
+            cambio,
+            "QUIETO"
+        )
+
+
+    # ==========================================
+    # CONCIENCIA DE SU CUERPO (PESO)
+    #
+    # Con su masa y su fuerza calcula qué tan
+    # rápido puede ir en cada suelo y cuánto
+    # tardaría en recorrer un camino.
+    # ==========================================
+
+    def conciencia_fisica(self):
+
+        if self.cuerpo is None:
+
+            return None
+
+
+        return {
+
+            "masa": self.cuerpo.masa,
+            "fuerza": self.cuerpo.fuerza_motriz,
+            "velocidad": self.cuerpo.velocidad,
+            "v_max_pasto": self.cuerpo.velocidad_maxima(0),
+            "v_max_arena": self.cuerpo.velocidad_maxima(4)
+
+        }
+
+
+    def tiempo_estimado(self, camino):
+
+        # Segundos para recorrer un camino,
+        # según su velocidad máxima en cada
+        # suelo (depende de su masa)
+
+        if self.cuerpo is None or not camino:
+
+            return None
+
+
+        from Fisica.cinematica import (
+            METROS_POR_CASILLA
+        )
+
+
+        segundos = 0.0
+
+        for casilla in camino:
+
+            segundos += (
+                METROS_POR_CASILLA
+                /
+                self.cuerpo.velocidad_maxima(
+                    self.mundo.grid[casilla]
+                )
+            )
+
+        return segundos
+
+
+    def tiempo_a_la_cabana(self):
+
+        camino = AEstrella.buscar(
+            self.posicion,
+            self.mundo.campamento,
+            self.mundo,
+            self.memoria.bayas_malas,
+            {}
+        )
+
+        if self.posicion == self.mundo.campamento:
+
+            return 0.0
+
+        return self.tiempo_estimado(
+            camino
+        )
+
+
+    # ==========================================
+    # IMPRIMIR SU AUTOCONCIENCIA (tecla B)
+    # ==========================================
+
+    def imprimir_conciencia(self, ultimas=10):
+
+        print()
+        print("========== AUTOCONCIENCIA DEL CAZADOR ==========")
+
+
+        print("Sentidos:")
+
+        for sentido, valor in self.percepcion.items():
+
+            print(f"   {sentido:7s}: {valor}")
+
+
+        fisica = self.conciencia_fisica()
+
+        if fisica is not None:
+
+            print(
+                f"Cuerpo: {fisica['masa']} kg, "
+                f"fuerza {fisica['fuerza']} N, "
+                f"velocidad {fisica['velocidad']:.2f} m/s "
+                f"(máx. {fisica['v_max_pasto']:.2f} en pasto, "
+                f"{fisica['v_max_arena']:.2f} en arena)"
+            )
+
+            tiempo = self.tiempo_a_la_cabana()
+
+            if tiempo is not None:
+
+                print(
+                    f"Tardaría {tiempo:.1f} s en llegar "
+                    "a la cabaña"
+                )
+
+
+        print(
+            f"Energía: {self.energia}  "
+            f"Vidas: {self.vidas}/{self.vidas_max}  "
+            f"Puntos: {self.puntos}"
+        )
+
+        print(
+            f"Problema actual: "
+            f"{self.problema_actual or 'ninguno'}"
+        )
+
+        if self.metas_descartadas:
+
+            print(
+                "Metas descartadas: "
+                f"{sorted(self.metas_descartadas)}"
+            )
+
+
+        print(f"Últimas {ultimas} decisiones:")
+
+        for registro in list(self.bitacora)[-ultimas:]:
+
+            print(
+                f"   #{registro['turno']:4d} "
+                f"{registro['accion']:9s} "
+                f"{registro['desde']}->{registro['hasta']} "
+                f"meta {registro['meta']} | "
+                f"{registro['motivo'][:38]} | "
+                f"sentido: {registro['sentido']} | "
+                f"{registro['fuente']} | "
+                f"{registro['resultado']}"
+                + (
+                    f" | PROBLEMA: {registro['problema']}"
+                    if registro["problema"]
+                    else ""
+                )
+                + (
+                    f" | {registro['premio']}"
+                    if registro.get("premio")
+                    else ""
+                )
+            )
+
+        print("================================================")
+
+
+    # ==========================================
+    # CASILLAS QUE NO DEBE USAR COMO META
+    # ==========================================
+
+    def casillas_prohibidas(self):
+
+        return (
+            set(self.memoria.bayas_malas)
+            |
+            set(self.metas_descartadas)
+        )
+
+
+    # ==========================================
+    # CASILLA VECINA ALCANZABLE
+    # ==========================================
+
+    def vecina_alcanzable(self, meta):
+
+        prohibidas = self.casillas_prohibidas()
+
+        opciones = [
+
+            vecina
+
+            for vecina in self.mundo.vecinos_validos(
+                meta
+            )
+
+            if vecina not in prohibidas
+
+        ]
+
+
+        # La más cercana a la que sí haya camino
+
+        opciones.sort(
+            key=lambda vecina:
+            AEstrella.heuristica(
+                self.posicion,
+                vecina
+            )
+        )
+
+
+        for vecina in opciones:
+
+            if vecina == self.posicion:
+
+                return vecina
+
+            if AEstrella.buscar(
+                self.posicion,
+                vecina,
+                self.mundo,
+                self.memoria.bayas_malas,
+                {}
+            ):
+
+                return vecina
+
+
+        return None
+
+
+    # ==========================================
+    # DETECTAR PROBLEMAS AL DECIDIR
+    # ==========================================
+
+    def detectar_problema(self, resultado):
+
+        # Situaciones normales en las que no
+        # moverse no es un problema
+
+        terminado = (
+            self.vidas <= 0
+            or
+            "Murió" in self.estado
+            or
+            "misión cumplida" in self.estado
+            or
+            "Energía recuperada" in self.estado
+        )
+
+
+        if resultado == "avanzó":
+
+            self.turnos_sin_moverse = 0
+
+        elif not terminado:
+
+            self.turnos_sin_moverse += 1
+
+
+        if resultado in ("sin ruta", "bloqueado"):
+
+            self.fallos_seguidos += 1
+
+        else:
+
+            self.fallos_seguidos = 0
+
+
+        if terminado:
+
+            return None
+
+
+        # Sin ruta hacia su meta
+
+        if resultado == "sin ruta":
+
+            return "sin ruta"
+
+
+        # No pudo dar el paso
+
+        if resultado == "bloqueado":
+
+            return "bloqueado"
+
+
+        # Lleva varios turnos sin moverse
+
+        if self.turnos_sin_moverse >= 6:
+
+            return "atascado"
+
+
+        # Va y viene entre dos casillas:
+        # A -> B -> A -> B
+
+        recientes = [
+            registro["hasta"]
+            for registro in list(self.bitacora)[-3:]
+        ] + [self.posicion]
+
+
+        # Solo es un problema si va y viene con
+        # la MISMA meta. Si la meta se mueve (por
+        # ejemplo, el jaguar huye en zigzag),
+        # seguirla no es un error.
+
+        metas = [
+            registro["meta"]
+            for registro in list(self.bitacora)[-3:]
+        ] + [self.meta_actual]
+
+
+        if (
+            len(recientes) == 4
+            and
+            recientes[0] == recientes[2]
+            and
+            recientes[1] == recientes[3]
+            and
+            recientes[0] != recientes[1]
+            and
+            len(set(metas)) == 1
+        ):
+
+            return "dando vueltas"
+
+
+        return None
+
+
+    # ==========================================
+    # REACCIONAR A UN PROBLEMA
+    # ==========================================
+
+    def reaccionar_a_problema(self):
+
+        problema = self.problema_actual
+
+
+        # Sin ruta o bloqueado: descarta esa meta
+        # por 15 turnos y busca otra
+
+        if problema in ("sin ruta", "bloqueado"):
+
+            if self.meta_actual is not None:
+
+                self.metas_descartadas[
+                    self.meta_actual
+                ] = 15
+
+            self.memoria.objetivo_busqueda = None
+
+
+        # Atascado: cambia de zona de búsqueda
+
+        elif problema == "atascado":
+
+            if self.memoria.objetivo_busqueda is not None:
+
+                self.metas_descartadas[
+                    self.memoria.objetivo_busqueda
+                ] = 15
+
+            self.memoria.objetivo_busqueda = None
+
+            self.turnos_sin_moverse = 0
+
+
+        # Dando vueltas con la misma meta:
+        # descarta esa meta y busca otra
+
+        elif problema == "dando vueltas":
+
+            if self.meta_actual is not None:
+
+                self.metas_descartadas[
+                    self.meta_actual
+                ] = 15
+
+            self.memoria.objetivo_busqueda = None
+
+
+    # ==========================================
+    # DECIDIR Y ACTUAR
+    # ==========================================
+
+    def decidir_y_actuar(
         self,
         posicion_jaguar
     ):
@@ -1229,7 +2086,76 @@ class AgenteCazador:
         # 4. ¿DEBE REGRESAR AL CAMPAMENTO?
         # ==========================================
 
-        if modo_supervivencia:
+        # ==========================================
+        # 3.5 ENTORNO DINÁMICO: EL ENEMIGO ATACA
+        #
+        # Si percibe al jaguar (con cualquier
+        # sentido), el jaguar lo está atacando y
+        # está a 3 casillas o menos, huye usando
+        # el mismo algoritmo de huida del jaguar.
+        # ==========================================
+
+        jaguar_percibido = (
+            jaguar_visible
+            or
+            jaguar_escuchado
+            or
+            jaguar_olido
+        )
+
+        en_peligro = (
+            self.mundo.jaguar_vivo
+            and
+            jaguar_percibido
+            and
+            getattr(
+                self.mundo,
+                "jaguar_atacando",
+                False
+            )
+            and
+            AEstrella.heuristica(
+                self.posicion,
+                posicion_jaguar
+            )
+            <= 3
+        )
+
+
+        if en_peligro:
+
+            escape = Huida.elegir_escape(
+                self.posicion,
+                posicion_jaguar,
+                self.mundo
+            )
+
+
+            # Nunca huye hacia una baya mala
+
+            if escape in self.memoria.bayas_malas:
+
+                escape = None
+
+
+            if escape is not None:
+
+                meta = escape
+
+                self.estado = (
+                    "¡El jaguar lo ataca! Huyendo"
+                )
+
+            else:
+
+                meta = self.posicion
+
+                self.estado = (
+                    "¡Acorralado por el jaguar!"
+                )
+
+
+        elif modo_supervivencia:
 
             meta = (
                 self.mundo.campamento
@@ -1324,7 +2250,9 @@ class AgenteCazador:
                 self.memoria
                 .penultima_posicion_jaguar,
 
-                self.mundo
+                self.mundo,
+
+                prohibidas=self.casillas_prohibidas()
 
             )
 
@@ -1455,7 +2383,9 @@ class AgenteCazador:
 
                 self.mundo,
 
-                adelanto=2
+                adelanto=2,
+
+                prohibidas=self.casillas_prohibidas()
 
             )
 
@@ -1614,6 +2544,40 @@ class AgenteCazador:
 
 
         # ==========================================
+        # META PROHIBIDA: ACECHAR AL LADO
+        #
+        # Si la meta es una casilla que no puede
+        # pisar (baya mala) o que ya falló, va a
+        # la casilla vecina alcanzable más cercana.
+        # Por ejemplo, si el jaguar está parado en
+        # una baya mala, lo acecha desde al lado.
+        # ==========================================
+
+        if meta in self.casillas_prohibidas():
+
+            alternativa = self.vecina_alcanzable(
+                meta
+            )
+
+            if alternativa is not None:
+
+                meta = alternativa
+
+                self.estado = (
+                    "Acechando: su meta está "
+                    "en una casilla prohibida"
+                )
+
+
+        # Para la autoconciencia: qué meta eligió
+        # y por qué
+
+        self.meta_actual = meta
+
+        self.motivo = self.estado
+
+
+        # ==========================================
         # 9. YA ESTÁ EN LA META
         # ==========================================
 
@@ -1710,7 +2674,25 @@ class AgenteCazador:
                 posicion_inicial=self.posicion,
                 posicion_objetivo=meta,
                 visitas_previas=self.memoria.visitas,
-                prohibidas=self.memoria.bayas_malas
+                prohibidas=self.memoria.bayas_malas,
+
+                # PERCEPCIÓN -> AG: dónde percibe al
+                # enemigo y si debe evitarlo
+
+                enemigo=(
+                    posicion_jaguar
+                    if jaguar_percibido
+                    else None
+                ),
+                evitar_enemigo=(
+                    jaguar_percibido
+                    and
+                    getattr(
+                        self.mundo,
+                        "jaguar_atacando",
+                        False
+                    )
+                )
             )
 
             # ... todo lo que ya tienes del AG
@@ -1732,6 +2714,23 @@ class AgenteCazador:
                     self.posicion[0] + cambio_fila,
                     self.posicion[1] + cambio_columna
                 )
+
+
+            # ¿El AG propuso chocar con un
+            # obstáculo (árbol, borde o baya mala)?
+
+            self.choque_ag = (
+                siguiente_posicion_genetica is not None
+                and
+                (
+                    not self.mundo.es_transitable(
+                        siguiente_posicion_genetica
+                    )
+                    or
+                    siguiente_posicion_genetica
+                    in self.memoria.bayas_malas
+                )
+            )
 
 
             # ======================================
@@ -1848,6 +2847,8 @@ class AgenteCazador:
                 "No existe ruta disponible"
             )
 
+            self.fallo_decision = "sin ruta"
+
             self.memoria.objetivo_busqueda = (
                 None
             )
@@ -1889,6 +2890,8 @@ class AgenteCazador:
             self.estado = (
                 "Movimiento bloqueado"
             )
+
+            self.fallo_decision = "bloqueado"
 
             return
 

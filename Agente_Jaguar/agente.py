@@ -88,6 +88,11 @@ class AgenteJaguar:
 
         mundo.jaguar_peligroso = False
 
+        # True mientras persigue al cazador
+        # (el cazador lo puede percibir)
+
+        mundo.jaguar_atacando = False
+
 
         self.estado = "Descansando"
 
@@ -201,6 +206,8 @@ class AgenteJaguar:
 
 
         self.cazador_anterior = posicion_cazador
+
+        self.mundo.jaguar_atacando = self.atacando
 
         self.mundo.jaguar_peligroso = (
             self.atacando
@@ -491,5 +498,7 @@ class AgenteJaguar:
         self.actualizar_nivel_hambre()
 
         self.mundo.jaguar_peligroso = True
+
+        self.mundo.jaguar_atacando = False
 
         self.estado = "¡Atacó al cazador!"

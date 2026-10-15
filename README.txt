@@ -342,5 +342,77 @@ También se probó el AG solo (sin la revisión con A*) en 400 caminos de 8 a 18
 árboles, con 10 individuos y 20 generaciones: llegó a la meta en 29-34% de los casos según el método.
 Por eso el cazador revisa cada paso del AG y usa el A* si el paso no lo acerca a la meta.
 
+Autoconciencia del cazador (`Agente_Cazador/agente.py`)
+
+`tomar_decision()` envuelve la decisión original (`decidir_y_actuar()`). En cada turno el cazador:
+
+1. Es consciente de sus sentidos: arma un resumen de lo que percibe con cada sentido
+   (`resumen_sentidos()`) y sabe qué sentido o motivo causó su decisión (`sentido_de_la_decision()`):
+   vista, oído, olfato, memoria o energía.
+2. Es consciente de su cuerpo (peso): conoce su cuerpo físico (`self.cuerpo`): masa (75 kg), fuerza
+   (400 N), velocidad actual y velocidad máxima en pasto y en arena (`conciencia_fisica()`). Con eso
+   estima cuánto tardaría en recorrer un camino (`tiempo_estimado()`, `tiempo_a_la_cabana()`).
+3. Es consciente de sus acciones: guarda una bitácora con sus últimas 40 decisiones: turno, de dónde a
+   dónde, acción (ARRIBA, ABAJO, IZQUIERDA, DERECHA o QUIETO), meta, motivo, sentido usado, quién
+   decidió el paso (AG, A* o ataque directo), resultado y energía antes y después.
+4. Detecta problemas al decidir y reacciona (`detectar_problema()`, `reaccionar_a_problema()`):
+
+| Problema       | Cómo lo detecta                                   | Qué hace                                  |
+|----------------|---------------------------------------------------|-------------------------------------------|
+| Sin ruta       | El A* no encuentra camino a su meta               | Descarta esa meta 15 turnos y busca otra  |
+| Bloqueado      | No pudo dar el paso                               | Descarta esa meta 15 turnos y busca otra  |
+| Atascado       | 6 turnos sin moverse (sin haber terminado)        | Cambia de zona de búsqueda                |
+| Dando vueltas  | A -> B -> A -> B con la MISMA meta                | Descarta esa meta y busca otra            |
+
+-Si la meta es una casilla prohibida (baya mala o meta descartada), va a la casilla vecina alcanzable
+ más cercana. Por ejemplo, si el jaguar está parado sobre una baya mala, lo acecha desde al lado.
+-La persecución también evita apuntar a casillas prohibidas.
+-En pruebas (120 mundos), sin las reacciones hubo 675 decisiones "sin ruta" (el punto donde quería
+ interceptar al jaguar estaba encerrado por árboles); con las reacciones solo hubo 1.
+
+En el panel: "Cazador 75 kg, 1.5 m/s" (su cuerpo) y "Usó: vista | ARRIBA (AG)" (sentido, acción y quién
+la decidió). Si hay un problema, esa línea cambia a rojo: "PROBLEMA: sin ruta (reaccionando)".
+Tecla B: imprime en la terminal su autoconciencia completa (sentidos, cuerpo, energía, problema actual,
+metas descartadas y las últimas 10 decisiones de la bitácora).
+
+Entorno dinámico: Percepción -> AG -> Acción
+
+El jaguar es el ENEMIGO: se mueve, caza ratones, huye y puede atacar al cazador. En cada turno:
+
+   PERCEPCIÓN                         AG (algoritmo genético)              ACCIÓN
+   vista, oído, olfato,      --->     cromosoma = 20 acciones      --->   el cazador ejecuta
+   tacto, gusto, memoria              (ARRIBA, ABAJO, IZQUIERDA,          el primer movimiento
+   (¿dónde está el jaguar?            DERECHA). Aptitud: acercarse        del mejor cromosoma
+   ¿está atacando?)                   a la meta, sin chocar y, si el
+                                      jaguar ataca, sin pasar junto a él
+
+-Percepción -> AG: si el cazador percibe al jaguar con cualquier sentido, el AG recibe su posición
+ (`enemigo`). Si el jaguar lo está atacando (`evitar_enemigo`), cada paso del plan que quede junto al
+ jaguar resta 0.5 de aptitud.
+-Si el jaguar lo ataca y está a 3 casillas o menos, el cazador huye usando `Algoritmos/huida.py`
+ (el mismo algoritmo de huida del jaguar), sin pasar por bayas malas.
+
+Premios y castigos (en el juego, no solo en el AG)
+
+Como en otros proyectos, el premio es más batería (energía) y el castigo es perderla:
+
+| Situación                                           | Batería | Puntos |
+|-----------------------------------------------------|---------|--------|
+| Buena decisión del AG (paso válido que lo acerca)    | +1      | +1     |
+| El AG propone chocar con un obstáculo                 | -2      | -2     |
+| Cazar al jaguar                                      | +30     | +50    |
+| Ser atacado por el jaguar                            | -30     | -10    |
+| Comer baya buena / baya mala                          | +20/-10 | -      |
+
+Dentro del AG también hay premios y castigos en la aptitud: premio por acercarse a la meta y por el
+progreso del primer paso; castigo por chocar (más fuerte si el primer paso choca), por pisar arena,
+por repetir casillas y por pasar junto al enemigo cuando ataca.
+
+Los puntos se ven en el panel ("Puntos: N") y cada premio o castigo queda en la bitácora (tecla B).
+
+En pruebas (120 mundos): sin premios el cazador cazó al jaguar en 69% y se agotó en 27%; con premios
+cazó en 88% y se agotó en 10%. Los choques del AG casi no ocurren (0-1 en 120 mundos) porque la
+aptitud ya castiga mucho que el primer paso choque.
+
 Las carpetas `__pycache__` contienen archivos temporales generados automáticamente por Python al ejecutar el programa. 
 Estos archivos no forman parte de la lógica principal del proyecto.

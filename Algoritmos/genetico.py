@@ -137,6 +137,8 @@ def simular_cromosoma(
     cromosoma,
     visitas_previas=None,
     prohibidas=None,
+    enemigo=None,
+    evitar_enemigo=False,
     peso_colision=0.2,
     peso_arena=0.30,
     peso_repeticion=0.25
@@ -148,6 +150,11 @@ def simular_cromosoma(
 
 
     primer_paso_invalido = False
+
+    # Pasos del plan que quedan junto al
+    # enemigo (si hay que evitarlo)
+
+    peligros = 0
 
 
     posicion_actual = posicion_inicial
@@ -225,6 +232,29 @@ def simular_cromosoma(
             posicion_actual = (
                 nueva_posicion
             )
+
+
+            # ==================================
+            # PERCEPCIÓN DEL ENEMIGO
+            #
+            # Si el cazador percibe al jaguar y
+            # el jaguar lo está atacando, los
+            # planes que pasan junto a él son
+            # peligrosos.
+            # ==================================
+
+            if (
+                evitar_enemigo
+                and
+                enemigo is not None
+                and
+                abs(posicion_actual[0] - enemigo[0])
+                +
+                abs(posicion_actual[1] - enemigo[1])
+                <= 1
+            ):
+
+                peligros += 1
 
                         # ==================================
             # EVALUAR EL PRIMER MOVIMIENTO
@@ -369,6 +399,13 @@ def simular_cromosoma(
         aptitud -= 1.0
 
 
+    # ======================================
+    # CASTIGO POR ACERCARSE AL ENEMIGO
+    # ======================================
+
+    aptitud -= peligros * 0.5
+
+
     return {
         "posicion_final": posicion_actual,
         "distancia": distancia,
@@ -390,6 +427,8 @@ def evaluar_poblacion(
     posicion_objetivo,
     visitas_previas=None,
     prohibidas=None,
+    enemigo=None,
+    evitar_enemigo=False,
     peso_colision=0.2,
     peso_arena=0.30,
     peso_repeticion=0.25
@@ -414,6 +453,8 @@ def evaluar_poblacion(
             cromosoma=cromosoma,
             visitas_previas=visitas_previas,
             prohibidas=prohibidas,
+            enemigo=enemigo,
+            evitar_enemigo=evitar_enemigo,
             peso_colision=peso_colision,
             peso_arena=peso_arena,
             peso_repeticion=peso_repeticion
@@ -761,7 +802,9 @@ def evolucionar(
     peso_repeticion=0.25,
     mostrar_progreso=True,
     visitas_previas=None,
-    prohibidas=None
+    prohibidas=None,
+    enemigo=None,
+    evitar_enemigo=False
 ):
 
     # ======================================
@@ -793,6 +836,8 @@ def evolucionar(
             posicion_objetivo=posicion_objetivo,
             visitas_previas=visitas_previas,
             prohibidas=prohibidas,
+            enemigo=enemigo,
+            evitar_enemigo=evitar_enemigo,
             peso_colision=peso_colision,
             peso_arena=peso_arena,
             peso_repeticion=peso_repeticion
@@ -884,7 +929,9 @@ def elegir_accion_genetica(
     posicion_inicial,
     posicion_objetivo,
     visitas_previas=None,
-    prohibidas=None
+    prohibidas=None,
+    enemigo=None,
+    evitar_enemigo=False
 ):
 
     mejor_individuo, generaciones = evolucionar(
@@ -899,7 +946,9 @@ def elegir_accion_genetica(
         probabilidad_mutacion=0.10,
         mostrar_progreso=False,
         visitas_previas=visitas_previas,
-            prohibidas=prohibidas
+            prohibidas=prohibidas,
+            enemigo=enemigo,
+            evitar_enemigo=evitar_enemigo
     )
 
 
