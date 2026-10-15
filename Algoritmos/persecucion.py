@@ -78,6 +78,16 @@ class Persecucion:
             )
 
 
+            # Muy cerca (2 casillas o menos): ir
+            # directo. Si la presa huye en zigzag,
+            # adelantarse haría que el perseguidor
+            # también vaya de un lado a otro.
+
+            if distancia <= 2:
+
+                adelanto = 0
+
+
         # ======================================
         # BUSCAR UNA CASILLA VÁLIDA,
         # DE LA MÁS ADELANTADA A LA PRESA

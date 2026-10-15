@@ -1,5 +1,7 @@
 import random
 
+from Agente_Raton.agente import AgenteRaton
+
 
 class MundoSelva:
 
@@ -189,12 +191,13 @@ class MundoSelva:
             )
 
 
-            raton = {
-                "id": numero_raton + 1,
-                "posicion": posicion_raton,
-                "anterior": posicion_raton,
-                "vivo": True
-            }
+            # Agente continuo (ver Agente_Raton)
+
+            raton = AgenteRaton(
+                self,
+                numero_raton + 1,
+                posicion_raton
+            )
 
 
             self.ratones.append(
@@ -209,7 +212,7 @@ class MundoSelva:
         print(
             "[MUNDO] Ratones:",
             [
-                raton["posicion"]
+                raton.posicion
                 for raton in self.ratones
             ]
         )

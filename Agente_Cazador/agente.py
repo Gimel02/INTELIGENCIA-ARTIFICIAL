@@ -43,6 +43,21 @@ class AgenteCazador:
 
 
         # ==========================================
+        # VIDAS
+        #
+        # El jaguar puede atacarlo cuando invierte
+        # los papeles. Cada ataque le quita
+        # energía y una vida.
+        # ==========================================
+
+        self.vidas_max = 3
+
+        self.vidas = self.vidas_max
+
+        self.dano_ataque = 30
+
+
+        # ==========================================
         # SENTIDOS
         # ==========================================
 
@@ -184,6 +199,19 @@ class AgenteCazador:
             return False
 
 
+        # Mientras el jaguar lo ataca o se
+        # retira después del ataque, no lo
+        # puede atrapar
+
+        if getattr(
+            self.mundo,
+            "jaguar_peligroso",
+            False
+        ):
+
+            return False
+
+
         self.mundo.cazar_jaguar()
 
         self.limpiar_informacion_jaguar()
@@ -194,6 +222,43 @@ class AgenteCazador:
         )
 
         return True
+
+
+    # ==========================================
+    # RECIBIR ATAQUE DEL JAGUAR
+    # ==========================================
+
+    def recibir_ataque(self):
+
+        self.energia = max(
+            0,
+            self.energia - self.dano_ataque
+        )
+
+        self.vidas = max(
+            0,
+            self.vidas - 1
+        )
+
+
+        if self.vidas == 0:
+
+            self.estado = (
+                "El jaguar lo venció. "
+                "Sin vidas"
+            )
+
+        else:
+
+            self.estado = (
+                "¡Atacado por el jaguar! "
+                f"Vidas: {self.vidas}"
+            )
+
+
+        # Olvida la ruta que llevaba
+
+        self.ruta_planeada = []
 
 
     # ==========================================
@@ -1058,6 +1123,20 @@ class AgenteCazador:
 
 
         # ==========================================
+        # 0. SIN VIDAS: YA NO SE MUEVE
+        # ==========================================
+
+        if self.vidas <= 0:
+
+            self.estado = (
+                "El jaguar lo venció. "
+                "Sin vidas"
+            )
+
+            return
+
+
+        # ==========================================
         # 1. COMPROBAR ENERGÍA
         # ==========================================
 
@@ -1630,7 +1709,8 @@ class AgenteCazador:
                 mundo=self.mundo,
                 posicion_inicial=self.posicion,
                 posicion_objetivo=meta,
-                visitas_previas=self.memoria.visitas
+                visitas_previas=self.memoria.visitas,
+                prohibidas=self.memoria.bayas_malas
             )
 
             # ... todo lo que ya tienes del AG
@@ -1658,6 +1738,38 @@ class AgenteCazador:
             # MOVIMIENTO GENÉTICO VÁLIDO
             # ======================================
 
+            # Costo real de cada casilla hasta la
+            # meta (rodeando árboles y bayas
+            # malas). Sirve para comprobar que el
+            # paso del AG de verdad lo acerca.
+
+            costos_meta = AEstrella.costos_desde(
+                meta,
+                self.mundo,
+                self.memoria.bayas_malas
+            )
+
+
+            acerca = (
+                siguiente_posicion_genetica is not None
+                and
+                costos_meta.get(
+                    siguiente_posicion_genetica,
+                    float("inf")
+                )
+                <
+                costos_meta.get(
+                    self.posicion,
+                    float("inf")
+                )
+            )
+
+
+            # El paso del AG se acepta solo si es
+            # válido Y lo acerca a la meta. Si no,
+            # se usa el A*. Así no puede ir y
+            # volver entre dos casillas.
+
             if (
                 siguiente_posicion_genetica is not None
                 and
@@ -1667,6 +1779,8 @@ class AgenteCazador:
                 and
                 siguiente_posicion_genetica
                 not in self.memoria.bayas_malas
+                and
+                acerca
             ):
 
                 tipo_terreno = (

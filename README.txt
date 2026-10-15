@@ -269,5 +269,78 @@ El jaguar es más ligero: acelera más rápido y en arena es más rápido, pero 
 es menor, por eso el cazador lo puede alcanzar. Cada agente decide su siguiente paso cuando su cuerpo
 llega a la casilla, así que cada uno va a su propio ritmo.
 
+Ratones: agente continuo (`Agente_Raton/agente.py`)
+
+A diferencia del cazador y del jaguar, los ratones NO se mueven de casilla en casilla: su posición es
+continua (con decimales) y tienen un vector de velocidad. En cada cuadro de animación:
+-Merodean: cambian poco a poco de dirección al azar (0.5 casillas/s).
+-Huyen: si perciben al jaguar a 3 casillas o menos, corren en dirección contraria (0.95 casillas/s).
+-Evitan obstáculos: miran un poco hacia adelante y giran si hay un árbol o el borde del mapa.
+-Aceleran poco a poco hacia la velocidad que quieren (no cambian de velocidad de golpe).
+Hay 3 ratones. El jaguar se come un ratón cuando lo alcanza (a menos de 0.6 casillas).
+
+Jaguar: agente inteligente (`Agente_Jaguar/agente.py`)
+
+El jaguar tiene hambre, que sube con cada decisión: NORMAL (< 40), HAMBRIENTO (40-79) y
+HAMBRE INDOMABLE (80-100). Decide en este orden:
+0. Si acaba de atacar al cazador, se retira huyendo durante 6 decisiones.
+1. Inversión de papeles: ataca al cazador (lo persigue con `persecucion.py`) si el cazador está débil
+   (energía < 30) o si tiene HAMBRE INDOMABLE y ya no quedan ratones.
+2. Si detecta al cazador a 4 casillas o menos, huye con `huida.py` (o queda "Acorralado").
+3. Si tiene hambre (40 o más), caza al ratón más cercano que huela (6 casillas). Si no huele ninguno,
+   sale a buscarlos.
+4. Si no, descansa o merodea.
+Comer un ratón le quita 50 de hambre.
+
+Encuentro cazador - jaguar
+-Si el jaguar está atacando: el cazador pierde 30 de energía y 1 de sus 3 vidas, y el jaguar se retira.
+ Sin vidas, el cazador queda vencido.
+-Si no: el cazador atrapa al jaguar.
+-Mientras el jaguar ataca o se retira, el cazador no lo puede atrapar.
+El panel muestra las vidas del cazador junto a la energía y el hambre del jaguar junto a su estado.
+
+Evitar ir y volver entre dos casillas (algoritmo genético + A*)
+-El AG planea 20 movimientos, pero el cazador solo ejecuta el primero. Por eso, un plan cuyo primer
+ movimiento choca (árbol, borde o baya mala conocida) recibe un castigo de -1 en la aptitud.
+-El AG trata las bayas malas que el cazador conoce como obstáculos (parámetro `prohibidas`).
+-El cazador solo acepta el paso del AG si de verdad lo acerca a la meta (costo real calculado con
+ `costos_desde`). Si no, usa el paso del A*.
+-Al perseguir, si la presa está a 2 casillas o menos va directo hacia ella, sin adelantarse
+ (si la presa huye en zigzag, adelantarse lo haría ir de un lado a otro).
+En pruebas (30 mundos) las idas y vueltas (A -> B -> A -> B) bajaron de 120 a 17.
+
+Métodos de selección y cruce del algoritmo genético (`Algoritmos/genetico.py`)
+
+Al inicio del archivo hay una configuración para elegir cómo evoluciona la población:
+
+-METODO_SELECCION: cómo se escogen los padres.
+ "elitismo": dos padres al azar entre los 4 mejores.
+ "ruleta": cada individuo tiene un pedazo de la ruleta según su lugar (escalamiento por rango: el peor
+           vale 1 y el mejor vale N). Los mejores tienen más probabilidad, pero cualquiera puede ser padre.
+ "torneo": se escogen 3 individuos al azar y gana el de mejor aptitud.
+-PROPORCION_CRUCE: probabilidad de que dos padres se crucen (crossover rate). Si no se cruzan, los
+ hijos son copias de los padres (y solo cambian por mutación).
+-PUNTO_CRUCE_ALEATORIO: True = el punto de cruce se elige al azar; False = siempre a la mitad.
+-TAMANO_TORNEO: cuántos individuos compiten en cada torneo.
+En todos los métodos los 2 mejores individuos (élite) pasan directo a la siguiente generación,
+y la mutación es de 10% por gen.
+
+Comparación de métodos (120 mundos por método, hasta 4 minutos cada uno):
+
+| Método                                   | Jaguar cazado | Cazador agotado | Idas y vueltas* |
+|------------------------------------------|---------------|-----------------|-----------------|
+| Elitismo, cruce 100%, punto a la mitad   | 65%           | 28%             | 3.8             |
+| Elitismo, cruce 70%, punto al azar       | 69%           | 24%             | 4.6             |
+| Ruleta, cruce 70%, punto al azar         | 66%           | 22%             | 5.7             |
+| Torneo, cruce 70%, punto al azar         | 64%           | 27%             | 5.6             |
+*por cada 1000 pasos
+
+Las diferencias son pequeñas (dentro de lo que cambia por azar entre mundos). Se dejó como
+predeterminado elitismo con cruce de 70% y punto al azar, que tuvo el mejor resultado.
+
+También se probó el AG solo (sin la revisión con A*) en 400 caminos de 8 a 18 casillas rodeando
+árboles, con 10 individuos y 20 generaciones: llegó a la meta en 29-34% de los casos según el método.
+Por eso el cazador revisa cada paso del AG y usa el A* si el paso no lo acerca a la meta.
+
 Las carpetas `__pycache__` contienen archivos temporales generados automáticamente por Python al ejecutar el programa. 
 Estos archivos no forman parte de la lógica principal del proyecto.

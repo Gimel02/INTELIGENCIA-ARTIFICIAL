@@ -618,7 +618,9 @@ class Interfaz:
 
                 destino = (
                     self.agente_jaguar.tomar_decision(
-                        self.agente.posicion
+                        self.agente.posicion,
+                        self.agente.energia,
+                        self.mundo.ratones
                     )
                 )
 
@@ -637,7 +639,61 @@ class Interfaz:
 
 
         # =====================================
-        # ¿LO ATRAPÓ?
+        # RATONES (agente continuo)
+        #
+        # Se mueven en cada cuadro y huyen del
+        # jaguar si lo perciben.
+        # =====================================
+
+        if self.mundo.jaguar_vivo:
+
+            posicion_jaguar = (
+                self.cuerpo_jaguar.posicion_visual()
+            )
+
+        else:
+
+            posicion_jaguar = None
+
+
+        for raton in self.mundo.ratones:
+
+            raton.actualizar(
+                dt,
+                posicion_jaguar
+            )
+
+
+            # ¿El jaguar lo atrapó?
+
+            if (
+                raton.vivo
+                and
+                posicion_jaguar is not None
+            ):
+
+                fila, columna = raton.posicion_visual()
+
+                cercania = (
+                    (fila - posicion_jaguar[0]) ** 2
+                    +
+                    (columna - posicion_jaguar[1]) ** 2
+                ) ** 0.5
+
+
+                if cercania < 0.6:
+
+                    raton.vivo = False
+
+                    self.agente_jaguar.comer_raton()
+
+
+        # =====================================
+        # ENCUENTRO CAZADOR - JAGUAR
+        #
+        # Si el jaguar está atacando, el que
+        # pierde es el cazador. Si no, el
+        # cazador atrapa al jaguar.
         # =====================================
 
         if (
@@ -648,7 +704,15 @@ class Interfaz:
             self.mundo.posicion_jaguar
         ):
 
-            self.agente.atrapar_jaguar()
+            if self.agente_jaguar.atacando:
+
+                self.agente.recibir_ataque()
+
+                self.agente_jaguar.despues_de_atacar()
+
+            else:
+
+                self.agente.atrapar_jaguar()
 
     def manejar_eventos(self):
 
@@ -1203,7 +1267,8 @@ class Interfaz:
 
             texto_jaguar = (
                 f"Jaguar: "
-                f"{self.agente_jaguar.estado}"
+                f"{self.agente_jaguar.estado} "
+                f"(hambre {self.agente_jaguar.hambre})"
             )
 
         else:
@@ -1478,7 +1543,9 @@ class Interfaz:
 
         titulo_energia = (
             self.fuente_UI.render(
-                f"ENERGÍA: {int(energia)}%",
+                f"ENERGÍA: {int(energia)}%   "
+                f"VIDAS: {self.agente.vidas}/"
+                f"{self.agente.vidas_max}",
                 True,
                 self.C_ORO_PURO
             )
@@ -1985,12 +2052,12 @@ class Interfaz:
         for raton in self.mundo.ratones:
 
             # No dibujar ratones muertos
-            if not raton["vivo"]:
+            if not raton.vivo:
                 continue
 
-            # Obtener posición actual del ratón
+            # Posición continua (con decimales)
             fila_raton, columna_raton = (
-                raton["posicion"]
+                raton.posicion_visual()
             )
 
             # Dibujar la imagen en su celda

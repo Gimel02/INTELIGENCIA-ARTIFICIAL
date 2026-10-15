@@ -2,6 +2,7 @@ import random
 
 from Algoritmos.a_Estrella import AEstrella
 from Algoritmos.huida import Huida
+from Algoritmos.persecucion import Persecucion
 
 
 class AgenteJaguar:
@@ -37,6 +38,57 @@ class AgenteJaguar:
         self.estado_hambre = "NORMAL"
 
 
+        # ==========================================
+        # CAZA DE RATONES
+        # ==========================================
+
+        # Distancia a la que huele a los ratones
+
+        self.rango_olfato_ratones = 6
+
+        # Cuánta hambre se quita al comer uno
+
+        self.saciedad_raton = 50
+
+
+        # ==========================================
+        # INVERSIÓN DE PAPELES: ATACAR AL CAZADOR
+        #
+        # Normalmente el jaguar huye del cazador.
+        # Pero se vuelve el PERSEGUIDOR si:
+        # - el cazador está débil (energía < 30)
+        # - o tiene HAMBRE INDOMABLE y ya no
+        #   quedan ratones
+        # ==========================================
+
+        self.energia_debil_cazador = 30
+
+        # Distancia a la que lo sigue persiguiendo
+        # una vez que empezó el ataque
+
+        self.rango_ataque = 8
+
+        self.atacando = False
+
+        # Decisiones que pasa huyendo después
+        # de atacar (no puede volver a atacar)
+
+        self.retirada = 0
+
+        self.decisiones_retirada = 6
+
+        # Última posición donde vio al cazador
+        # (para cortarle el paso)
+
+        self.cazador_anterior = None
+
+        # El cazador revisa esto: mientras el
+        # jaguar ataca o se retira, no lo puede
+        # atrapar
+
+        mundo.jaguar_peligroso = False
+
+
         self.estado = "Descansando"
 
 
@@ -51,16 +103,6 @@ class AgenteJaguar:
 
 
     # ==========================================
-    # TOMAR DECISIÓN
-    #
-    # Devuelve la casilla a la que se mueve,
-    # o None si se queda quieto.
-    # ==========================================
-        # ==========================================
-    # ACTUALIZAR HAMBRE
-    # ==========================================
-
-        # ==========================================
     # ACTUALIZAR HAMBRE
     # ==========================================
 
@@ -73,10 +115,14 @@ class AgenteJaguar:
             self.hambre_max
         )
 
+        self.actualizar_nivel_hambre()
 
-        # ======================================
-        # NIVEL DE HAMBRE
-        # ======================================
+
+    # ==========================================
+    # NIVEL DE HAMBRE
+    # ==========================================
+
+    def actualizar_nivel_hambre(self):
 
         if self.hambre >= 80:
 
@@ -99,28 +145,44 @@ class AgenteJaguar:
 
     # ==========================================
     # TOMAR DECISIÓN
+    #
+    # Prioridades:
+    # 0. Retirarse después de atacar
+    # 1. Atacar al cazador (inversión de papeles)
+    # 2. Huir del cazador
+    # 3. Cazar ratones si tiene hambre
+    # 4. Descansar o merodear
+    #
+    # Devuelve la casilla a la que se mueve,
+    # o None si se queda quieto.
     # ==========================================
+
     def tomar_decision(
         self,
-        posicion_cazador
+        posicion_cazador,
+        energia_cazador=100,
+        ratones=None
     ):
 
         if not self.mundo.jaguar_vivo:
 
             return None
 
+
         self.actualizar_hambre()
 
-        #temporal
-        print(
-            "[JAGUAR]",
-            "Hambre:",
-            self.hambre,
-            "| Nivel:",
-            self.estado_hambre,
-            "| Conducta:",
-            self.estado
-        )
+
+        if ratones is None:
+
+            ratones = []
+
+
+        ratones_vivos = [
+            raton
+            for raton in ratones
+            if raton.vivo
+        ]
+
 
         distancia = (
             AEstrella.heuristica(
@@ -130,8 +192,123 @@ class AgenteJaguar:
         )
 
 
+        destino = self.decidir(
+            posicion_cazador,
+            energia_cazador,
+            ratones_vivos,
+            distancia
+        )
+
+
+        self.cazador_anterior = posicion_cazador
+
+        self.mundo.jaguar_peligroso = (
+            self.atacando
+            or
+            self.retirada > 0
+        )
+
+
+        if destino is not None:
+
+            self.mundo.mover_jaguar(
+                destino
+            )
+
+
+        return destino
+
+
+    def decidir(
+        self,
+        posicion_cazador,
+        energia_cazador,
+        ratones_vivos,
+        distancia
+    ):
+
         # ==========================================
-        # 1. DETECTA AL CAZADOR: ESCAPAR
+        # 0. RETIRADA DESPUÉS DE ATACAR
+        # ==========================================
+
+        if self.retirada > 0:
+
+            self.retirada -= 1
+
+            self.atacando = False
+
+            self.estado = "Retirándose tras el ataque"
+
+            return Huida.elegir_escape(
+                self.posicion,
+                posicion_cazador,
+                self.mundo
+            )
+
+
+        # ==========================================
+        # 1. INVERSIÓN DE PAPELES: ATACAR
+        # ==========================================
+
+        cazador_debil = (
+            energia_cazador
+            <
+            self.energia_debil_cazador
+        )
+
+        hambre_sin_ratones = (
+            self.hambre >= 80
+            and
+            not ratones_vivos
+        )
+
+        alcance = (
+            self.rango_ataque
+            if self.atacando
+            else self.rango_deteccion
+        )
+
+
+        if (
+            (cazador_debil or hambre_sin_ratones)
+            and
+            distancia <= alcance
+        ):
+
+            self.atacando = True
+
+
+            if cazador_debil:
+
+                self.estado = (
+                    "¡Atacando al cazador débil!"
+                )
+
+            else:
+
+                self.estado = (
+                    "¡Hambre indomable! Atacando"
+                )
+
+
+            # Persecución: apunta a donde va a
+            # estar el cazador
+
+            meta = Persecucion.punto_intercepcion(
+                self.posicion,
+                posicion_cazador,
+                self.cazador_anterior,
+                self.mundo
+            )
+
+            return self.paso_hacia(meta)
+
+
+        self.atacando = False
+
+
+        # ==========================================
+        # 2. DETECTA AL CAZADOR: ESCAPAR
         # ==========================================
 
         if (
@@ -141,13 +318,9 @@ class AgenteJaguar:
         ):
 
             destino = Huida.elegir_escape(
-
                 self.posicion,
-
                 posicion_cazador,
-
                 self.mundo
-
             )
 
 
@@ -160,15 +333,54 @@ class AgenteJaguar:
 
             self.estado = "Huyendo"
 
-            self.mundo.mover_jaguar(
-                destino
-            )
-
             return destino
 
 
         # ==========================================
-        # 2. TRANQUILO: MERODEAR O DESCANSAR
+        # 3. TIENE HAMBRE: CAZAR RATONES
+        # ==========================================
+
+        if (
+            self.hambre >= 40
+            and
+            ratones_vivos
+        ):
+
+            cercano = min(
+                ratones_vivos,
+                key=lambda raton:
+                AEstrella.heuristica(
+                    self.posicion,
+                    raton.posicion
+                )
+            )
+
+
+            if (
+                AEstrella.heuristica(
+                    self.posicion,
+                    cercano.posicion
+                )
+                <=
+                self.rango_olfato_ratones
+            ):
+
+                self.estado = "Cazando ratón"
+
+                return self.paso_hacia(
+                    cercano.posicion
+                )
+
+
+            # No huele ninguno: los busca
+
+            self.estado = "Buscando ratones"
+
+            return self.merodear()
+
+
+        # ==========================================
+        # 4. TRANQUILO: MERODEAR O DESCANSAR
         # ==========================================
 
         if (
@@ -181,6 +393,43 @@ class AgenteJaguar:
 
             return None
 
+
+        self.estado = "Merodeando"
+
+        return self.merodear()
+
+
+    # ==========================================
+    # DAR UN PASO HACIA UNA META (A*)
+    # ==========================================
+
+    def paso_hacia(self, meta):
+
+        if meta == self.posicion:
+
+            return None
+
+
+        camino = AEstrella.buscar(
+            self.posicion,
+            meta,
+            self.mundo
+        )
+
+
+        if not camino:
+
+            return None
+
+
+        return camino[0]
+
+
+    # ==========================================
+    # MERODEAR: UN PASO AL AZAR
+    # ==========================================
+
+    def merodear(self):
 
         opciones = [
 
@@ -200,20 +449,47 @@ class AgenteJaguar:
 
         if not opciones:
 
-            self.estado = "Descansando"
-
             return None
 
 
-        destino = random.choice(
+        return random.choice(
             opciones
         )
 
 
-        self.estado = "Merodeando"
+    # ==========================================
+    # COMER UN RATÓN
+    # ==========================================
 
-        self.mundo.mover_jaguar(
-            destino
+    def comer_raton(self):
+
+        self.hambre = max(
+            0,
+            self.hambre - self.saciedad_raton
         )
 
-        return destino
+        self.actualizar_nivel_hambre()
+
+        self.estado = "¡Comió un ratón!"
+
+
+    # ==========================================
+    # DESPUÉS DE ATACAR AL CAZADOR
+    # ==========================================
+
+    def despues_de_atacar(self):
+
+        self.atacando = False
+
+        self.retirada = self.decisiones_retirada
+
+        self.hambre = max(
+            0,
+            self.hambre - 40
+        )
+
+        self.actualizar_nivel_hambre()
+
+        self.mundo.jaguar_peligroso = True
+
+        self.estado = "¡Atacó al cazador!"

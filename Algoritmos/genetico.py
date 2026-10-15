@@ -32,6 +32,35 @@ DESPLAZAMIENTOS = {
 
 
 # ==========================================
+# CONFIGURACIÓN DE LA EVOLUCIÓN
+#
+# Se pueden cambiar para comparar métodos
+# (ver "Comparación de métodos" en el README).
+# ==========================================
+
+# Cómo se escogen los padres:
+#   "elitismo": solo los mejores
+#   "ruleta":   ruleta con escalamiento por rango
+#   "torneo":   el mejor de un grupo al azar
+
+METODO_SELECCION = "elitismo"
+
+# Probabilidad de que dos padres se crucen
+# (si no, los hijos son copias de los padres)
+
+PROPORCION_CRUCE = 0.7
+
+# True: el punto de cruce se elige al azar
+# False: siempre a la mitad del cromosoma
+
+PUNTO_CRUCE_ALEATORIO = True
+
+# Cuántos individuos compiten en cada torneo
+
+TAMANO_TORNEO = 3
+
+
+# ==========================================
 # GENERAR UN CROMOSOMA
 # ==========================================
 
@@ -107,10 +136,19 @@ def simular_cromosoma(
     posicion_objetivo,
     cromosoma,
     visitas_previas=None,
+    prohibidas=None,
     peso_colision=0.2,
     peso_arena=0.30,
     peso_repeticion=0.25
 ):
+
+    if prohibidas is None:
+
+        prohibidas = set()
+
+
+    primer_paso_invalido = False
+
 
     posicion_actual = posicion_inicial
 
@@ -171,8 +209,17 @@ def simular_cromosoma(
         # MOVIMIENTO VÁLIDO
         # ======================================
 
-        if mundo.es_transitable(
-            nueva_posicion
+        # Casillas prohibidas (por ejemplo,
+        # bayas que el cazador ya sabe que son
+        # malas) cuentan como obstáculo,
+        # igual que un árbol.
+
+        if (
+            mundo.es_transitable(
+                nueva_posicion
+            )
+            and
+            nueva_posicion not in prohibidas
         ):
 
             posicion_actual = (
@@ -252,6 +299,15 @@ def simular_cromosoma(
             colisiones += 1
 
 
+            # El agente solo ejecuta el PRIMER
+            # movimiento del plan: si ese choca,
+            # el plan no le sirve de nada.
+
+            if indice == 0:
+
+                primer_paso_invalido = True
+
+
     # ======================================
     # DISTANCIA MANHATTAN
     # ======================================
@@ -304,6 +360,15 @@ def simular_cromosoma(
     )
 
 
+    # ======================================
+    # CASTIGO SI EL PRIMER PASO CHOCA
+    # ======================================
+
+    if primer_paso_invalido:
+
+        aptitud -= 1.0
+
+
     return {
         "posicion_final": posicion_actual,
         "distancia": distancia,
@@ -324,6 +389,7 @@ def evaluar_poblacion(
     posicion_inicial,
     posicion_objetivo,
     visitas_previas=None,
+    prohibidas=None,
     peso_colision=0.2,
     peso_arena=0.30,
     peso_repeticion=0.25
@@ -347,6 +413,7 @@ def evaluar_poblacion(
             posicion_objetivo=posicion_objetivo,
             cromosoma=cromosoma,
             visitas_previas=visitas_previas,
+            prohibidas=prohibidas,
             peso_colision=peso_colision,
             peso_arena=peso_arena,
             peso_repeticion=peso_repeticion
@@ -391,6 +458,17 @@ def seleccionar_mejores(
 
 # ==========================================
 # CRUZA DE DOS CROMOSOMAS
+#
+# Cruce de punto sencillo: se corta a los
+# dos padres en un punto y se intercambian
+# las partes.
+#
+# - PUNTO_CRUCE_ALEATORIO: el punto se elige
+#   al azar entre 1 y (longitud - 1).
+#   Si no, siempre se corta a la mitad.
+# - PROPORCION_CRUCE: probabilidad de que se
+#   crucen. Si no se cruzan, los hijos son
+#   copias de los padres.
 # ==========================================
 
 def cruzar(
@@ -401,11 +479,34 @@ def cruzar(
     cromosoma1 = padre1["cromosoma"]
     cromosoma2 = padre2["cromosoma"]
 
-    punto_cruza = (
-        len(cromosoma1)
-        //
-        2
-    )
+
+    # ¿Se cruzan?
+
+    if random.random() >= PROPORCION_CRUCE:
+
+        return (
+            cromosoma1.copy(),
+            cromosoma2.copy()
+        )
+
+
+    # ¿Dónde se corta?
+
+    if PUNTO_CRUCE_ALEATORIO:
+
+        punto_cruza = random.randint(
+            1,
+            len(cromosoma1) - 1
+        )
+
+    else:
+
+        punto_cruza = (
+            len(cromosoma1)
+            //
+            2
+        )
+
 
     hijo1 = (
         cromosoma1[:punto_cruza]
@@ -462,6 +563,114 @@ def mutar(
     return cromosoma_mutado
 
 
+# ==========================================
+# SELECCIÓN POR RULETA
+#
+# Cada individuo tiene un pedazo de la ruleta.
+# Se usa escalamiento por rango: el peor vale
+# 1, el siguiente 2, ... y el mejor vale N.
+# (La aptitud puede ser negativa por los
+# castigos, por eso no se usa directamente.)
+#
+# Los mejores tienen más probabilidad, pero
+# los demás también pueden ser padres.
+# ==========================================
+
+def seleccionar_ruleta(resultados):
+
+    # resultados viene ordenado de mejor a peor
+
+    total = len(resultados)
+
+    pesos = [
+        total - posicion
+        for posicion in range(total)
+    ]
+
+    return random.choices(
+        resultados,
+        weights=pesos,
+        k=1
+    )[0]
+
+
+# ==========================================
+# SELECCIÓN POR TORNEO
+#
+# Se escogen al azar TAMANO_TORNEO individuos
+# y gana el de mejor aptitud.
+# ==========================================
+
+def seleccionar_torneo(resultados):
+
+    competidores = random.sample(
+        resultados,
+        min(
+            TAMANO_TORNEO,
+            len(resultados)
+        )
+    )
+
+    return max(
+        competidores,
+        key=lambda individuo: individuo["aptitud"]
+    )
+
+
+# ==========================================
+# ESCOGER DOS PADRES DISTINTOS
+# ==========================================
+
+def escoger_padres(
+    resultados,
+    cantidad_padres
+):
+
+    if METODO_SELECCION == "ruleta":
+
+        seleccionar = seleccionar_ruleta
+
+    elif METODO_SELECCION == "torneo":
+
+        seleccionar = seleccionar_torneo
+
+    else:
+
+        # Elitismo: dos al azar entre los mejores
+
+        return random.sample(
+            resultados[:cantidad_padres],
+            2
+        )
+
+
+    padre1 = seleccionar(resultados)
+
+    padre2 = seleccionar(resultados)
+
+
+    # Que no sea el mismo individuo dos veces
+
+    intentos = 0
+
+    while padre2 is padre1 and intentos < 5:
+
+        padre2 = seleccionar(resultados)
+
+        intentos += 1
+
+
+    return padre1, padre2
+
+
+# ==========================================
+# NUEVA GENERACIÓN
+#
+# 1. Los mejores (élite) pasan directo.
+# 2. Se escogen padres con METODO_SELECCION.
+# 3. Se cruzan y se mutan sus hijos.
+# ==========================================
+
 def crear_nueva_generacion(
     resultados,
     tamano_poblacion=10,
@@ -474,7 +683,7 @@ def crear_nueva_generacion(
 
 
     # ======================================
-    # ELITISMO
+    # ÉLITE
     # ======================================
     # Los mejores individuos pasan
     # directamente a la siguiente generación.
@@ -491,23 +700,14 @@ def crear_nueva_generacion(
 
 
     # ======================================
-    # SELECCIÓN DE PADRES
-    # ======================================
-
-    padres = resultados[
-        :cantidad_padres
-    ]
-
-
-    # ======================================
     # GENERAR HIJOS
     # ======================================
 
     while len(nueva_poblacion) < tamano_poblacion:
 
-        padre1, padre2 = random.sample(
-            padres,
-            2
+        padre1, padre2 = escoger_padres(
+            resultados,
+            cantidad_padres
         )
 
         hijo1, hijo2 = cruzar(
@@ -560,7 +760,8 @@ def evolucionar(
     peso_arena=0.30,
     peso_repeticion=0.25,
     mostrar_progreso=True,
-    visitas_previas=None
+    visitas_previas=None,
+    prohibidas=None
 ):
 
     # ======================================
@@ -591,6 +792,7 @@ def evolucionar(
             posicion_inicial=posicion_inicial,
             posicion_objetivo=posicion_objetivo,
             visitas_previas=visitas_previas,
+            prohibidas=prohibidas,
             peso_colision=peso_colision,
             peso_arena=peso_arena,
             peso_repeticion=peso_repeticion
@@ -681,7 +883,8 @@ def elegir_accion_genetica(
     mundo,
     posicion_inicial,
     posicion_objetivo,
-    visitas_previas=None
+    visitas_previas=None,
+    prohibidas=None
 ):
 
     mejor_individuo, generaciones = evolucionar(
@@ -695,7 +898,8 @@ def elegir_accion_genetica(
         cantidad_padres=4,
         probabilidad_mutacion=0.10,
         mostrar_progreso=False,
-        visitas_previas=visitas_previas
+        visitas_previas=visitas_previas,
+            prohibidas=prohibidas
     )
 
 
