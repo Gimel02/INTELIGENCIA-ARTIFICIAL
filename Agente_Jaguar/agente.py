@@ -263,10 +263,12 @@ class AgenteJaguar:
             self.energia_debil_cazador
         )
 
-        hambre_sin_ratones = (
+        # HAMBRE INDOMABLE: el hambre le quita el
+        # miedo y ataca al cazador aunque todavía
+        # queden ratones
+
+        hambre_indomable = (
             self.hambre >= 80
-            and
-            not ratones_vivos
         )
 
         alcance = (
@@ -277,7 +279,7 @@ class AgenteJaguar:
 
 
         if (
-            (cazador_debil or hambre_sin_ratones)
+            (cazador_debil or hambre_indomable)
             and
             distancia <= alcance
         ):
@@ -333,6 +335,23 @@ class AgenteJaguar:
 
             if destino is None:
 
+                # Acorralado: si el cazador está muy
+                # cerca, contraataca en vez de
+                # quedarse quieto
+
+                if distancia <= 2:
+
+                    self.atacando = True
+
+                    self.estado = (
+                        "¡Acorralado! Contraataca"
+                    )
+
+                    return self.paso_hacia(
+                        posicion_cazador
+                    )
+
+
                 self.estado = "Acorralado"
 
                 return None
@@ -380,10 +399,13 @@ class AgenteJaguar:
 
 
             # No huele ninguno: los busca
+            # (con hambre sí cruza la arena)
 
             self.estado = "Buscando ratones"
 
-            return self.merodear()
+            return self.merodear(
+                cruzar_arena=True
+            )
 
 
         # ==========================================
@@ -436,7 +458,7 @@ class AgenteJaguar:
     # MERODEAR: UN PASO AL AZAR
     # ==========================================
 
-    def merodear(self):
+    def merodear(self, cruzar_arena=False):
 
         opciones = [
 
@@ -446,9 +468,14 @@ class AgenteJaguar:
                 self.posicion
             )
 
-            # Evita la arena y el campamento
+            # Evita el campamento, y la arena
+            # salvo que tenga hambre
 
-            if self.mundo.grid[vecino] != 4
+            if (
+                cruzar_arena
+                or
+                self.mundo.grid[vecino] != 4
+            )
             and vecino != self.mundo.campamento
 
         ]
