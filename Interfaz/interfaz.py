@@ -1624,9 +1624,7 @@ class Interfaz:
 
         titulo_energia = (
             self.fuente_UI.render(
-                f"ENERGÍA: {int(energia)}%   "
-                f"VIDAS: {self.agente.vidas}/"
-                f"{self.agente.vidas_max}",
+                f"ENERGÍA: {int(energia)}%",
                 True,
                 self.C_ORO_PURO
             )

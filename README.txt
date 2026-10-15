@@ -296,7 +296,8 @@ Encuentro cazador - jaguar
 -Si el jaguar está atacando: el cazador pierde 30 de energía y 1 de sus 3 vidas, y el jaguar se retira.
  Sin vidas, el cazador queda vencido.
 -Si no: el cazador atrapa al jaguar.
--Mientras el jaguar ataca o se retira, el cazador no lo puede atrapar.
+-Mientras el jaguar ataca, y justo después del ataque (hasta su primer paso de huida), el cazador no lo
+ puede atrapar. Ya huyendo, si el cazador lo alcanza, lo atrapa.
 El panel muestra las vidas del cazador junto a la energía y el hambre del jaguar junto a su estado.
 
 Evitar ir y volver entre dos casillas (algoritmo genético + A*)

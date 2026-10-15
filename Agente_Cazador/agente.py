@@ -46,14 +46,14 @@ class AgenteCazador:
 
 
         # ==========================================
-        # VIDAS
+        # VIDA
         #
         # El jaguar puede atacarlo cuando invierte
-        # los papeles. Cada ataque le quita
-        # energía y una vida.
+        # los papeles. Si lo alcanza, lo caza y el
+        # juego termina (una sola vida).
         # ==========================================
 
-        self.vidas_max = 3
+        self.vidas_max = 1
 
         self.vidas = self.vidas_max
 
@@ -356,8 +356,8 @@ class AgenteCazador:
         if self.vidas == 0:
 
             self.estado = (
-                "El jaguar lo venció. "
-                "Sin vidas"
+                "¡El jaguar lo cazó! "
+                "Fin del juego"
             )
 
         else:
@@ -1986,8 +1986,8 @@ class AgenteCazador:
         if self.vidas <= 0:
 
             self.estado = (
-                "El jaguar lo venció. "
-                "Sin vidas"
+                "¡El jaguar lo cazó! "
+                "Fin del juego"
             )
 
             return

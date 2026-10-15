@@ -209,10 +209,16 @@ class AgenteJaguar:
 
         self.mundo.jaguar_atacando = self.atacando
 
+        # El cazador no lo puede atrapar mientras
+        # ataca, ni justo después del ataque
+        # (cuando todavía están en la misma
+        # casilla). En cuanto da su primer paso
+        # de huida, ya se le puede atrapar.
+
         self.mundo.jaguar_peligroso = (
             self.atacando
             or
-            self.retirada > 0
+            self.retirada == self.decisiones_retirada
         )
 
 
