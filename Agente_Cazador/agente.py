@@ -33,6 +33,13 @@ class AgenteCazador:
             mundo.inicio_cazador
         )
 
+        # Recordar las últimas posiciones para evitar
+        # que el cazador vaya y vuelva entre dos casillas.
+        self.ultimas_posiciones = deque(
+            [self.posicion],
+            maxlen=6
+        )
+
 
         # ==========================================
         # ENERGÍA
@@ -2875,6 +2882,49 @@ class AgenteCazador:
 
 
         # ==========================================
+        # 12.1 ROMPER BUCLE DE DOS POSICIONES
+        # ==========================================
+        # Si el siguiente paso nos devuelve a la casilla
+        # anterior, buscar otra vecina transitable.
+
+        if (
+            len(self.ultimas_posiciones) >= 2
+            and
+            siguiente_posicion == self.ultimas_posiciones[-2]
+        ):
+
+            posicion_anterior = self.ultimas_posiciones[-2]
+
+            alternativas = [
+                vecino
+                for vecino in self.mundo.vecinos_validos(
+                    self.posicion
+                )
+                if vecino != posicion_anterior
+                and self.mundo.es_transitable(vecino)
+                and vecino not in self.memoria.bayas_malas
+            ]
+
+            if alternativas:
+                alternativas.sort(
+                    key=lambda vecino: (
+                        AEstrella.heuristica(
+                            vecino,
+                            posicion_jaguar
+                        ),
+                        self.memoria.visitas.get(
+                            vecino,
+                            0
+                        )
+                    )
+                )
+
+                siguiente_posicion = alternativas[0]
+                camino = [siguiente_posicion]
+                self.ruta_planeada = camino
+
+
+        # ==========================================
         # 13. COMPROBAR POSICIÓN
         # ==========================================
 
@@ -2911,6 +2961,12 @@ class AgenteCazador:
 
             self.posicion = (
                 siguiente_posicion
+            )
+
+            # Guardar la posición alcanzada para detectar
+            # un posible regreso inmediato en el próximo turno.
+            self.ultimas_posiciones.append(
+                self.posicion
             )
 
 

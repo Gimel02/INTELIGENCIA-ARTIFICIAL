@@ -1,3 +1,4 @@
+
 import random
 
 from Algoritmos.a_Estrella import AEstrella
@@ -11,91 +12,39 @@ class AgenteJaguar:
 
         self.mundo = mundo
 
-
-        # ==========================================
-        # DETECCIÓN DEL CAZADOR
-        #
-        # El jaguar huele y oye al cazador a
-        # esta distancia (los árboles no lo tapan).
-        # ==========================================
-
+        # Detección del cazador
         self.rango_deteccion = 4
 
-
-        # Probabilidad de moverse cuando está
-        # tranquilo (si no, descansa)
-
+        # Movimiento cuando está tranquilo
         self.probabilidad_merodear = 0.35
-                # ==========================================
-        # HAMBRE
-        # ==========================================
 
+        # Memoria para evitar ciclos de movimiento
+        self.posiciones_recientes = []
+        self.max_posiciones_recientes = 4
+        self.cazador_anterior = None
+
+        # Hambre
         self.hambre = 0
         self.hambre_max = 100
-
-        # Cuánto aumenta por cada decisión
         self.aumento_hambre = 2
         self.estado_hambre = "NORMAL"
 
-
-        # ==========================================
-        # CAZA DE RATONES
-        # ==========================================
-
-        # Distancia a la que huele a los ratones
-
+        # Caza de ratones
         self.rango_olfato_ratones = 6
-
-        # Cuánta hambre se quita al comer uno
-
         self.saciedad_raton = 50
 
-
-        # ==========================================
-        # INVERSIÓN DE PAPELES: ATACAR AL CAZADOR
-        #
-        # Normalmente el jaguar huye del cazador.
-        # Pero se vuelve el PERSEGUIDOR si:
-        # - el cazador está débil (energía < 30)
-        # - o tiene HAMBRE INDOMABLE y ya no
-        #   quedan ratones
-        # ==========================================
-
+        # Ataque al cazador
         self.energia_debil_cazador = 30
-
-        # Distancia a la que lo sigue persiguiendo
-        # una vez que empezó el ataque
-
         self.rango_ataque = 8
-
         self.atacando = False
-
-        # Decisiones que pasa huyendo después
-        # de atacar (no puede volver a atacar)
-
         self.retirada = 0
-
         self.decisiones_retirada = 6
 
-        # Última posición donde vio al cazador
-        # (para cortarle el paso)
-
-        self.cazador_anterior = None
-
-        # El cazador revisa esto: mientras el
-        # jaguar ataca o se retira, no lo puede
-        # atrapar
-
+        # Estado del mundo
         mundo.jaguar_peligroso = False
-
-        # True mientras persigue al cazador
-        # (el cazador lo puede percibir)
-
         mundo.jaguar_atacando = False
 
-
         self.estado = "Descansando"
-
 
     # ==========================================
     # POSICIÓN
@@ -103,9 +52,122 @@ class AgenteJaguar:
 
     @property
     def posicion(self):
-
         return self.mundo.posicion_jaguar
 
+    # ==========================================
+    # DISTANCIA ORTOGONAL
+    # No considera movimientos diagonales
+    # ==========================================
+
+    @staticmethod
+    def distancia_ortogonal(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    # ==========================================
+    # VECINOS ORTOGONALES
+    # ==========================================
+
+    def vecinos_ortogonales(self, posicion=None):
+
+        if posicion is None:
+            posicion = self.posicion
+
+        fila, columna = posicion
+
+        candidatos = [
+            (fila - 1, columna),
+            (fila + 1, columna),
+            (fila, columna - 1),
+            (fila, columna + 1)
+        ]
+
+        # El mundo valida los obstáculos y límites.
+        # Además comprobamos que solo avance una casilla.
+        vecinos_validos = self.mundo.vecinos_validos(
+            posicion
+        )
+
+        permitidos = []
+
+        for vecino in vecinos_validos:
+
+            if vecino not in candidatos:
+                continue
+
+            if self.distancia_ortogonal(
+                posicion, vecino
+            ) != 1:
+                continue
+
+            permitidos.append(vecino)
+
+        return permitidos
+
+    # ==========================================
+    # MEMORIA DE POSICIONES
+    # ==========================================
+
+    def recordar_posicion(self, posicion=None):
+
+        if posicion is None:
+            posicion = self.posicion
+
+        if (
+            not self.posiciones_recientes
+            or self.posiciones_recientes[-1] != posicion
+        ):
+            self.posiciones_recientes.append(posicion)
+
+        self.posiciones_recientes = (
+            self.posiciones_recientes[
+                -self.max_posiciones_recientes:
+            ]
+        )
+
+    # ==========================================
+    # ELEGIR ESCAPE SIN REPETIR MOVIMIENTOS
+    # ==========================================
+
+    def elegir_escape_sin_bucle(
+        self,
+        posicion_cazador
+    ):
+
+        opciones = self.vecinos_ortogonales()
+
+        if not opciones:
+            return None
+
+        # Primero intenta no regresar a las
+        # últimas casillas visitadas.
+        alternativas = [
+            vecino
+            for vecino in opciones
+            if vecino not in self.posiciones_recientes
+        ]
+
+        if alternativas:
+            opciones = alternativas
+
+        # Escoge la casilla que más lo aleje
+        # del cazador usando distancia ortogonal.
+        distancias = {
+            vecino: self.distancia_ortogonal(
+                vecino,
+                posicion_cazador
+            )
+            for vecino in opciones
+        }
+
+        distancia_maxima = max(distancias.values())
+
+        mejores = [
+            vecino
+            for vecino in opciones
+            if distancias[vecino] == distancia_maxima
+        ]
+
+        return random.choice(mejores)
 
     # ==========================================
     # ACTUALIZAR HAMBRE
@@ -113,53 +175,26 @@ class AgenteJaguar:
 
     def actualizar_hambre(self):
 
-        self.hambre += self.aumento_hambre
-
         self.hambre = min(
-            self.hambre,
+            self.hambre + self.aumento_hambre,
             self.hambre_max
         )
 
         self.actualizar_nivel_hambre()
 
-
-    # ==========================================
-    # NIVEL DE HAMBRE
-    # ==========================================
-
     def actualizar_nivel_hambre(self):
 
         if self.hambre >= 80:
-
-            self.estado_hambre = (
-                "HAMBRE INDOMABLE"
-            )
+            self.estado_hambre = "HAMBRE INDOMABLE"
 
         elif self.hambre >= 40:
-
-            self.estado_hambre = (
-                "HAMBRIENTO"
-            )
+            self.estado_hambre = "HAMBRIENTO"
 
         else:
-
-            self.estado_hambre = (
-                "NORMAL"
-            )
-
+            self.estado_hambre = "NORMAL"
 
     # ==========================================
     # TOMAR DECISIÓN
-    #
-    # Prioridades:
-    # 0. Retirarse después de atacar
-    # 1. Atacar al cazador (inversión de papeles)
-    # 2. Huir del cazador
-    # 3. Cazar ratones si tiene hambre
-    # 4. Descansar o merodear
-    #
-    # Devuelve la casilla a la que se mueve,
-    # o None si se queda quieto.
     # ==========================================
 
     def tomar_decision(
@@ -170,32 +205,25 @@ class AgenteJaguar:
     ):
 
         if not self.mundo.jaguar_vivo:
-
             return None
-
 
         self.actualizar_hambre()
 
-
         if ratones is None:
-
             ratones = []
-
 
         ratones_vivos = [
             raton
             for raton in ratones
-            if raton.vivo
+            if getattr(raton, "vivo", False)
         ]
 
-
-        distancia = (
-            AEstrella.heuristica(
-                self.posicion,
-                posicion_cazador
-            )
+        distancia = self.distancia_ortogonal(
+            self.posicion,
+            posicion_cazador
         )
 
+        posicion_anterior = self.posicion
 
         destino = self.decidir(
             posicion_cazador,
@@ -204,33 +232,47 @@ class AgenteJaguar:
             distancia
         )
 
+        # Solo permitir un paso ortogonal.
+        # Evita saltos y diagonales.
+        if destino is not None:
+
+            vecinos = self.vecinos_ortogonales(
+                posicion_anterior
+            )
+
+            if destino not in vecinos:
+
+                # Si la decisión produjo un destino
+                # no adyacente, intentar avanzar hacia él
+                # mediante A*.
+                destino = self.paso_hacia(destino)
+
+                if (
+                    destino is not None
+                    and destino not in vecinos
+                ):
+                    destino = None
 
         self.cazador_anterior = posicion_cazador
 
         self.mundo.jaguar_atacando = self.atacando
 
-        # El cazador no lo puede atrapar mientras
-        # ataca, ni justo después del ataque
-        # (cuando todavía están en la misma
-        # casilla). En cuanto da su primer paso
-        # de huida, ya se le puede atrapar.
-
         self.mundo.jaguar_peligroso = (
             self.atacando
-            or
-            self.retirada == self.decisiones_retirada
+            or self.retirada == self.decisiones_retirada
         )
-
 
         if destino is not None:
 
-            self.mundo.mover_jaguar(
-                destino
-            )
+            self.recordar_posicion(posicion_anterior)
 
+            self.mundo.mover_jaguar(destino)
 
         return destino
 
+    # ==========================================
+    # TOMAR DECISIÓN SEGÚN SU ESTADO
+    # ==========================================
 
     def decidir(
         self,
@@ -240,42 +282,23 @@ class AgenteJaguar:
         distancia
     ):
 
-        # ==========================================
-        # 0. RETIRADA DESPUÉS DE ATACAR
-        # ==========================================
-
+        # 0. Retirarse después de atacar
         if self.retirada > 0:
 
             self.retirada -= 1
-
             self.atacando = False
-
             self.estado = "Retirándose tras el ataque"
 
-            return Huida.elegir_escape(
-                self.posicion,
-                posicion_cazador,
-                self.mundo
+            return self.elegir_escape_sin_bucle(
+                posicion_cazador
             )
 
-
-        # ==========================================
-        # 1. INVERSIÓN DE PAPELES: ATACAR
-        # ==========================================
-
+        # 1. Decidir si puede atacar al cazador
         cazador_debil = (
-            energia_cazador
-            <
-            self.energia_debil_cazador
+            energia_cazador < self.energia_debil_cazador
         )
 
-        # HAMBRE INDOMABLE: el hambre le quita el
-        # miedo y ataca al cazador aunque todavía
-        # queden ratones
-
-        hambre_indomable = (
-            self.hambre >= 80
-        )
+        hambre_indomable = self.hambre >= 80
 
         alcance = (
             self.rango_ataque
@@ -283,31 +306,17 @@ class AgenteJaguar:
             else self.rango_deteccion
         )
 
-
         if (
             (cazador_debil or hambre_indomable)
-            and
-            distancia <= alcance
+            and distancia <= alcance
         ):
 
             self.atacando = True
 
-
             if cazador_debil:
-
-                self.estado = (
-                    "¡Atacando al cazador débil!"
-                )
-
+                self.estado = "¡Atacando al cazador débil!"
             else:
-
-                self.estado = (
-                    "¡Hambre indomable! Atacando"
-                )
-
-
-            # Persecución: apunta a donde va a
-            # estar el cazador
+                self.estado = "¡Hambre indomable! Atacando"
 
             meta = Persecucion.punto_intercepcion(
                 self.posicion,
@@ -318,84 +327,49 @@ class AgenteJaguar:
 
             return self.paso_hacia(meta)
 
-
         self.atacando = False
 
+        # 2. Si detecta al cazador, huye
+        if distancia <= self.rango_deteccion:
 
-        # ==========================================
-        # 2. DETECTA AL CAZADOR: ESCAPAR
-        # ==========================================
-
-        if (
-            distancia
-            <=
-            self.rango_deteccion
-        ):
-
-            destino = Huida.elegir_escape(
-                self.posicion,
-                posicion_cazador,
-                self.mundo
+            destino = self.elegir_escape_sin_bucle(
+                posicion_cazador
             )
 
-
             if destino is None:
-
-                # Acorralado: si el cazador está muy
-                # cerca, contraataca en vez de
-                # quedarse quieto
 
                 if distancia <= 2:
 
                     self.atacando = True
-
-                    self.estado = (
-                        "¡Acorralado! Contraataca"
-                    )
+                    self.estado = "¡Acorralado! Contraataca"
 
                     return self.paso_hacia(
                         posicion_cazador
                     )
 
-
                 self.estado = "Acorralado"
-
                 return None
 
-
             self.estado = "Huyendo"
-
             return destino
 
-
-        # ==========================================
-        # 3. TIENE HAMBRE: CAZAR RATONES
-        # ==========================================
-
-        if (
-            self.hambre >= 40
-            and
-            ratones_vivos
-        ):
+        # 3. Si tiene hambre, busca ratones
+        if self.hambre >= 40 and ratones_vivos:
 
             cercano = min(
                 ratones_vivos,
-                key=lambda raton:
-                AEstrella.heuristica(
+                key=lambda raton: self.distancia_ortogonal(
                     self.posicion,
                     raton.posicion
                 )
             )
 
+            distancia_raton = self.distancia_ortogonal(
+                self.posicion,
+                cercano.posicion
+            )
 
-            if (
-                AEstrella.heuristica(
-                    self.posicion,
-                    cercano.posicion
-                )
-                <=
-                self.rango_olfato_ratones
-            ):
+            if distancia_raton <= self.rango_olfato_ratones:
 
                 self.estado = "Cazando ratón"
 
@@ -403,47 +377,30 @@ class AgenteJaguar:
                     cercano.posicion
                 )
 
-
-            # No huele ninguno: los busca
-            # (con hambre sí cruza la arena)
-
             self.estado = "Buscando ratones"
 
             return self.merodear(
                 cruzar_arena=True
             )
 
-
-        # ==========================================
-        # 4. TRANQUILO: MERODEAR O DESCANSAR
-        # ==========================================
-
-        if (
-            random.random()
-            >
-            self.probabilidad_merodear
-        ):
+        # 4. Si está tranquilo, puede descansar
+        if random.random() > self.probabilidad_merodear:
 
             self.estado = "Descansando"
-
             return None
-
 
         self.estado = "Merodeando"
 
         return self.merodear()
 
-
     # ==========================================
-    # DAR UN PASO HACIA UNA META (A*)
+    # DAR UN PASO HACIA UNA META USANDO A*
     # ==========================================
 
     def paso_hacia(self, meta):
 
-        if meta == self.posicion:
-
+        if meta is None or meta == self.posicion:
             return None
-
 
         camino = AEstrella.buscar(
             self.posicion,
@@ -451,51 +408,58 @@ class AgenteJaguar:
             self.mundo
         )
 
-
         if not camino:
-
             return None
 
+        # Elegir únicamente el primer paso del camino.
+        siguiente = camino[0]
 
-        return camino[0]
+        # Evitar que un camino devuelva una diagonal.
+        if siguiente not in self.vecinos_ortogonales():
+            return None
 
+        return siguiente
 
     # ==========================================
-    # MERODEAR: UN PASO AL AZAR
+    # MERODEAR SIN DIAGONALES NI CICLOS
     # ==========================================
 
     def merodear(self, cruzar_arena=False):
 
+        opciones = self.vecinos_ortogonales()
+
+        # El grid es un diccionario con coordenadas
+        # como claves: grid[(fila, columna)].
+        if not cruzar_arena:
+
+            opciones = [
+                vecino
+                for vecino in opciones
+                if self.mundo.grid[vecino] != 4
+            ]
+
+        # Evitar el campamento.
         opciones = [
-
             vecino
-
-            for vecino in self.mundo.vecinos_validos(
-                self.posicion
-            )
-
-            # Evita el campamento, y la arena
-            # salvo que tenga hambre
-
-            if (
-                cruzar_arena
-                or
-                self.mundo.grid[vecino] != 4
-            )
-            and vecino != self.mundo.campamento
-
+            for vecino in opciones
+            if vecino != self.mundo.campamento
         ]
 
-
         if not opciones:
-
             return None
 
+        # Evitar las posiciones recientes cuando
+        # existen otros caminos disponibles.
+        alternativas = [
+            vecino
+            for vecino in opciones
+            if vecino not in self.posiciones_recientes
+        ]
 
-        return random.choice(
-            opciones
-        )
+        if alternativas:
+            opciones = alternativas
 
+        return random.choice(opciones)
 
     # ==========================================
     # COMER UN RATÓN
@@ -512,7 +476,6 @@ class AgenteJaguar:
 
         self.estado = "¡Comió un ratón!"
 
-
     # ==========================================
     # DESPUÉS DE ATACAR AL CAZADOR
     # ==========================================
@@ -520,7 +483,6 @@ class AgenteJaguar:
     def despues_de_atacar(self):
 
         self.atacando = False
-
         self.retirada = self.decisiones_retirada
 
         self.hambre = max(
@@ -531,7 +493,6 @@ class AgenteJaguar:
         self.actualizar_nivel_hambre()
 
         self.mundo.jaguar_peligroso = True
-
         self.mundo.jaguar_atacando = False
 
         self.estado = "¡Atacó al cazador!"

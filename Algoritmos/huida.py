@@ -6,22 +6,28 @@ class Huida:
     # ==========================================
     # ELEGIR CASILLA DE ESCAPE
     #
-    # El que huye (jaguar) revisa sus casillas
-    # vecinas y elige la mejor para alejarse
-    # del cazador.
+    # El que huye (jaguar o cazador) revisa sus
+    # casillas vecinas y elige la mejor para
+    # alejarse del perseguidor.
     #
     # Puntaje de cada casilla:
-    # + distancia al cazador (lo más importante)
+    # + distancia al perseguidor (lo más importante)
     # + salidas que tiene (para no meterse
     #   en un callejón sin salida)
     # - si es arena movediza (lo hace lento)
+    #
+    # CAMBIO: nuevo parámetro opcional "prohibidas"
+    # (por ejemplo, bayas malas). Esas casillas
+    # nunca se eligen como escape. Si no se pasa,
+    # todo funciona exactamente igual que antes.
     # ==========================================
 
     @staticmethod
     def elegir_escape(
         posicion_presa,
         posicion_cazador,
-        mundo
+        mundo,
+        prohibidas=()
     ):
 
         distancia_actual = (
@@ -44,9 +50,16 @@ class Huida:
         ):
 
             # Nunca se mete en la casilla
-            # del cazador
+            # del perseguidor
 
             if vecino == posicion_cazador:
+
+                continue
+
+
+            # CAMBIO: nunca elige una casilla prohibida
+
+            if vecino in prohibidas:
 
                 continue
 
