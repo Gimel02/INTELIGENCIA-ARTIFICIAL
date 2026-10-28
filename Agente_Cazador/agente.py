@@ -12,7 +12,7 @@ from Algoritmos.genetico import (
     DESPLAZAMIENTOS
 )
 
-
+#GIMEL COMMIT PRUEBA
 class AgenteCazador:
 
     # Cuánto vale cada casilla nueva que vería
