@@ -3,6 +3,21 @@ import math
 import random
 
 
+# ==========================================
+# AGENTE TONTO (lo coordina DIOS)
+#
+# El ratón NO usa lógica difusa, no tiene
+# base de conocimiento y no aprende. Siempre
+# sigue las mismas reglas fijas:
+#   1. Si el jaguar está a 3 casillas o menos,
+#      huye en línea recta.
+#   2. Si no, camina al azar y cambia de
+#      dirección cada 0.8 a 2 segundos.
+#   3. Si choca, busca otra dirección libre.
+# Sirve para comparar contra los agentes
+# entrenados (cazador y jaguar).
+# ==========================================
+
 class AgenteRaton:
 
     def __init__(self, mundo, identificador, casilla):

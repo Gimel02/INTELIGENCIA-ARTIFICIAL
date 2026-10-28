@@ -417,3 +417,167 @@ aptitud ya castiga mucho que el primer paso choque.
 
 Las carpetas `__pycache__` contienen archivos temporales generados automáticamente por Python al ejecutar el programa. 
 Estos archivos no forman parte de la lógica principal del proyecto.
+
+
+Control difuso (Mamdani): quién toma las decisiones
+
+DIOS (Logica_Difusa/dios.py) coordina a los agentes:
+-Agente 1 = CAZADOR: control difuso, reglas entrenadas con AG.
+-Agente 2 = JAGUAR: control difuso, reglas entrenadas con AG.
+-Agente Tonto = RATONES: reglas fijas (huir del jaguar o caminar al azar), sin memoria y sin aprender.
+
+En cada turno, el controlador difuso decide QUÉ hace el agente. Después, el AG del movimiento
+(o A*) decide CÓMO llega el cazador a su meta.
+
+   CAZADOR                                                  JAGUAR
+   entradas: reserva (0-100), distancia (0-30),             entradas: hambre (0-100),
+             peligro (0-100)                                          distancia_cazador (0-30),
+   salida:   huir | recargar | explorar | perseguir |                 energia_cazador (0-100)
+             atacar                                         salida:   huir | merodear |
+   23 reglas                                                          cazar_raton | atacar
+                                                            11 reglas
+
+   Input -> Fuzzificación (grados 0-1) -> Inferencia (IF-THEN, AND=min, OR=max, NOT=1-x,
+   implicación=min, AGG=max) -> Centroide (x* = Σxμ/Σμ) -> Output
+
+-reserva = energía - energía para volver al campamento.
+-distancia = casillas hasta el jaguar (o hasta donde lo vio). 30 si no sabe nada de él.
+-peligro = 100 si el jaguar lo ataca, el hambre del jaguar si lo percibe, 0 si no lo percibe.
+
+Archivos (carpeta Logica_Difusa/):
+-funciones_membresia.py: grado, grado inversa, triangular y trapezoidal.
+-operadores.py: AND, OR, NOT, implicación y AGG.
+-variables.py: variables lingüísticas y sus puntos X0..X3.
+-base_conocimiento.py: reglas IF-THEN, guardar/cargar en JSON, cromosoma <-> reglas.
+-motor_mamdani.py: fuzzificación, inferencia y centroide.
+-dios.py: orquestador DIOS.
+-simulador.py: partidas sin ventana para entrenar y comparar.
+-entrenamiento_genetico.py: el AG que crea las reglas.
+-comparar.py: compara reglas entrenadas, del equipo y al azar.
+-bases/: la base de conocimiento (memoria) de cada agente en JSON.
+-reporte/: reporte y gráficas.
+
+Comandos:
+   python3 -m Logica_Difusa.entrenamiento_genetico jaguar      (entrena al jaguar)
+   python3 -m Logica_Difusa.entrenamiento_genetico cazador     (entrena al cazador)
+   python3 -m Logica_Difusa.comparar 60                        (compara en 60 mapas nuevos)
+
+En la ventana, la tecla D cambia entre las reglas entrenadas y las del equipo, y reinicia la
+partida. La bitácora (tecla B) muestra la decisión difusa del cazador en cada turno: x*, la acción
+y las reglas que más pesaron.
+
+
+Qué cambió en los archivos que ya existían (explicado para el equipo)
+
+Antes, el cazador y el jaguar decidían con una cadena de "if": si pasa esto, haz aquello.
+Ahora, en cada turno, le preguntan al sistema difuso qué hacer. El sistema difuso NO mueve al
+agente: solo dice la ACCIÓN. Después, el código que ya teníamos (AG del movimiento, A*, huida,
+etc.) se encarga de dar el paso.
+
+   El agente mide sus entradas  ->  el sistema difuso responde una acción  ->  el agente
+   elige su meta según esa acción  ->  el AG del movimiento o A* da el paso
+
+
+1. Agente_Cazador/agente.py (el que más cambió)
+
+   ANTES: decidía con una "reserva de seguridad" fija y una variable "en_peligro". Si su
+   energía bajaba de cierto número, regresaba; si veía al jaguar cerca, huía. Era todo o nada.
+
+   AHORA:
+   -Se agregó la función entradas_difusas(). Calcula los 3 datos que el cazador le da al
+    sistema difuso:
+       reserva   = energía que le queda - energía que necesita para volver al campamento
+       distancia = casillas hasta el jaguar (o hasta donde lo vio la última vez); 30 si no
+                   sabe nada de él
+       peligro   = 100 si el jaguar lo está atacando, el hambre del jaguar si lo ve, 0 si no
+                   lo ve
+   -Se agregó la función decidir_difuso(). Le manda esos 3 datos al controlador difuso y
+    recibe una de estas 5 acciones:
+       huir       -> se aleja del jaguar (usa la huida que ya existía)
+       recargar   -> modo supervivencia: va por bayas buenas o regresa al campamento
+       explorar   -> sigue explorando el mapa como antes
+       perseguir  -> calcula dónde cortarle el paso al jaguar y va hacia ahí
+       atacar     -> va directo a la casilla del jaguar
+   -En decidir_y_actuar() se reemplazó el bloque viejo de reserva_seguridad / en_peligro por
+    esas 5 acciones. Lo demás (memoria, bayas, mapa, AG del movimiento) sigue igual.
+   -Antes, si el jaguar estaba en la casilla de al lado, el cazador lo atacaba siempre. Ahora
+    solo lo hace si su decisión difusa fue perseguir o atacar.
+   -La bitácora (tecla B) ahora también muestra la decisión difusa. Ejemplo:
+       x*=33.3 recargar | R21->huir (0.67)
+    Quiere decir que el centroide dio 33.3, la acción fue recargar y la regla que más pesó
+    fue la R21 con fuerza 0.67.
+
+2. Agente_Jaguar/agente.py
+
+   ANTES: decidía con "if" sobre su hambre y la distancia al cazador.
+
+   AHORA: le da al sistema difuso estos 3 datos:
+       hambre             = qué tanta hambre tiene (0 a 100)
+       distancia_cazador  = casillas hasta el cazador
+       energia_cazador    = energía del cazador (si está débil, el jaguar se anima a atacar)
+   y recibe una de estas 4 acciones:
+       atacar       -> calcula dónde interceptar al cazador y va hacia ahí con A*
+       huir         -> busca la mejor ruta de escape; si está acorralado y el cazador está a 2
+                       casillas o menos, contraataca
+       cazar_raton  -> va por el ratón más cercano que pueda oler (6 casillas o menos); si no
+                       hay ninguno, camina buscando
+       merodear     -> descansa o camina por la selva
+   -Lo que NO cambió: después de atacar, el jaguar se retira unos turnos sin preguntarle al
+    sistema difuso (igual que antes).
+   -Ahora guarda su hambre en mundo.hambre_jaguar para que el cazador la pueda usar como
+    "peligro" cuando lo ve.
+
+3. Agente_Raton/agente.py
+
+   No cambió su comportamiento. Solo se agregó un comentario arriba que dice que los ratones
+   son el AGENTE TONTO: siguen reglas fijas (si ven al jaguar huyen, si no caminan al azar),
+   no tienen base de conocimiento y no aprenden.
+
+4. Interfaz/interfaz.py
+
+   -El panel de abajo ahora muestra la decisión difusa, por ejemplo:
+       ... | difuso (entrenadas): perseguir
+   -Se agregó la tecla D. Cambia entre las reglas entrenadas por el AG y las reglas que
+    hicimos a mano (equipo), y reinicia la partida. Sirve para comparar en vivo cómo se
+    comporta cada una.
+
+5. README.txt
+
+   Se agregó esta sección y la de arriba.
+
+
+Lo que NO se tocó: Mundo/, Algoritmos/genetico.py (el AG del movimiento), main.py y el resto
+de archivos siguen igual.
+
+
+Ejemplo de un turno del cazador (paso a paso)
+
+   1. El cazador mide: reserva = 30, distancia al jaguar = 4, peligro = 70.
+   2. Fuzzificación (qué tanto pertenece cada dato a cada palabra, de 0 a 1):
+         reserva 30   -> baja 0.5, media 0.5
+         distancia 4  -> cerca 0.67, media 0.33
+         peligro 70   -> tranquilo 0.25, agresivo 0.75
+   3. Reglas: se evalúan las 23 reglas con AND=min, OR=max, NOT=1-x. Por ejemplo:
+         R21: SI peligro es agresivo Y distancia es (muy_cerca O cerca) ENTONCES huir
+              = min(0.75, max(0, 0.67)) = 0.67
+   4. Cada acción se recorta a la fuerza de sus reglas (huir 0.67, recargar 0.33,
+      perseguir 0.25) y se juntan con max.
+   5. Centroide: el punto de equilibrio de esa figura da x* = 33.3, que cae en "recargar".
+   6. El cazador entra en modo supervivencia y el AG del movimiento le da el paso.
+
+
+Cómo ver o cambiar las reglas
+
+   Las reglas de cada agente están en Logica_Difusa/bases/ en archivos JSON:
+       cazador_entrenadas.json, jaguar_entrenadas.json  -> las que encontró el AG
+       cazador_equipo.json, jaguar_equipo.json          -> las que hicimos a mano
+   Cada regla se ve así:
+       "id": "R01",
+       "si": { "y": [ reserva es muy_baja, distancia es muy_cerca, NO peligro es agresivo ] },
+       "entonces": ["accion", "explorar"]
+   Para cambiar lo que hace una regla, se cambia la acción de "entonces" (por ejemplo,
+   "explorar" por "huir") y se vuelve a correr el juego. Si se vuelve a entrenar con el AG,
+   el archivo *_entrenadas.json se sobrescribe.
+
+Para entender todo con más detalle (gráficas, ejemplo con números y resultados del
+entrenamiento), ver Logica_Difusa/reporte/REPORTE_CONTROL_DIFUSO.md.

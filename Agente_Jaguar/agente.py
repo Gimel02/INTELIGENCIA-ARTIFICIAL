@@ -10,9 +10,28 @@ from Algoritmos.genetica_jaguar import elegir_accion_genetica_jaguar,DESPLAZAMIE
 
 class AgenteJaguar:
 
-    def __init__(self, mundo):
+    def __init__(self, mundo, controlador=None):
 
         self.mundo = mundo
+
+        # ==========================================
+        # CONTROL DIFUSO (MAMDANI)
+        #
+        # Decide QUÉ hace el jaguar en cada turno:
+        # huir, merodear, cazar_raton o atacar.
+        # Si no le pasan uno, usa el del
+        # orquestador (DIOS).
+        # ==========================================
+
+        if controlador is None:
+
+            from Logica_Difusa.dios import controlador_por_defecto
+
+            controlador = controlador_por_defecto("jaguar")
+
+        self.controlador = controlador
+
+        self.decision_difusa = None
 
         # Detección del cazador
         self.rango_deteccion = 4
@@ -32,6 +51,7 @@ class AgenteJaguar:
 
         # Hambre
         self.hambre = 0
+        mundo.hambre_jaguar = 0
         self.hambre_max = 100
         self.aumento_hambre = 2
         self.estado_hambre = "NORMAL"
@@ -194,6 +214,11 @@ class AgenteJaguar:
         self.actualizar_nivel_hambre()
 
     def actualizar_nivel_hambre(self):
+
+        # El cazador percibe qué tan agresivo
+        # está el jaguar (entrada "peligro" de
+        # su control difuso)
+        self.mundo.hambre_jaguar = self.hambre
 
         if self.hambre >= 80:
             self.estado_hambre = "HAMBRE INDOMABLE"
@@ -366,14 +391,33 @@ class AgenteJaguar:
                 self.estado = "Retirándose tras el ataque"
                 return self.elegir_escape_inteligente(posicion_cazador)
 
-            # 1. Decidir si puede atacar al cazador
-            cazador_debil = energia_cazador < self.energia_debil_cazador
-            hambre_indomable = self.hambre >= 80
-            alcance = self.rango_ataque if self.atacando else self.rango_deteccion
+            # 1. DECISIÓN DIFUSA: qué hacer
 
-            if (cazador_debil or hambre_indomable) and distancia <= alcance:
+            entradas = {
+                "hambre": self.hambre,
+                "distancia_cazador": distancia,
+                "energia_cazador": energia_cazador,
+            }
+
+            accion, x_estrella = self.controlador.decidir(entradas)
+
+            self.decision_difusa = {
+                "accion": accion,
+                "x": x_estrella,
+                "entradas": entradas,
+                "explicacion": self.controlador.explicar(),
+            }
+
+            self.atacando = False
+
+
+            # 2. ATACAR al cazador
+
+            if accion == "atacar":
+
                 self.atacando = True
-                if cazador_debil:
+
+                if energia_cazador < self.energia_debil_cazador:
                     self.estado = "¡Atacando al cazador débil!"
                 else:
                     self.estado = "¡Hambre indomable! Atacando"
@@ -386,10 +430,10 @@ class AgenteJaguar:
                 )
                 return self.paso_hacia(meta)
 
-            self.atacando = False
 
-            # 2. Si detecta al cazador, huye utilizando escape inteligente
-            if distancia <= self.rango_deteccion:
+            # 3. HUIR del cazador con escape inteligente
+
+            if accion == "huir":
                 destino = self.elegir_escape_inteligente(posicion_cazador)
 
                 if destino is None:
@@ -404,29 +448,35 @@ class AgenteJaguar:
                 self.estado = "Huyendo (Escape Inteligente)"
                 return destino
 
-            # 3. Si tiene hambre, busca ratones
-            if self.hambre >= 40 and ratones_vivos:
-                cercano = min(
-                    ratones_vivos,
-                    key=lambda raton: self.distancia_ortogonal(
-                        self.posicion,
-                        raton.posicion
+
+            # 4. CAZAR RATONES
+
+            if accion == "cazar_raton":
+
+                if ratones_vivos:
+                    cercano = min(
+                        ratones_vivos,
+                        key=lambda raton: self.distancia_ortogonal(
+                            self.posicion,
+                            raton.posicion
+                        )
                     )
-                )
 
-                distancia_raton = self.distancia_ortogonal(
-                    self.posicion,
-                    cercano.posicion
-                )
+                    distancia_raton = self.distancia_ortogonal(
+                        self.posicion,
+                        cercano.posicion
+                    )
 
-                if distancia_raton <= self.rango_olfato_ratones:
-                    self.estado = "Cazando ratón"
-                    return self.paso_hacia(cercano.posicion)
+                    if distancia_raton <= self.rango_olfato_ratones:
+                        self.estado = "Cazando ratón"
+                        return self.paso_hacia(cercano.posicion)
 
                 self.estado = "Buscando ratones"
                 return self.merodear(cruzar_arena=True)
 
-            # 4. Si está tranquilo, puede descansar o merodear
+
+            # 5. MERODEAR: puede descansar o caminar
+
             if random.random() > self.probabilidad_merodear:
                 self.estado = "Descansando"
                 return None

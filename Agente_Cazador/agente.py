@@ -12,6 +12,8 @@ from Algoritmos.genetico import (
     DESPLAZAMIENTOS
 )
 
+from Logica_Difusa.variables import DISTANCIA
+
 #GIMEL COMMIT PRUEBA
 class AgenteCazador:
 
@@ -21,13 +23,36 @@ class AgenteCazador:
 
     PESO_TERRENO_NUEVO = 1
 
-    def __init__(self, mundo):
+    def __init__(self, mundo, controlador=None):
 
         # ==========================================
         # MUNDO
         # ==========================================
 
         self.mundo = mundo
+
+
+        # ==========================================
+        # CONTROL DIFUSO (MAMDANI)
+        #
+        # Es el que decide QUÉ hacer en cada turno:
+        # huir, recargar, explorar, perseguir o
+        # atacar. Si no le pasan uno, usa el del
+        # agente activo del orquestador (DIOS).
+        # ==========================================
+
+        if controlador is None:
+
+            from Logica_Difusa.dios import controlador_por_defecto
+
+            controlador = controlador_por_defecto("cazador")
+
+        self.controlador = controlador
+
+        # Última decisión difusa: acción, x* y
+        # las reglas que más pesaron
+
+        self.decision_difusa = None
 
         self.posicion = (
             mundo.inicio_cazador
@@ -1391,7 +1416,12 @@ class AgenteCazador:
                 self.energia
             ),
             "problema": self.problema_actual,
-            "premio": self.ultimo_premio
+            "premio": self.ultimo_premio,
+            "difuso": (
+                self.decision_difusa["explicacion"]
+                if self.decision_difusa
+                else ""
+            )
 
         })
 
@@ -1725,6 +1755,11 @@ class AgenteCazador:
             )
 
 
+        print(
+            f"Control difuso: "
+            f"{self.controlador.base.nombre}"
+        )
+
         print(f"Últimas {ultimas} decisiones:")
 
         for registro in list(self.bitacora)[-ultimas:]:
@@ -1746,6 +1781,11 @@ class AgenteCazador:
                 + (
                     f" | {registro['premio']}"
                     if registro.get("premio")
+                    else ""
+                )
+                + (
+                    f"\n          difuso: {registro['difuso']}"
+                    if registro.get("difuso")
                     else ""
                 )
             )
@@ -1973,6 +2013,121 @@ class AgenteCazador:
 
 
     # ==========================================
+    # DECISIÓN DIFUSA
+    #
+    # Prepara las 3 entradas del controlador
+    # difuso y le pregunta qué hacer:
+    #
+    #   reserva   = energía - energía para volver
+    #   distancia = casillas hasta el jaguar (o
+    #               hasta donde lo vio); 30 si no
+    #               sabe nada
+    #   peligro   = 100 si el jaguar lo ataca, su
+    #               hambre si lo percibe, 0 si no
+    #               lo percibe
+    #
+    # Regresa la acción y la posición del
+    # jaguar que conoce (o None).
+    # ==========================================
+
+    def entradas_difusas(
+        self,
+        posicion_jaguar,
+        jaguar_percibido,
+        energia_regreso
+    ):
+
+        if not self.mundo.jaguar_vivo:
+
+            posicion_amenaza = None
+
+        elif jaguar_percibido:
+
+            posicion_amenaza = posicion_jaguar
+
+        else:
+
+            posicion_amenaza = (
+                self.memoria.ultima_posicion_jaguar
+            )
+
+
+        if posicion_amenaza is None:
+
+            distancia = DISTANCIA.maximo
+
+        else:
+
+            distancia = AEstrella.heuristica(
+                self.posicion,
+                posicion_amenaza
+            )
+
+
+        if not (self.mundo.jaguar_vivo and jaguar_percibido):
+
+            peligro = 0
+
+        elif getattr(self.mundo, "jaguar_atacando", False):
+
+            peligro = 100
+
+        else:
+
+            peligro = getattr(self.mundo, "hambre_jaguar", 0)
+
+
+        entradas = {
+            "reserva": max(0, self.energia - energia_regreso),
+            "distancia": distancia,
+            "peligro": peligro,
+        }
+
+        return entradas, posicion_amenaza
+
+
+    def decidir_difuso(
+        self,
+        posicion_jaguar,
+        jaguar_percibido,
+        energia_regreso
+    ):
+
+        entradas, posicion_amenaza = self.entradas_difusas(
+            posicion_jaguar,
+            jaguar_percibido,
+            energia_regreso
+        )
+
+        accion, x_estrella = self.controlador.decidir(
+            entradas
+        )
+
+        explicacion = self.controlador.explicar()
+
+
+        # Si las reglas dicen "huir" pero no sabe
+        # dónde está el jaguar, no tiene de qué
+        # huir: sigue explorando
+
+        if accion == "huir" and posicion_amenaza is None:
+
+            accion = "explorar"
+
+            explicacion += " (huir sin saber dónde está el jaguar -> explorar)"
+
+
+        self.decision_difusa = {
+            "accion": accion,
+            "x": x_estrella,
+            "entradas": entradas,
+            "explicacion": explicacion,
+        }
+
+        return accion, posicion_amenaza
+
+
+    # ==========================================
     # DECIDIR Y ACTUAR
     # ==========================================
 
@@ -2073,35 +2228,6 @@ class AgenteCazador:
         )
 
 
-        # Reserva para no llegar al límite exacto
-
-        reserva_seguridad = 10
-
-
-        energia_minima_segura = (
-            energia_regreso
-            +
-            reserva_seguridad
-        )
-        modo_supervivencia = (
-            self.energia
-            <=
-            energia_minima_segura
-        )
-
-                # ==========================================
-        # 4. ¿DEBE REGRESAR AL CAMPAMENTO?
-        # ==========================================
-
-        # ==========================================
-        # 3.5 ENTORNO DINÁMICO: EL ENEMIGO ATACA
-        #
-        # Si percibe al jaguar (con cualquier
-        # sentido), el jaguar lo está atacando y
-        # está a 3 casillas o menos, huye usando
-        # el mismo algoritmo de huida del jaguar.
-        # ==========================================
-
         jaguar_percibido = (
             jaguar_visible
             or
@@ -2110,22 +2236,41 @@ class AgenteCazador:
             jaguar_olido
         )
 
+
+        # ==========================================
+        # 4. DECISIÓN DIFUSA (MAMDANI)
+        #
+        # El controlador difuso decide QUÉ hacer:
+        #   huir, recargar, explorar, perseguir
+        #   o atacar.
+        # Después, el AG de movimiento (o A*)
+        # decide CÓMO llegar.
+        # ==========================================
+
+        modo, posicion_amenaza = self.decidir_difuso(
+            posicion_jaguar,
+            jaguar_percibido,
+            energia_regreso
+        )
+
+
+        # Huir solo tiene sentido si sabe dónde
+        # está el jaguar
+
         en_peligro = (
+            modo == "huir"
+            and
             self.mundo.jaguar_vivo
             and
-            jaguar_percibido
-            and
-            getattr(
-                self.mundo,
-                "jaguar_atacando",
-                False
-            )
-            and
-            AEstrella.heuristica(
-                self.posicion,
-                posicion_jaguar
-            )
-            <= 3
+            posicion_amenaza is not None
+        )
+
+        modo_supervivencia = (
+            modo == "recargar"
+        )
+
+        quiere_cazar = (
+            modo in ("perseguir", "atacar")
         )
 
 
@@ -2133,7 +2278,7 @@ class AgenteCazador:
 
             escape = Huida.elegir_escape(
                 self.posicion,
-                posicion_jaguar,
+                posicion_amenaza,
                 self.mundo
             )
 
@@ -2236,6 +2381,8 @@ class AgenteCazador:
         # ==========================================
 
         elif (
+            quiere_cazar
+            and
             self.mundo.jaguar_vivo
             and
             jaguar_visible
@@ -2262,6 +2409,15 @@ class AgenteCazador:
                 prohibidas=self.casillas_prohibidas()
 
             )
+
+
+            # ATACAR (decisión difusa): va directo a
+            # donde está el jaguar, sin calcular
+            # dónde cortarle el paso
+
+            if modo == "atacar":
+
+                meta = posicion_jaguar
 
 
             if meta == posicion_jaguar:
@@ -2291,6 +2447,8 @@ class AgenteCazador:
         # ==========================================
 
         elif (
+            quiere_cazar
+            and
             self.mundo.jaguar_vivo
             and
             jaguar_escuchado
@@ -2330,6 +2488,8 @@ class AgenteCazador:
         # ==========================================
 
         elif (
+            quiere_cazar
+            and
             self.mundo.jaguar_vivo
             and
             jaguar_olido
@@ -2363,6 +2523,8 @@ class AgenteCazador:
         # ==========================================
 
         elif (
+            quiere_cazar
+            and
             self.mundo.jaguar_vivo
             and
             self.memoria
@@ -2623,7 +2785,7 @@ class AgenteCazador:
             and
             distancia_jaguar == 1
             and
-            not modo_supervivencia
+            quiere_cazar
         ):
 
             print(

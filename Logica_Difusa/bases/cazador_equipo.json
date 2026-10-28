@@ -1,0 +1,582 @@
+{
+  "agente": "cazador",
+  "nombre": "Cazador: reglas del equipo",
+  "origen": "equipo",
+  "descripcion": "Reglas escritas por el equipo con sentido común. También son la semilla del algoritmo genético.",
+  "aptitud": null,
+  "reglas": [
+    {
+      "id": "R01",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "muy_baja"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R02",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "muy_baja"
+          },
+          {
+            "var": "distancia",
+            "es": "cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R03",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "muy_baja"
+          },
+          {
+            "var": "distancia",
+            "es": "media"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R04",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "muy_baja"
+          },
+          {
+            "var": "distancia",
+            "es": "lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R05",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "muy_baja"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R06",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "baja"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "atacar"
+      ]
+    },
+    {
+      "id": "R07",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "baja"
+          },
+          {
+            "var": "distancia",
+            "es": "cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "perseguir"
+      ]
+    },
+    {
+      "id": "R08",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "baja"
+          },
+          {
+            "var": "distancia",
+            "es": "media"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R09",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "baja"
+          },
+          {
+            "var": "distancia",
+            "es": "lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R10",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "baja"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R11",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "media"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "atacar"
+      ]
+    },
+    {
+      "id": "R12",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "media"
+          },
+          {
+            "var": "distancia",
+            "es": "cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "perseguir"
+      ]
+    },
+    {
+      "id": "R13",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "media"
+          },
+          {
+            "var": "distancia",
+            "es": "media"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "perseguir"
+      ]
+    },
+    {
+      "id": "R14",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "media"
+          },
+          {
+            "var": "distancia",
+            "es": "lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "explorar"
+      ]
+    },
+    {
+      "id": "R15",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "media"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "explorar"
+      ]
+    },
+    {
+      "id": "R16",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "alta"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "atacar"
+      ]
+    },
+    {
+      "id": "R17",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "alta"
+          },
+          {
+            "var": "distancia",
+            "es": "cerca"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "atacar"
+      ]
+    },
+    {
+      "id": "R18",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "alta"
+          },
+          {
+            "var": "distancia",
+            "es": "media"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "perseguir"
+      ]
+    },
+    {
+      "id": "R19",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "alta"
+          },
+          {
+            "var": "distancia",
+            "es": "lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "perseguir"
+      ]
+    },
+    {
+      "id": "R20",
+      "si": {
+        "y": [
+          {
+            "var": "reserva",
+            "es": "alta"
+          },
+          {
+            "var": "distancia",
+            "es": "muy_lejos"
+          },
+          {
+            "no": {
+              "var": "peligro",
+              "es": "agresivo"
+            }
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "explorar"
+      ]
+    },
+    {
+      "id": "R21",
+      "si": {
+        "y": [
+          {
+            "var": "peligro",
+            "es": "agresivo"
+          },
+          {
+            "o": [
+              {
+                "var": "distancia",
+                "es": "muy_cerca"
+              },
+              {
+                "var": "distancia",
+                "es": "cerca"
+              }
+            ]
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "huir"
+      ]
+    },
+    {
+      "id": "R22",
+      "si": {
+        "y": [
+          {
+            "var": "peligro",
+            "es": "agresivo"
+          },
+          {
+            "var": "distancia",
+            "es": "media"
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "recargar"
+      ]
+    },
+    {
+      "id": "R23",
+      "si": {
+        "y": [
+          {
+            "var": "peligro",
+            "es": "agresivo"
+          },
+          {
+            "o": [
+              {
+                "var": "distancia",
+                "es": "lejos"
+              },
+              {
+                "var": "distancia",
+                "es": "muy_lejos"
+              }
+            ]
+          }
+        ]
+      },
+      "entonces": [
+        "accion",
+        "explorar"
+      ]
+    }
+  ]
+}

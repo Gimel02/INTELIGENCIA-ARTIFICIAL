@@ -16,6 +16,7 @@ print(
 from Agente_Cazador.agente import AgenteCazador
 from Agente_Cazador.sentidos import PLURAL_COLORES
 from Agente_Jaguar.agente import AgenteJaguar
+from Logica_Difusa.dios import obtener_dios
 
 from Fisica.cinematica import CuerpoFisico
 
@@ -748,6 +749,20 @@ class Interfaz:
                     self.agente.imprimir_conciencia()
 
 
+                # D = DIOS cambia las reglas del cazador
+                # y del jaguar (entrenadas con AG o las
+                # del equipo) y reinicia la partida
+                elif evento.key == pygame.K_d:
+
+                    dios = obtener_dios()
+
+                    dios.cambiar_modo()
+
+                    print(f"[DIOS] Reglas: {dios.descripcion()}")
+
+                    self.reiniciar_simulacion()
+
+
                 # ESC = salir
                 elif evento.key == pygame.K_ESCAPE:
 
@@ -1351,10 +1366,20 @@ class Interfaz:
 
         else:
 
+            decision = self.agente.decision_difusa
+
+            texto_difuso = (
+                f" | difuso ({obtener_dios().modo}): "
+                f"{decision['accion']}"
+                if decision
+                else ""
+            )
+
             texto_conciencia = (
                 f"Usó: {self.agente.sentido_usado} | "
                 f"{self.agente.ultima_accion} "
                 f"({self.agente.fuente_decision})"
+                f"{texto_difuso}"
             )
 
 
