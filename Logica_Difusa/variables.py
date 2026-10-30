@@ -69,8 +69,8 @@ DISTANCIA = VariableLinguistica(
 PELIGRO = VariableLinguistica(
     "peligro", 0, 100,
     [
-        Termino("tranquilo", "grado_inversa", (40, 80)),
-        Termino("agresivo", "grado", (40, 80)),
+        Termino("tranquilo", "grado_inversa", (30, 70)),
+        Termino("agresivo", "grado", (30, 70)),
     ],
     unidad="puntos"
 )

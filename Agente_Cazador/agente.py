@@ -199,7 +199,7 @@ class AgenteCazador:
             mundo
         )
 
-
+        
         # ==========================================
         # MEMORIA
         # ==========================================
@@ -212,7 +212,10 @@ class AgenteCazador:
             self.posicion
         ] = 1
 
+        self.turno_ultima_percepcion_jaguar = None
+        self.ultimo_peligro_percibido = 0.0     
 
+        
         # ==========================================
         # ESTADO
         # ==========================================
@@ -2013,6 +2016,159 @@ class AgenteCazador:
 
 
     # ==========================================
+    # CALCULAR NIVEL DE PELIGRO
+    # ==========================================
+
+    def calcular_peligro(
+        self,
+        jaguar_percibido,
+        posicion_amenaza
+    ):
+
+        # Si el Jaguar ya no está vivo,
+        # no existe peligro.
+
+        if not self.mundo.jaguar_vivo:
+
+            self.turno_ultima_percepcion_jaguar = None
+            self.ultimo_peligro_percibido = 0.0
+
+            return 0.0
+
+
+        # Si no conoce ninguna posición del Jaguar,
+        # no tiene información suficiente para
+        # calcular peligro.
+
+        if posicion_amenaza is None:
+
+            return 0.0
+
+
+        # ======================================
+        # 1. HAMBRE DEL JAGUAR
+        # ======================================
+
+        hambre = getattr(
+            self.mundo,
+            "hambre_jaguar",
+            0
+        )
+
+        hambre = max(
+            0,
+            min(100, hambre)
+        )
+
+        peligro_hambre = (
+            hambre * 0.40
+        )
+
+
+        # ======================================
+        # 2. CERCANÍA DEL JAGUAR
+        # ======================================
+
+        distancia = AEstrella.heuristica(
+            self.posicion,
+            posicion_amenaza
+        )
+
+        peligro_cercania = max(
+            0,
+            40 - distancia * 4
+        )
+
+
+        # ======================================
+        # 3. JAGUAR ATACANDO
+        # ======================================
+
+        peligro_ataque = (
+            30
+            if getattr(
+                self.mundo,
+                "jaguar_atacando",
+                False
+            )
+            else 0
+        )
+
+
+        peligro = (
+            peligro_hambre
+            +
+            peligro_cercania
+            +
+            peligro_ataque
+        )
+
+
+        # ======================================
+        # 4. MEMORIA DEL PELIGRO
+        # ======================================
+
+        if jaguar_percibido:
+
+            # Guarda el momento y el nivel
+            # de peligro mientras sí percibe
+            # al Jaguar.
+
+            self.turno_ultima_percepcion_jaguar = (
+                self.turno
+            )
+
+            self.ultimo_peligro_percibido = (
+                peligro
+            )
+
+        else:
+
+            # Nunca ha percibido al Jaguar.
+
+            if self.turno_ultima_percepcion_jaguar is None:
+
+                return 0.0
+
+
+            turnos_sin_percibir = (
+                self.turno
+                -
+                self.turno_ultima_percepcion_jaguar
+            )
+
+
+            # El recuerdo del peligro dura
+            # 6 turnos y disminuye poco a poco.
+
+            factor_memoria = max(
+                0.0,
+                1.0 - turnos_sin_percibir / 6.0
+            )
+
+
+            peligro = (
+                self.ultimo_peligro_percibido
+                *
+                factor_memoria
+            )
+
+
+        # Mantener siempre el peligro
+        # dentro del rango 0 a 100.
+
+        peligro = max(
+            0,
+            min(100, peligro)
+        )
+
+
+        return round(
+            peligro,
+            2
+        )
+
+    # ==========================================
     # DECISIÓN DIFUSA
     #
     # Prepara las 3 entradas del controlador
@@ -2064,19 +2220,11 @@ class AgenteCazador:
             )
 
 
-        if not (self.mundo.jaguar_vivo and jaguar_percibido):
-
-            peligro = 0
-
-        elif getattr(self.mundo, "jaguar_atacando", False):
-
-            peligro = 100
-
-        else:
-
-            peligro = getattr(self.mundo, "hambre_jaguar", 0)
-
-
+        peligro = self.calcular_peligro(
+            jaguar_percibido,
+            posicion_amenaza
+        )
+        
         entradas = {
             "reserva": max(0, self.energia - energia_regreso),
             "distancia": distancia,
