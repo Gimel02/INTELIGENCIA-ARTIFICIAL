@@ -571,9 +571,18 @@ class Interfaz:
         dt
     ):
 
+        # =====================================
+        # FIN DEL JUEGO
+        # =====================================
+
+        if self.agente.vidas <= 0:
+
+            self.en_curso = False
+
+            return
+
+
         grid = self.mundo.grid
-
-
         # =====================================
         # CAZADOR
         # =====================================
