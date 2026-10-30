@@ -127,6 +127,41 @@ def termino_de_salida(salida, x):
 
     return max(grados, key=grados.get)
 
+def accion_dominante(salida, alturas):
+
+    # La acción final debe ser una acción que
+    # realmente haya sido activada por las reglas.
+    #
+    # No usamos el centroide para elegir entre
+    # acciones categóricas porque podría crear
+    # una acción intermedia que ninguna regla
+    # pidió, por ejemplo:
+    #
+    # HUIR + ATACAR -> EXPLORAR
+    #
+    # En caso de empate se respeta el orden de
+    # los términos definido en variables.py.
+
+    mayor_altura = max(
+        alturas.values(),
+        default=0.0
+    )
+
+    if mayor_altura <= 0:
+
+        return None
+
+    for nombre in salida.terminos:
+
+        if abs(
+            alturas.get(nombre, 0.0)
+            -
+            mayor_altura
+        ) < 1e-9:
+
+            return nombre
+
+    return None
 
 # ==========================================
 # CONTROLADOR DIFUSO
@@ -237,15 +272,25 @@ class ControladorDifuso:
         x_estrella = centroide(self.xs, agregado)
 
 
-        # ---- 4. Output ----
+        # ---- 4. Acción lingüística dominante ----
+        #
+        # El centroide se conserva como valor numérico
+        # para la traza y el análisis del controlador.
+        #
+        # La acción real se obtiene del consecuente
+        # con mayor activación para evitar acciones
+        # "fantasma" creadas por promediar categorías.
 
-        if x_estrella is None:
+        accion = accion_dominante(
+            self.salida,
+            altura_por_termino
+        )
 
-            accion = self.ACCION_POR_DEFECTO[self.base.perfil.nombre]
+        if accion is None:
 
-        else:
-
-            accion = termino_de_salida(self.salida, x_estrella)
+            accion = self.ACCION_POR_DEFECTO[
+                self.base.perfil.nombre
+            ]
 
 
         if guardar_traza:

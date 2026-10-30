@@ -2224,7 +2224,7 @@ class AgenteCazador:
             jaguar_percibido,
             posicion_amenaza
         )
-        
+
         entradas = {
             "reserva": max(0, self.energia - energia_regreso),
             "distancia": distancia,
@@ -2344,6 +2344,8 @@ class AgenteCazador:
             self.mundo.jaguar_vivo
             and
             self.posicion == posicion_jaguar
+            and
+            self.modo_difuso_actual == "atacar"
         ):
 
             self.comprobar_caza_jaguar(
@@ -2400,6 +2402,8 @@ class AgenteCazador:
             jaguar_percibido,
             energia_regreso
         )
+
+        self.modo_difuso_actual = modo
 
 
         # Huir solo tiene sentido si sabe dónde
@@ -2567,6 +2571,15 @@ class AgenteCazador:
 
                 meta = posicion_jaguar
 
+            elif meta == posicion_jaguar:
+
+                meta_persecucion = self.vecina_alcanzable(
+                    posicion_jaguar
+                )
+
+                if meta_persecucion is not None:
+
+                    meta = meta_persecucion
 
             if meta == posicion_jaguar:
 
@@ -2933,7 +2946,7 @@ class AgenteCazador:
             and
             distancia_jaguar == 1
             and
-            quiere_cazar
+            modo == "atacar"
         ):
 
             print(
@@ -2942,6 +2955,8 @@ class AgenteCazador:
                 self.posicion,
                 "| Jaguar:",
                 posicion_jaguar,
+                "| Modo:",
+                modo,
                 "| Atacando"
             )
 
@@ -3304,6 +3319,8 @@ class AgenteCazador:
                 self.mundo.jaguar_vivo
                 and
                 self.posicion == posicion_jaguar
+                and
+                modo == "atacar"
             ):
 
                 self.comprobar_caza_jaguar(

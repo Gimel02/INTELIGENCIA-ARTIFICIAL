@@ -47,7 +47,7 @@ AGENTE_TONTO = "ratones"
 
 MODOS = ["entrenadas", "equipo"]
 
-MODO_INICIAL = "entrenadas"
+MODO_INICIAL = "equipo"
 
 
 def archivo_base(agente, modo):
