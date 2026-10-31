@@ -758,18 +758,7 @@ class Interfaz:
                     self.agente.imprimir_conciencia()
 
 
-                # D = DIOS cambia las reglas del cazador
-                # y del jaguar (entrenadas con AG o las
-                # del equipo) y reinicia la partida
-                elif evento.key == pygame.K_d:
 
-                    dios = obtener_dios()
-
-                    dios.cambiar_modo()
-
-                    print(f"[DIOS] Reglas: {dios.descripcion()}")
-
-                    self.reiniciar_simulacion()
 
 
                 # ESC = salir

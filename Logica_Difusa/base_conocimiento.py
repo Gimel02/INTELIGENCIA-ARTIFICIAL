@@ -24,7 +24,6 @@
 
 import json
 import os
-import random
 
 from Logica_Difusa.variables import (
     ENTRADAS_CAZADOR,
@@ -62,9 +61,9 @@ def _condicion(variable, termino):
 #  2. Unas reglas EXTRA para cuando sí se
 #     cumple la excepción.
 #
-# El AG no inventa condiciones: usa siempre
-# las mismas y lo que aprende es el
-# CONSECUENTE de cada una.
+# Los antecedentes de las reglas son fijos.
+# Los consecuentes se definen mediante la
+# base de conocimiento diseñada por el equipo.
 # ==========================================
 
 class Perfil:
@@ -317,7 +316,7 @@ class BaseConocimiento:
 
 
     @classmethod
-    def desde_cromosoma(cls, perfil, cromosoma, nombre="Entrenada", origen="AG", aptitud=None):
+    def desde_cromosoma(cls, perfil, cromosoma, nombre="Base de conocimiento", origen="equipo", aptitud=None):
 
         if isinstance(perfil, str):
 
@@ -467,10 +466,11 @@ def ruta_base(archivo):
 
 
 # ==========================================
-# BASES INICIALES (reglas del equipo)
+# BASE DE CONOCIMIENTO
 #
-# Las escribimos con sentido común. Son la
-# "semilla" del AG.
+# Reglas IF-THEN diseñadas por el equipo
+# para controlar el comportamiento difuso
+# del cazador y del jaguar.
 # ==========================================
 
 # CAZADOR. Filas: reserva. Columnas: distancia
@@ -532,38 +532,8 @@ def base_equipo(agente):
     )
 
     base.descripcion = (
-        "Reglas escritas por el equipo con sentido común. "
-        "También son la semilla del algoritmo genético."
-    )
-
-    return base
-
-
-def base_aleatoria(agente, semilla=7):
-
-    # Reglas al azar, pero SIEMPRE las mismas
-    # (semilla fija). Sirve para comprobar que
-    # el AG de verdad mejora algo.
-
-    perfil = PERFILES[agente]
-
-    generador = random.Random(semilla)
-
-    cromosoma = [
-        generador.randrange(len(perfil.terminos_salida))
-        for _ in range(perfil.numero_reglas)
-    ]
-
-    base = BaseConocimiento.desde_cromosoma(
-        perfil,
-        cromosoma,
-        nombre=f"{agente.capitalize()}: reglas al azar",
-        origen="aleatorio"
-    )
-
-    base.descripcion = (
-        f"Consecuentes elegidos al azar con la semilla {semilla}. "
-        "Solo sirve de comparación."
-    )
+    "Base de conocimiento formada por reglas IF-THEN "
+    "diseñadas por el equipo."
+)
 
     return base

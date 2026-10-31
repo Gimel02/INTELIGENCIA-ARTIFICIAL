@@ -2,7 +2,7 @@
   "agente": "cazador",
   "nombre": "Cazador: reglas del equipo",
   "origen": "equipo",
-  "descripcion": "Reglas escritas por el equipo con sentido común. También son la semilla del algoritmo genético.",
+  "descripcion": "Base de conocimiento formada por reglas IF-THEN diseñadas por el equipo.",
   "aptitud": null,
   "reglas": [
     {

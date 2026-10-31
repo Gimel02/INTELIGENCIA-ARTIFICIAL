@@ -2553,23 +2553,21 @@ class AgenteCazador:
 
                 meta = posicion_jaguar
 
-            elif meta == posicion_jaguar:
-
-                meta_persecucion = self.vecina_alcanzable(
-                    posicion_jaguar
-                )
-
-                if meta_persecucion is not None:
-
-                    meta = meta_persecucion
-
-            if meta == posicion_jaguar:
-
                 self.estado = (
-                    "¡Jaguar detectado! Persiguiendo"
+                    "¡Jaguar detectado! Atacando"
                 )
 
             else:
+
+                if meta == posicion_jaguar:
+
+                    meta_persecucion = self.vecina_alcanzable(
+                        posicion_jaguar
+                    )
+
+                    if meta_persecucion is not None:
+
+                        meta = meta_persecucion
 
                 self.estado = (
                     "¡Jaguar detectado! "

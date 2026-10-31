@@ -18,6 +18,5 @@
 #                           inferencia y centroide
 #   dios.py                 orquestador de agentes
 #   simulador.py            partidas sin ventana
-#   entrenamiento_genetico.py  el AG que crea
 #                           las reglas
 # ==========================================
