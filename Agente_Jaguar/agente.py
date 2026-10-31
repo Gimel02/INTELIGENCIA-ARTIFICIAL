@@ -5,8 +5,6 @@ from Algoritmos.a_Estrella import AEstrella
 #from Algoritmos.huida import Huida
 from Algoritmos.persecucion import Persecucion
 from Agente_Jaguar.memoria import MemoriaJaguar
-from Algoritmos.genetica_jaguar import elegir_accion_genetica_jaguar,DESPLAZAMIENTOS
-
 
 class AgenteJaguar:
 
@@ -33,6 +31,7 @@ class AgenteJaguar:
 
         self.decision_difusa = None
 
+        self.modo_difuso_actual = "explorar"
         # Detección del cazador
         self.rango_deteccion = 4
 
@@ -132,28 +131,7 @@ class AgenteJaguar:
 
         return permitidos
 
-        
 
-    # ==========================================
-    # MEMORIA DE POSICIONES
-    # ==========================================
-
-    def recordar_posicion(self, posicion=None):
-
-        if posicion is None:
-            posicion = self.posicion
-
-        if (
-            not self.posiciones_recientes
-            or self.posiciones_recientes[-1] != posicion
-        ):
-            self.posiciones_recientes.append(posicion)
-
-        self.posiciones_recientes = (
-            self.posiciones_recientes[
-                -self.max_posiciones_recientes:
-            ]
-        )
 
     # ==========================================
     # ELEGIR ESCAPE SIN REPETIR MOVIMIENTOS
@@ -231,93 +209,6 @@ class AgenteJaguar:
 
     # ==========================================
     # TOMAR DECISIÓN
-    # ==========================================
-
-    def tomar_decision(
-        self,
-        posicion_cazador,
-        energia_cazador=100,
-        ratones=None
-    ):
-
-        if not self.mundo.jaguar_vivo:
-            return None
-
-        self.actualizar_hambre()
-
-        if ratones is None:
-            ratones = []
-
-        ratones_vivos = [
-            raton
-            for raton in ratones
-            if getattr(raton, "vivo", False)
-        ]
-
-        distancia = self.distancia_ortogonal(
-            self.posicion,
-            posicion_cazador
-        )
-
-        posicion_anterior = self.posicion
-
-        destino = self.decidir(
-            posicion_cazador,
-            energia_cazador,
-            ratones_vivos,
-            distancia
-        )
-
-        # Solo permitir un paso ortogonal.
-        # Evita saltos y diagonales.
-        if destino is not None:
-
-            self.recordar_posicion(posicion_anterior)
-
-            self.mundo.mover_jaguar(destino)
-
-            # Si al llegar pisa una baya (tipo 5 o 6), se la come y limpia la celda para liberar espacio
-            tipo_suelo = self.mundo.grid.get(destino, 0)
-            if tipo_suelo in (5, 6):
-                self.hambre = max(0, self.hambre - 35)
-                self.actualizar_nivel_hambre()
-                self.mundo.grid[destino] = 0  # La baya desaparece y la casilla queda libre
-                self.estado = "¡Comió una baya al pasar!"
-
-            return destino
-
-        # ==========================================
-        # MOVIMIENTO Y LIMPIZA DE TERRENO (BAYAS)
-        # ==========================================
-        if destino is not None:
-
-            self.recordar_posicion(posicion_anterior)
-            
-            # Guardar en celdas visitadas para evitar dar vueltas
-            self.celdas_visitadas.add(destino)
-
-            # Mover físicamente al jaguar en el mundo
-            self.mundo.mover_jaguar(destino)
-
-            # Si al llegar pisa una baya (tipo 5 o 6), se la come y limpia la celda
-            tipo_suelo = self.mundo.grid.get(destino, 0)
-            if tipo_suelo in (5, 6):
-                self.hambre = max(0, self.hambre - 35)
-                self.actualizar_nivel_hambre()
-
-                self.mundo.grid[destino] = 0
-                self.memoria.olvidar_baya(destino)
-
-                self.estado = "¡Comió una baya al pasar!"
-
-        return destino
-
-    # ==========================================
-    # TOMAR DECISIÓN SEGÚN SU ESTADO
-    # ==========================================
-
-    # ==========================================
-    # TOMAR DECISIÓN (VERSIÓN CORREGIDA Y UNIFICADA)
     # ==========================================
 
     def tomar_decision(
@@ -600,10 +491,41 @@ class AgenteJaguar:
     # REGISTRAR POSICIÓN Y MEMORIA DEL ENTORNO
     # ==========================================
 
-    def recordar_posicion(self, posicion=None):
+    def recordar_posicion(
+        self,
+        posicion=None
+    ):
+
         if posicion is None:
+
             posicion = self.posicion
-        self.memoria.recordar_posicion(posicion)
+
+
+        # Memoria reciente para evitar ciclos
+
+        if (
+            not self.posiciones_recientes
+            or
+            self.posiciones_recientes[-1] != posicion
+        ):
+
+            self.posiciones_recientes.append(
+                posicion
+            )
+
+
+        self.posiciones_recientes = (
+            self.posiciones_recientes[
+                -self.max_posiciones_recientes:
+            ]
+        )
+
+
+        # Memoria general del Jaguar
+
+        self.memoria.recordar_posicion(
+            posicion
+        )
 
     def actualizar_memoria_entorno(self):
         # Escanea los vecinos inmediatos para registrar bayas o arena

@@ -115,7 +115,7 @@ class Interfaz:
         # PANEL SUPERIOR
         # =========================================
 
-        self.alto_panel = 190
+        self.alto_panel = 260
 
 
         # =========================================
@@ -1144,7 +1144,7 @@ class Interfaz:
     def dibujar_panel(self):
 
         # =====================================
-        # FONDO GENERAL
+        # FONDO GENERAL DEL HUD
         # =====================================
 
         pygame.draw.rect(
@@ -1158,273 +1158,377 @@ class Interfaz:
             )
         )
 
-        for x in range(
-            0,
-            self.ancho,
-            150
-        ):
-
-            pygame.draw.line(
-                self.pantalla,
-                (20, 12, 8),
-                (x, 0),
-                (x, self.alto_panel),
-                3
-            )
-
-
+        # Línea inferior dorada
         pygame.draw.rect(
             self.pantalla,
             self.C_ORO_PURO,
             (
                 0,
-                self.alto_panel - 6,
+                self.alto_panel - 5,
                 self.ancho,
-                6
+                5
             )
         )
 
 
         # =====================================
-        # TAMAÑOS DE BLOQUES
+        # FUNCIONES AUXILIARES
         # =====================================
 
-        margen = 25
-        separacion = 25
+        def dibujar_titulo(
+            texto,
+            x,
+            y,
+            color
+        ):
 
-        ancho_izq = 330
-        ancho_der = 400
+            render = self.fuente_titulo.render(
+                texto,
+                True,
+                color
+            )
 
-        ancho_centro = (
+            self.pantalla.blit(
+                render,
+                (x, y)
+            )
+
+
+        def dibujar_linea(
+            texto,
+            x,
+            y,
+            ancho,
+            color=(220, 220, 220)
+        ):
+
+            texto = self.recortar_texto(
+                str(texto),
+                ancho
+            )
+
+            render = self.fuente_pequena.render(
+                texto,
+                True,
+                color
+            )
+
+            self.pantalla.blit(
+                render,
+                (x, y)
+            )
+
+
+        def dibujar_barra(
+            x,
+            y,
+            ancho,
+            valor,
+            maximo,
+            color,
+            etiqueta
+        ):
+
+            valor = max(
+                0,
+                min(valor, maximo)
+            )
+
+            texto = self.fuente_UI.render(
+                f"{etiqueta}: {int(valor)}",
+                True,
+                (235, 235, 235)
+            )
+
+            self.pantalla.blit(
+                texto,
+                (x, y)
+            )
+
+            fondo = pygame.Rect(
+                x,
+                y + 22,
+                ancho,
+                15
+            )
+
+            pygame.draw.rect(
+                self.pantalla,
+                (15, 10, 10),
+                fondo,
+                border_radius=7
+            )
+
+            proporcion = (
+                valor / maximo
+                if maximo > 0
+                else 0
+            )
+
+            relleno = pygame.Rect(
+                x + 2,
+                y + 24,
+                int(
+                    (ancho - 4)
+                    *
+                    proporcion
+                ),
+                11
+            )
+
+            pygame.draw.rect(
+                self.pantalla,
+                color,
+                relleno,
+                border_radius=6
+            )
+
+
+        # =====================================
+        # DISTRIBUCIÓN DE LOS 4 PANELES
+        # =====================================
+
+        margen = 18
+        separacion = 12
+
+        disponible = (
             self.ancho
-            -
-            ancho_izq
-            -
-            ancho_der
             -
             margen * 2
             -
-            separacion * 2
+            separacion * 3
         )
 
-        x_izq = margen
+        ancho_cazador = int(
+            disponible * 0.32
+        )
 
-        x_centro = (
-            x_izq
+        ancho_sentidos = int(
+            disponible * 0.20
+        )
+
+        ancho_jaguar = int(
+            disponible * 0.28
+        )
+
+        ancho_dios = (
+            disponible
+            -
+            ancho_cazador
+            -
+            ancho_sentidos
+            -
+            ancho_jaguar
+        )
+
+        x_cazador = margen
+
+        x_sentidos = (
+            x_cazador
             +
-            ancho_izq
+            ancho_cazador
             +
             separacion
         )
 
-        x_der = (
-            x_centro
+        x_jaguar = (
+            x_sentidos
             +
-            ancho_centro
+            ancho_sentidos
             +
             separacion
         )
 
+        x_dios = (
+            x_jaguar
+            +
+            ancho_jaguar
+            +
+            separacion
+        )
+
+        y_panel = 15
+
+        alto_caja = (
+            self.alto_panel - 35
+        )
+
 
         # =====================================
-        # BLOQUE IZQUIERDO
+        # 1. AGENTE CAZADOR
         # =====================================
 
-        rect_izq = pygame.Rect(
-            x_izq,
-            20,
-            ancho_izq,
-            145
+        rect_cazador = pygame.Rect(
+            x_cazador,
+            y_panel,
+            ancho_cazador,
+            alto_caja
         )
 
         self.dibujar_caja_biselada_solida(
-            rect_izq,
+            rect_cazador,
             self.C_MADERA_BASE,
             self.C_MADERA_LUZ,
             self.C_MADERA_SOMBRA
         )
 
-
-        titulo1 = self.fuente_titulo.render(
-            "AGENTE",
-            True,
-            (255, 255, 255)
-        )
-
-        titulo2 = self.fuente_titulo.render(
-            " CAZADOR",
-            True,
+        dibujar_titulo(
+            "AGENTE CAZADOR",
+            x_cazador + 15,
+            25,
             self.C_ORO_PURO
         )
 
-        self.pantalla.blit(
-            titulo1,
+
+        # Energía
+
+        energia = self.agente.energia
+
+        color_energia = (
+            self.C_NEON_VERDE
+            if energia > 30
+            else self.C_NEON_ROJO
+        )
+
+        dibujar_barra(
+            x_cazador + 15,
+            58,
+            ancho_cazador - 30,
+            energia,
+            getattr(
+                self.agente,
+                "energia_max",
+                100
+            ),
+            color_energia,
+            "Energía"
+        )
+
+
+        memoria = self.agente.memoria
+
+        conocimiento = (
+            memoria.conocimiento_bayas
+        )
+
+        roja = (
+            conocimiento["roja"]
+            if conocimiento["roja"] is not None
+            else "?"
+        )
+
+        azul = (
+            conocimiento["azul"]
+            if conocimiento["azul"] is not None
+            else "?"
+        )
+
+
+        dibujar_linea(
+            f"Baya roja: {roja}   |   Baya azul: {azul}",
+            x_cazador + 15,
+            103,
+            ancho_cazador - 30
+        )
+
+
+        dibujar_linea(
             (
-                x_izq + 20,
-                35
-            )
+                f"Memoria: {len(memoria.celdas_revisadas)} "
+                f"| Pasos: {memoria.pasos} "
+                f"| Rep: {memoria.pasos_repetidos}"
+            ),
+            x_cazador + 15,
+            125,
+            ancho_cazador - 30
         )
 
-        self.pantalla.blit(
-            titulo2,
+
+        vidas_max = getattr(
+            self.agente,
+            "vidas_max",
+            self.agente.vidas
+        )
+
+        dibujar_linea(
             (
-                x_izq + 20 + titulo1.get_width(),
-                35
-            )
-        )
-
-
-        estado = str(
-            self.agente.estado
-        )
-
-        if len(estado) > 32:
-            estado = estado[:29] + "..."
-
-
-        texto_estado = self.fuente_UI.render(
-            f"Estado: {estado}",
-            True,
+                f"Vidas: {self.agente.vidas}/{vidas_max} "
+                f"| Puntos: {self.agente.puntos}"
+            ),
+            x_cazador + 15,
+            147,
+            ancho_cazador - 30,
             self.C_ORO_VIEJO
         )
 
-        self.pantalla.blit(
-            texto_estado,
-            (
-                x_izq + 20,
-                75
-            )
+
+        dibujar_linea(
+            f"Estado: {self.agente.estado}",
+            x_cazador + 15,
+            169,
+            ancho_cazador - 30,
+            (240, 190, 120)
         )
 
 
-        if self.mundo.jaguar_vivo:
+        decision = (
+            self.agente.decision_difusa
+        )
 
-            texto_jaguar = (
-                f"Jaguar: "
-                f"{self.agente_jaguar.estado} "
-                f"(hambre {self.agente_jaguar.hambre})"
+        if decision:
+
+            accion_difusa = (
+                decision["accion"]
             )
 
         else:
 
-            texto_jaguar = (
-                "Jaguar: cazado"
-            )
+            accion_difusa = "-"
 
 
-        jaguar = self.fuente_UI.render(
-            texto_jaguar,
-            True,
-            (240, 180, 120)
+        dibujar_linea(
+            f"Difuso: {accion_difusa.upper()}",
+            x_cazador + 15,
+            191,
+            ancho_cazador - 30,
+            self.C_NEON_VERDE
         )
 
-        self.pantalla.blit(
-            jaguar,
+
+        dibujar_linea(
             (
-                x_izq + 20,
-                99
-            )
-        )
-
-
-        # Conciencia de su cuerpo: masa y
-        # velocidad
-
-        fisica = self.fuente_pequena.render(
-            self.recortar_texto(
-                (
-                    f"Cazador {self.cuerpo_cazador.masa} kg, "
-                    f"{self.cuerpo_cazador.velocidad:.1f} m/s"
-                    f"   Jaguar {self.cuerpo_jaguar.velocidad:.1f} m/s"
-                ),
-                ancho_izq - 40
-            ),
-            True,
-            (210, 210, 220)
-        )
-
-        self.pantalla.blit(
-            fisica,
-            (
-                x_izq + 20,
-                120
-            )
-        )
-
-
-        # Autoconciencia: sentido usado, última
-        # acción y problema detectado
-
-        if self.agente.problema_actual:
-
-            texto_conciencia = (
-                f"PROBLEMA: {self.agente.problema_actual}"
-                f" (reaccionando)"
-            )
-
-        else:
-
-            decision = self.agente.decision_difusa
-
-            texto_difuso = (
-                f" | difuso ({obtener_dios().modo}): "
-                f"{decision['accion']}"
-                if decision
-                else ""
-            )
-
-            texto_conciencia = (
-                f"Usó: {self.agente.sentido_usado} | "
+                f"Movimiento: "
                 f"{self.agente.ultima_accion} "
-                f"({self.agente.fuente_decision})"
-                f"{texto_difuso}"
-            )
-
-
-        conciencia = self.fuente_pequena.render(
-            self.recortar_texto(
-                texto_conciencia,
-                ancho_izq - 40
+                f"← {self.agente.fuente_decision}"
             ),
-            True,
-            (
-                (255, 140, 120)
-                if self.agente.problema_actual
-                else (180, 230, 180)
-            )
-        )
-
-        self.pantalla.blit(
-            conciencia,
-            (
-                x_izq + 20,
-                141
-            )
+            x_cazador + 15,
+            211,
+            ancho_cazador - 30,
+            self.C_NEON_AZUL
         )
 
 
         # =====================================
-        # BLOQUE CENTRAL - SENTIDOS
+        # 2. SENTIDOS
         # =====================================
 
-        rect_centro = pygame.Rect(
-            x_centro,
-            20,
-            ancho_centro,
-            145
+        rect_sentidos = pygame.Rect(
+            x_sentidos,
+            y_panel,
+            ancho_sentidos,
+            alto_caja
         )
 
         self.dibujar_caja_biselada_solida(
-            rect_centro,
+            rect_sentidos,
             self.C_MADERA_BASE,
             self.C_MADERA_LUZ,
             self.C_MADERA_SOMBRA
         )
 
-
         titulo_sentidos = (
             self.fuente_subtitulo.render(
-                "MATRIZ SENSORIAL",
+                "SENTIDOS",
                 True,
                 self.C_ORO_PURO
             )
@@ -1433,7 +1537,7 @@ class Interfaz:
         self.pantalla.blit(
             titulo_sentidos,
             (
-                x_centro + 20,
+                x_sentidos + 15,
                 30
             )
         )
@@ -1443,18 +1547,18 @@ class Interfaz:
 
 
         vista = (
-            "Jaguar detectado"
+            "Jaguar"
             if sentidos.ve_jaguar
-            else "Sin detección"
+            else "Nada"
         )
 
-
         oido = (
-            str(sentidos.direccion_sonido)
+            str(
+                sentidos.direccion_sonido
+            )
             if sentidos.escucha_jaguar
             else "Silencio"
         )
-
 
         if sentidos.huele_jaguar:
 
@@ -1465,14 +1569,15 @@ class Interfaz:
             olfato = (
                 "Bayas "
                 +
-                PLURAL_COLORES[
-                    sentidos.color_olor_bayas
-                ]
+                PLURAL_COLORES.get(
+                    sentidos.color_olor_bayas,
+                    ""
+                )
             )
 
         else:
 
-            olfato = "Sin detección"
+            olfato = "Nada"
 
 
         tacto = str(
@@ -1483,55 +1588,26 @@ class Interfaz:
             sentidos.sensacion_gusto
         )
 
-                # =====================================
-        # SLOTS VISUALES DE LOS 5 SENTIDOS
-        # =====================================
-
-        padding = 15
 
         ancho_slot = (
-            ancho_centro
-            -
-            padding * 3
-        ) // 2
-
-        x_col1 = (
-            x_centro
-            +
-            padding
+            ancho_sentidos - 20
         )
 
-        x_col2 = (
-            x_col1
-            +
-            ancho_slot
-            +
-            padding
-        )
-
-
-        # =====================================
-        # VISIÓN
-        # =====================================
 
         self.dibujar_slot_sentido_animado(
-            x_col1,
+            x_sentidos + 10,
             55,
             ancho_slot,
-            "Visión",
+            "Vista",
             vista,
             sentidos.ve_jaguar,
             self.C_NEON_ROJO
         )
 
 
-        # =====================================
-        # OÍDO
-        # =====================================
-
         self.dibujar_slot_sentido_animado(
-            x_col1,
-            95,
+            x_sentidos + 10,
+            91,
             ancho_slot,
             "Oído",
             oido,
@@ -1540,10 +1616,6 @@ class Interfaz:
         )
 
 
-        # =====================================
-        # OLFATO
-        # =====================================
-
         olfato_activo = (
             sentidos.huele_jaguar
             or
@@ -1551,8 +1623,8 @@ class Interfaz:
         )
 
         self.dibujar_slot_sentido_animado(
-            x_col2,
-            55,
+            x_sentidos + 10,
+            127,
             ancho_slot,
             "Olfato",
             olfato,
@@ -1561,17 +1633,13 @@ class Interfaz:
         )
 
 
-        # =====================================
-        # TACTO
-        # =====================================
-
         tacto_activo = bool(
             sentidos.arena_cercana
         )
 
         self.dibujar_slot_sentido_animado(
-            x_col2,
-            95,
+            x_sentidos + 10,
+            163,
             ancho_slot,
             "Tacto",
             tacto,
@@ -1580,28 +1648,13 @@ class Interfaz:
         )
 
 
-        # =====================================
-        # GUSTO
-        # =====================================
-
         gusto_activo = (
             gusto != "Sin alimento"
         )
 
-        x_gusto = (
-            x_centro
-            +
-            (
-                ancho_centro
-                -
-                ancho_slot
-            )
-            // 2
-        )
-
         self.dibujar_slot_sentido_animado(
-            x_gusto,
-            132,
+            x_sentidos + 10,
+            199,
             ancho_slot,
             "Gusto",
             gusto,
@@ -1609,199 +1662,314 @@ class Interfaz:
             self.C_NEON_VERDE
         )
 
-            
 
         # =====================================
-        # BLOQUE DERECHO
+        # 3. AGENTE JAGUAR
         # =====================================
 
-        rect_der = pygame.Rect(
-            x_der,
-            20,
-            ancho_der,
-            145
+        rect_jaguar = pygame.Rect(
+            x_jaguar,
+            y_panel,
+            ancho_jaguar,
+            alto_caja
         )
 
         self.dibujar_caja_biselada_solida(
-            rect_der,
+            rect_jaguar,
             self.C_MADERA_BASE,
             self.C_MADERA_LUZ,
             self.C_MADERA_SOMBRA
         )
 
 
-        energia = self.agente.energia
+        dibujar_titulo(
+            "AGENTE JAGUAR",
+            x_jaguar + 15,
+            25,
+            (255, 150, 80)
+        )
 
 
-        titulo_energia = (
-            self.fuente_UI.render(
-                f"ENERGÍA: {int(energia)}%",
-                True,
-                self.C_ORO_PURO
+        hambre = (
+            self.agente_jaguar.hambre
+        )
+
+
+        dibujar_barra(
+            x_jaguar + 15,
+            58,
+            ancho_jaguar - 30,
+            hambre,
+            getattr(
+                self.agente_jaguar,
+                "hambre_max",
+                100
+            ),
+            self.C_NEON_ROJO,
+            "Hambre"
+        )
+
+
+        if self.mundo.jaguar_vivo:
+
+            estado_jaguar = (
+                self.agente_jaguar.estado
             )
+
+        else:
+
+            estado_jaguar = (
+                "Jaguar cazado"
+            )
+
+
+        dibujar_linea(
+            f"Estado: {estado_jaguar}",
+            x_jaguar + 15,
+            103,
+            ancho_jaguar - 30,
+            (255, 190, 130)
+        )
+
+
+        decision_jaguar = (
+            self.agente_jaguar.decision_difusa
+        )
+
+        if decision_jaguar:
+
+            accion_jaguar = (
+                decision_jaguar["accion"]
+            )
+
+            entradas_jaguar = (
+                decision_jaguar["entradas"]
+            )
+
+        else:
+
+            accion_jaguar = "-"
+
+            entradas_jaguar = {}
+
+
+        dibujar_linea(
+            f"Difuso: {accion_jaguar.upper()}",
+            x_jaguar + 15,
+            127,
+            ancho_jaguar - 30,
+            self.C_NEON_AMARILLO
+        )
+
+
+        dibujar_linea(
+            (
+                f"Distancia cazador: "
+                f"{entradas_jaguar.get('distancia_cazador', '-')}"
+            ),
+            x_jaguar + 15,
+            149,
+            ancho_jaguar - 30
+        )
+
+
+        dibujar_linea(
+            (
+                f"Energía cazador percibida: "
+                f"{entradas_jaguar.get('energia_cazador', '-')}"
+            ),
+            x_jaguar + 15,
+            171,
+            ancho_jaguar - 30
+        )
+
+
+        dibujar_linea(
+            (
+                f"Velocidad: "
+                f"{self.cuerpo_jaguar.velocidad:.2f} m/s"
+            ),
+            x_jaguar + 15,
+            193,
+            ancho_jaguar - 30,
+            (200, 220, 255)
+        )
+
+
+        dibujar_linea(
+            (
+                "Atacando: "
+                +
+                (
+                    "SÍ"
+                    if self.agente_jaguar.atacando
+                    else "NO"
+                )
+            ),
+            x_jaguar + 15,
+            213,
+            ancho_jaguar - 30,
+            (
+                self.C_NEON_ROJO
+                if self.agente_jaguar.atacando
+                else (170, 190, 170)
+            )
+        )
+
+
+                # =====================================
+        # 4. DIOS / CONTROL
+        # =====================================
+
+        rect_dios = pygame.Rect(
+            x_dios,
+            y_panel,
+            ancho_dios,
+            alto_caja
+        )
+
+        self.dibujar_caja_biselada_solida(
+            rect_dios,
+            self.C_MADERA_BASE,
+            self.C_MADERA_LUZ,
+            self.C_MADERA_SOMBRA
+        )
+
+
+        dibujar_titulo(
+            "DIOS",
+            x_dios + 15,
+            25,
+            (255, 255, 255)
+        )
+
+
+        # =====================================
+        # REPRESENTACIÓN VISUAL DE DIOS
+        # =====================================
+
+        # =====================================
+        # SÍMBOLO TEMPORAL DE DIOS
+        # =====================================
+
+        simbolo_dios = self.fuente_titulo.render(
+            "♛",
+            True,
+            self.C_ORO_PURO
+        )
+
+        simbolo_x = (
+            x_dios
+            +
+            (
+                ancho_dios
+                -
+                simbolo_dios.get_width()
+            )
+            // 2
         )
 
         self.pantalla.blit(
-            titulo_energia,
+            simbolo_dios,
             (
-                x_der + 20,
-                35
+                simbolo_x,
+                70
             )
         )
 
 
-        # Fondo barra energía
+        # =====================================
+        # ESTADO DE LA SIMULACIÓN
+        # =====================================
 
-        barra_fondo = pygame.Rect(
-            x_der + 20,
-            65,
-            ancho_der - 40,
-            20
-        )
-
-        pygame.draw.rect(
-            self.pantalla,
-            (15, 10, 10),
-            barra_fondo,
-            border_radius=10
+        dibujar_linea(
+            f"Turno: {self.agente.turno}",
+            x_dios + 15,
+            132,
+            ancho_dios - 30,
+            self.C_ORO_PURO
         )
 
 
-        ancho_energia = int(
-            (
-                ancho_der - 46
+        if self.agente.vidas <= 0:
+
+            estado_simulacion = (
+                "FIN DEL JUEGO"
             )
-            *
-            max(
-                0,
-                min(
-                    energia / 100,
-                    1
-                )
+
+            color_estado = (
+                self.C_NEON_ROJO
             )
-        )
 
+        elif not self.mundo.jaguar_vivo:
 
-        if energia > 30:
+            estado_simulacion = (
+                "JAGUAR CAZADO"
+            )
 
-            color_energia = (
+            color_estado = (
+                self.C_NEON_AMARILLO
+            )
+
+        elif self.en_curso:
+
+            estado_simulacion = (
+                "EN CURSO"
+            )
+
+            color_estado = (
                 self.C_NEON_VERDE
             )
 
         else:
 
-            color_energia = (
-                self.C_NEON_ROJO
+            estado_simulacion = (
+                "PAUSADO"
+            )
+
+            color_estado = (
+                (180, 180, 180)
             )
 
 
-        barra_energia = pygame.Rect(
-            x_der + 23,
-            68,
-            ancho_energia,
-            14
-        )
-
-        pygame.draw.rect(
-            self.pantalla,
-            color_energia,
-            barra_energia,
-            border_radius=7
-        )
-
-
-        memoria = self.agente.memoria
-
-
-        # =====================================
-        # CONOCIMIENTO DE LAS BAYAS
-        # =====================================
-
-        conocimiento = (
-            memoria.conocimiento_bayas
-        )
-
-
-        estado_roja = (
-            conocimiento["roja"]
-            if conocimiento["roja"] is not None
-            else "?"
-        )
-
-        estado_azul = (
-            conocimiento["azul"]
-            if conocimiento["azul"] is not None
-            else "?"
-        )
-
-
-        info_bayas = self.fuente_pequena.render(
+        dibujar_linea(
             (
-                f"Baya roja: {estado_roja}    "
-                f"Baya azul: {estado_azul}"
+                f"Estado: "
+                f"{estado_simulacion}"
             ),
-            True,
-            (220, 220, 220)
-        )
-
-        self.pantalla.blit(
-            info_bayas,
-            (
-                x_der + 20,
-                100
-            )
+            x_dios + 15,
+            154,
+            ancho_dios - 30,
+            color_estado
         )
 
 
         # =====================================
-        # MEMORIA Y EFICIENCIA
-        # =====================================
-
-        info_memoria = self.fuente_pequena.render(
-            (
-                f"Memoria: {len(memoria.celdas_revisadas)} "
-                f"| Pasos: {memoria.pasos} "
-                f"| Rep: {memoria.pasos_repetidos} "
-                f"| Puntos: {self.agente.puntos}"
-            ),
-            True,
-            (220, 220, 220)
-        )
-
-        self.pantalla.blit(
-            info_memoria,
-            (
-                x_der + 20,
-                120
-            )
-        )
-
-
-            # =====================================
         # BOTONES
         # =====================================
 
         ancho_boton = (
-            ancho_der - 55
+            ancho_dios - 45
         ) // 2
 
 
         self.rect_btn_pausa = pygame.Rect(
-            x_der + 20,
-            137,
+            x_dios + 15,
+            195,
             ancho_boton,
-            25
+            28
         )
 
+
         self.rect_btn_reiniciar = pygame.Rect(
-            x_der
+            x_dios
             +
-            35
+            30
             +
             ancho_boton,
-            137,
+            195,
             ancho_boton,
-            25
+            28
         )
 
 
@@ -1815,7 +1983,7 @@ class Interfaz:
                 45
             )
 
-            color_pausa_hover = (
+            color_hover = (
                 220,
                 70,
                 70
@@ -1831,7 +1999,7 @@ class Interfaz:
                 65
             )
 
-            color_pausa_hover = (
+            color_hover = (
                 60,
                 200,
                 90
@@ -1842,7 +2010,7 @@ class Interfaz:
             self.rect_btn_pausa,
             texto_pausa,
             color_pausa,
-            color_pausa_hover
+            color_hover
         )
 
 
@@ -1860,7 +2028,6 @@ class Interfaz:
                 230
             )
         )
-        
 
     def dibujar_alcance(
         self,
