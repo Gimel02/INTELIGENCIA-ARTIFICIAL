@@ -1342,24 +1342,6 @@ class AgenteCazador:
             self.posicion
         )
 
-
-        if "genética" in self.estado:
-
-            self.fuente_decision = "AG"
-
-        elif "alcance" in self.estado:
-
-            self.fuente_decision = "ataque directo"
-
-        elif self.posicion != posicion_antes:
-
-            self.fuente_decision = "A*"
-
-        else:
-
-            self.fuente_decision = "-"
-
-
         if self.posicion != posicion_antes:
 
             resultado = "avanzó"
@@ -2287,7 +2269,7 @@ class AgenteCazador:
         # Limpiar ruta anterior
 
         self.ruta_planeada = []
-
+        self.fuente_decision = "-"
 
         # ==========================================
         # 0. SIN VIDAS: YA NO SE MUEVE
@@ -2963,6 +2945,7 @@ class AgenteCazador:
             camino = [
                 posicion_jaguar
             ]
+            self.fuente_decision = "ataque directo"
 
             self.estado = (
                 "¡Jaguar al alcance! Atacando"
@@ -2982,7 +2965,7 @@ class AgenteCazador:
                 self.memoria.bayas_malas,
                 {}
             )
-
+            self.fuente_decision = "A*"
 
             print(
                 "[SUPERVIVENCIA]",
@@ -3147,6 +3130,7 @@ class AgenteCazador:
                 camino = [
                     siguiente_posicion_genetica
                 ]
+                self.fuente_decision = "AG"
 
                 self.estado += (
                     " | Decisión genética: "
@@ -3167,6 +3151,8 @@ class AgenteCazador:
                     self.memoria.bayas_malas,
                     self.memoria.visitas
                 )
+
+                self.fuente_decision = "A*"
 
 
         # ==========================================
@@ -3235,7 +3221,7 @@ class AgenteCazador:
                     key=lambda vecino: (
                         AEstrella.heuristica(
                             vecino,
-                            posicion_jaguar
+                            meta
                         ),
                         self.memoria.visitas.get(
                             vecino,
@@ -3245,6 +3231,7 @@ class AgenteCazador:
                 )
 
                 siguiente_posicion = alternativas[0]
+                self.fuente_decision = "anti-bucle"
                 camino = [siguiente_posicion]
                 self.ruta_planeada = camino
 
