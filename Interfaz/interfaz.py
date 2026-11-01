@@ -17,6 +17,8 @@ from Agente_Cazador.agente import AgenteCazador
 from Agente_Cazador.sentidos import PLURAL_COLORES
 from Agente_Jaguar.agente import AgenteJaguar
 from Logica_Difusa.dios import obtener_dios
+from Mundo import escenarios
+import random
 
 from Fisica.cinematica import CuerpoFisico
 
@@ -40,6 +42,10 @@ class Interfaz:
         # =========================================
 
         self.mundo = MundoSelva()
+
+        # Escenario de demostración cargado
+        # (None = mapa al azar)
+        self.escenario_actual = None
 
 
         # =========================================
@@ -369,13 +375,26 @@ class Interfaz:
 
         self.reloj = pygame.time.Clock()
 
-    def reiniciar_simulacion(self):
+    def reiniciar_simulacion(self, escenario=None):
 
         # =========================================
         # CREAR MUNDO NUEVO
+        #
+        # Con escenario: siempre el mismo mapa
+        # (teclas 1 y 2). Sin escenario: al azar.
         # =========================================
 
-        self.mundo = MundoSelva()
+        self.escenario_actual = escenario
+
+        if escenario is None:
+
+            self.mundo = MundoSelva()
+
+        else:
+
+            self.mundo = escenarios.crear_mundo(
+                escenario
+            )
 
 
         # =========================================
@@ -464,6 +483,30 @@ class Interfaz:
         self.agente_jaguar = AgenteJaguar(
             self.mundo
         )
+
+
+        # =========================================
+        # PREPARAR EL ESCENARIO DE DEMOSTRACIÓN
+        # =========================================
+
+        if escenario is not None:
+
+            escenarios.aplicar(
+                escenario,
+                self.mundo,
+                self.agente,
+                self.agente_jaguar,
+                fijar_azar=False
+            )
+
+            # Cada vez que se presiona la tecla,
+            # la partida es un poco distinta
+            random.seed()
+
+            print(
+                f"[DIOS] Escenario: {escenario.nombre} "
+                f"({escenario.descripcion})"
+            )
 
 
         # =========================================
@@ -753,9 +796,27 @@ class Interfaz:
 
 
                 # B = imprimir la bitácora del cazador
+                # y la del jaguar
                 elif evento.key == pygame.K_b:
 
                     self.agente.imprimir_conciencia()
+
+                    self.agente_jaguar.imprimir_conciencia()
+
+
+                # 1 y 2 = escenarios de demostración
+                elif evento.key in (pygame.K_1, pygame.K_KP1):
+
+                    self.reiniciar_simulacion(
+                        escenarios.ESCENARIOS[1]
+                    )
+
+
+                elif evento.key in (pygame.K_2, pygame.K_KP2):
+
+                    self.reiniciar_simulacion(
+                        escenarios.ESCENARIOS[2]
+                    )
 
 
 
@@ -1141,6 +1202,36 @@ class Interfaz:
         return texto + "..."
 
 
+    # =========================================
+    # TEXTO DE LA REGLA MÁS FUERTE Y DEL
+    # CENTROIDE (para el panel)
+    # =========================================
+
+    def texto_regla_y_centroide(self, agente):
+
+        decision = getattr(agente, "decision_difusa", None)
+
+        if not decision:
+
+            return ""
+
+        regla = agente.controlador.regla_dominante()
+
+        x = decision.get("x")
+
+        partes = []
+
+        if regla is not None:
+
+            partes.append(f"{regla[0]} {regla[2]:.2f}")
+
+        if x is not None:
+
+            partes.append(f"x*={x:.0f}")
+
+        return f"  ({', '.join(partes)})" if partes else ""
+
+
     def dibujar_panel(self):
 
         # =====================================
@@ -1487,7 +1578,10 @@ class Interfaz:
 
 
         dibujar_linea(
-            f"Difuso: {accion_difusa.upper()}",
+            (
+                f"Difuso: {accion_difusa.upper()}"
+                f"{self.texto_regla_y_centroide(self.agente)}"
+            ),
             x_cazador + 15,
             191,
             ancho_cazador - 30,
@@ -1498,8 +1592,8 @@ class Interfaz:
         dibujar_linea(
             (
                 f"Movimiento: "
-                f"{self.agente.ultima_accion} "
-                f"← {self.agente.fuente_decision}"
+                f"{self.agente.ultima_accion}  "
+                f"| Motor: {self.agente.fuente_decision}"
             ),
             x_cazador + 15,
             211,
@@ -1754,7 +1848,10 @@ class Interfaz:
 
 
         dibujar_linea(
-            f"Difuso: {accion_jaguar.upper()}",
+            (
+                f"Difuso: {accion_jaguar.upper()}"
+                f"{self.texto_regla_y_centroide(self.agente_jaguar)}"
+            ),
             x_jaguar + 15,
             127,
             ancho_jaguar - 30,
@@ -1764,8 +1861,9 @@ class Interfaz:
 
         dibujar_linea(
             (
-                f"Distancia cazador: "
-                f"{entradas_jaguar.get('distancia_cazador', '-')}"
+                f"Hambre {entradas_jaguar.get('hambre', '-')} | "
+                f"Dist {entradas_jaguar.get('distancia_cazador', '-')} | "
+                f"Energía caz. {entradas_jaguar.get('energia_cazador', '-')}"
             ),
             x_jaguar + 15,
             149,
@@ -1775,12 +1873,14 @@ class Interfaz:
 
         dibujar_linea(
             (
-                f"Energía cazador percibida: "
-                f"{entradas_jaguar.get('energia_cazador', '-')}"
+                f"Movimiento: "
+                f"{self.agente_jaguar.ultima_accion}  "
+                f"| Motor: {self.agente_jaguar.fuente_movimiento}"
             ),
             x_jaguar + 15,
             171,
-            ancho_jaguar - 30
+            ancho_jaguar - 30,
+            self.C_NEON_AZUL
         )
 
 
@@ -1941,6 +2041,21 @@ class Interfaz:
             154,
             ancho_dios - 30,
             color_estado
+        )
+
+
+        escenario_texto = (
+            self.escenario_actual.nombre
+            if self.escenario_actual is not None
+            else "Mapa al azar"
+        )
+
+        dibujar_linea(
+            f"Escenario: {escenario_texto}",
+            x_dios + 15,
+            174,
+            ancho_dios - 30,
+            (200, 200, 200)
         )
 
 

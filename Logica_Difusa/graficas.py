@@ -20,7 +20,11 @@ from Logica_Difusa.variables import (
     ACCION_JAGUAR
 )
 from Logica_Difusa.base_conocimiento import base_equipo
-from Logica_Difusa.motor_mamdani import ControladorDifuso
+from Logica_Difusa.motor_mamdani import (
+    ControladorDifuso,
+    accion_dominante,
+    termino_de_salida,
+)
 
 
 CARPETA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "reporte")
@@ -30,7 +34,7 @@ COLORES = ["#1f6feb", "#d1242f", "#2da44e", "#bf8700", "#8250df"]
 ANCHO, ALTO = 640, 260
 IZQ, DER, ARRIBA, ABAJO = 50, 35, 40, 50
 
-EJEMPLO = {"reserva": 30, "distancia": 4, "peligro": 70}
+EJEMPLO = {"reserva": 30, "distancia": 4, "peligro": 60}
 
 
 def _x(valor, variable):
@@ -171,7 +175,8 @@ def grafica_centroide(controlador, entradas):
     partes = _ejes(
         variable,
         f"Agregación (max) y centroide: x* = {traza['x_estrella']:.2f} "
-        f"-> {traza['accion']}"
+        f"-> {termino_de_salida(variable, traza['x_estrella'])} "
+        f"(altura máxima: {accion_dominante(variable, traza['alturas'])})"
     )
 
     # Términos completos en gris claro

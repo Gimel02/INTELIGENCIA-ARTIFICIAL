@@ -161,17 +161,48 @@ def _mover_ratones(mundo, jaguar):
     return comidos
 
 
-def jugar_partida(base_cazador, base_jaguar, semilla, max_turnos=MAX_TURNOS):
+def jugar_partida(
+    base_cazador,
+    base_jaguar,
+    semilla,
+    max_turnos=MAX_TURNOS,
+    escenario=None,
+    semilla_juego=None
+):
 
-    random.seed(semilla)
+    # escenario: uno de Mundo/escenarios.py (su
+    # semilla manda sobre "semilla").
+    # semilla_juego: azar distinto después de
+    # preparar el escenario, para ver si el
+    # resultado se repite.
+
+    from Mundo import escenarios
 
     with contextlib.redirect_stdout(io.StringIO()):
 
-        mundo = MundoSelva()
+        if escenario is None:
+
+            random.seed(semilla)
+
+            mundo = MundoSelva()
+
+        else:
+
+            mundo = escenarios.crear_mundo(escenario)
 
         cazador = AgenteCazador(mundo, controlador=ControladorDifuso(base_cazador))
 
         jaguar = AgenteJaguar(mundo, controlador=ControladorDifuso(base_jaguar))
+
+        if escenario is not None:
+
+            escenarios.aplicar(escenario, mundo, cazador, jaguar)
+
+        if semilla_juego is not None:
+
+            random.seed(semilla_juego)
+
+        secuencia = []
 
         turno_caza = None
 
@@ -200,6 +231,10 @@ def jugar_partida(base_cazador, base_jaguar, semilla, max_turnos=MAX_TURNOS):
                 accion = cazador.decision_difusa["accion"]
 
                 acciones[accion] = acciones.get(accion, 0) + 1
+
+                if not secuencia or secuencia[-1] != accion:
+
+                    secuencia.append(accion)
 
             _encuentro(mundo, cazador, jaguar)
 
@@ -255,6 +290,8 @@ def jugar_partida(base_cazador, base_jaguar, semilla, max_turnos=MAX_TURNOS):
         "ratones_comidos": ratones_comidos,
         "turnos_escondido": turnos_escondido,
         "acciones": acciones,
+        "secuencia": secuencia,
+        "vidas": cazador.vidas,
     }
 
     partida["aptitud_cazador"] = aptitud_cazador(partida, max_turnos)

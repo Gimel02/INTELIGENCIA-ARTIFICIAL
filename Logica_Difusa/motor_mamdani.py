@@ -38,6 +38,23 @@ PASO_CENTROIDE = 1.0
 
 
 # ==========================================
+# MÉTODO DE DEFUZZIFICACIÓN
+#
+#   "centroide"     -> la acción es la que
+#                      tiene más grado en x*
+#                      (lo que pide la práctica)
+#   "altura_maxima" -> la acción es la de la
+#                      regla con más fuerza
+#
+# El centroide x* se calcula siempre. Ver la
+# comparación de los dos métodos en el
+# reporte (sección de resultados).
+# ==========================================
+
+METODO_DEFUZZIFICACION = "altura_maxima"
+
+
+# ==========================================
 # 1. FUZZIFICACIÓN
 # ==========================================
 
@@ -127,25 +144,17 @@ def termino_de_salida(salida, x):
 
     return max(grados, key=grados.get)
 
+
 def accion_dominante(salida, alturas):
 
-    # La acción final debe ser una acción que
-    # realmente haya sido activada por las reglas.
-    #
-    # No usamos el centroide para elegir entre
-    # acciones categóricas porque podría crear
-    # una acción intermedia que ninguna regla
-    # pidió, por ejemplo:
-    #
-    # HUIR + ATACAR -> EXPLORAR
-    #
-    # En caso de empate se respeta el orden de
-    # los términos definido en variables.py.
+    # Método de altura máxima: la acción con
+    # más activación. Evita acciones
+    # intermedias que ninguna regla pidió (por
+    # ejemplo HUIR + ATACAR -> EXPLORAR). En un
+    # empate gana el primer término de
+    # variables.py.
 
-    mayor_altura = max(
-        alturas.values(),
-        default=0.0
-    )
+    mayor_altura = max(alturas.values(), default=0.0)
 
     if mayor_altura <= 0:
 
@@ -153,11 +162,7 @@ def accion_dominante(salida, alturas):
 
     for nombre in salida.terminos:
 
-        if abs(
-            alturas.get(nombre, 0.0)
-            -
-            mayor_altura
-        ) < 1e-9:
+        if abs(alturas.get(nombre, 0.0) - mayor_altura) < 1e-9:
 
             return nombre
 
@@ -272,19 +277,33 @@ class ControladorDifuso:
         x_estrella = centroide(self.xs, agregado)
 
 
-        # ---- 4. Acción lingüística dominante ----
+        # ---- 4. Output ----
         #
-        # El centroide se conserva como valor numérico
-        # para la traza y el análisis del controlador.
-        #
-        # La acción real se obtiene del consecuente
-        # con mayor activación para evitar acciones
-        # "fantasma" creadas por promediar categorías.
+        # Según METODO_DEFUZZIFICACION:
+        #   altura_maxima -> la acción de la regla
+        #                    con más fuerza
+        #   centroide     -> la acción con mayor
+        #                    grado en x*
+        # Si ninguna regla se activó, se usa la
+        # acción por defecto.
 
-        accion = accion_dominante(
-            self.salida,
-            altura_por_termino
-        )
+        if x_estrella is None:
+
+            accion = None
+
+        elif METODO_DEFUZZIFICACION == "altura_maxima":
+
+            accion = accion_dominante(
+                self.salida,
+                altura_por_termino
+            )
+
+        else:
+
+            accion = termino_de_salida(
+                self.salida,
+                x_estrella
+            )
 
         if accion is None:
 
@@ -307,6 +326,28 @@ class ControladorDifuso:
             }
 
         return accion, x_estrella
+
+
+    # --------------------------------------
+    # Regla con más fuerza en la última
+    # decisión: (id, acción, fuerza) o None
+    # --------------------------------------
+
+    def regla_dominante(self):
+
+        traza = self.ultima_traza
+
+        if traza is None:
+
+            return None
+
+        activas = [f for f in traza["fuerzas"] if f[2] > 0]
+
+        if not activas:
+
+            return None
+
+        return max(activas, key=lambda f: f[2])
 
 
     # --------------------------------------

@@ -1,5 +1,6 @@
 
 import random
+from collections import deque
 
 from Algoritmos.a_Estrella import AEstrella
 #from Algoritmos.huida import Huida
@@ -31,7 +32,19 @@ class AgenteJaguar:
 
         self.decision_difusa = None
 
-        self.modo_difuso_actual = "explorar"
+        # ==========================================
+        # AUTOCONCIENCIA (BITÁCORA)
+        #
+        # En cada turno guarda qué percibió, qué
+        # regla pesó más, qué decidió y cómo se
+        # movió. Se imprime con la tecla B.
+        # ==========================================
+
+        self.turno = 0
+        self.fuente_movimiento = "-"
+        self.ultima_accion = "QUIETO"
+        self.bitacora = deque(maxlen=200)
+
         # Detección del cazador
         self.rango_deteccion = 4
 
@@ -46,7 +59,6 @@ class AgenteJaguar:
 
         # Memoria independiente del Jaguar
         self.memoria = MemoriaJaguar()
-        self.cazador_anterior = None
 
         # Hambre
         self.hambre = 0
@@ -238,12 +250,22 @@ class AgenteJaguar:
 
         posicion_anterior = self.posicion
 
+        self.turno += 1
+
+        self.fuente_movimiento = "-"
+
+        consulto_reglas = self.retirada == 0
+
         destino = self.decidir(
             posicion_cazador,
             energia_cazador,
             ratones_vivos,
             distancia
         )
+
+        if destino is None:
+
+            self.fuente_movimiento = "quieto"
 
         # Actualizar estados del mundo antes de mover
         self.cazador_anterior = posicion_cazador
@@ -262,7 +284,145 @@ class AgenteJaguar:
             # Procesar consumo de bayas en la casilla alcanzada
             self.procesar_terreno_jaguar(destino)
 
+        self.ultima_accion = self.nombre_movimiento(
+            posicion_anterior,
+            destino
+        )
+
+        self.registrar_bitacora(
+            posicion_anterior,
+            destino,
+            consulto_reglas
+        )
+
         return destino
+
+    # ==========================================
+    # NOMBRE DEL MOVIMIENTO
+    # ==========================================
+
+    @staticmethod
+    def nombre_movimiento(desde, hasta):
+
+        if hasta is None or hasta == desde:
+            return "QUIETO"
+
+        cambio = (hasta[0] - desde[0], hasta[1] - desde[1])
+
+        return {
+            (-1, 0): "ARRIBA",
+            (1, 0): "ABAJO",
+            (0, -1): "IZQUIERDA",
+            (0, 1): "DERECHA",
+        }.get(cambio, "SALTO")
+
+    # ==========================================
+    # BITÁCORA (AUTOCONCIENCIA)
+    # ==========================================
+
+    def regla_dominante_texto(self):
+
+        regla = self.controlador.regla_dominante()
+
+        if regla is None:
+            return "-"
+
+        id_regla, accion, fuerza = regla
+
+        return f"{id_regla} -> {accion} ({fuerza:.2f})"
+
+    def registrar_bitacora(
+        self,
+        desde,
+        destino,
+        consulto_reglas
+    ):
+
+        if consulto_reglas and self.decision_difusa:
+
+            entradas = self.decision_difusa["entradas"]
+            accion = self.decision_difusa["accion"]
+            x = self.decision_difusa["x"]
+            regla = self.regla_dominante_texto()
+
+        else:
+
+            # Tras atacar se retira unos turnos
+            # sin consultar sus reglas
+
+            entradas = None
+            accion = "retirada"
+            x = None
+            regla = "- (se retira tras atacar)"
+
+        self.bitacora.append({
+            "turno": self.turno,
+            "entradas": entradas,
+            "regla": regla,
+            "accion": accion,
+            "x": x,
+            "estado": self.estado,
+            "desde": desde,
+            "hasta": destino if destino is not None else desde,
+            "movimiento": self.ultima_accion,
+            "fuente": self.fuente_movimiento,
+            "hambre": self.hambre,
+        })
+
+    def imprimir_conciencia(self, ultimas=10):
+
+        print()
+        print("========== AUTOCONCIENCIA DEL JAGUAR ==========")
+
+        print(
+            f"Hambre: {self.hambre} ({self.estado_hambre})  "
+            f"Atacando: {'SÍ' if self.atacando else 'NO'}  "
+            f"Estado: {self.estado}"
+        )
+
+        print(f"Control difuso: {self.controlador.base.nombre}")
+
+        if self.decision_difusa:
+
+            entradas = self.decision_difusa["entradas"]
+            x = self.decision_difusa["x"]
+
+            print("Entradas:")
+            print(f"   hambre            = {entradas['hambre']}")
+            print(f"   distancia_cazador = {entradas['distancia_cazador']}")
+            print(f"   energia_cazador   = {entradas['energia_cazador']}")
+            print(f"Regla dominante: {self.regla_dominante_texto()}")
+            print(
+                "Centroide: "
+                + ("-" if x is None else f"x* = {x:.1f}")
+            )
+            print(f"Decisión: {self.decision_difusa['accion'].upper()}")
+
+        print(f"Últimas {ultimas} decisiones:")
+
+        for registro in list(self.bitacora)[-ultimas:]:
+
+            entradas = registro["entradas"]
+
+            if entradas:
+                texto_entradas = (
+                    f"H {entradas['hambre']:3.0f} "
+                    f"D {entradas['distancia_cazador']:2.0f} "
+                    f"E {entradas['energia_cazador']:3.0f}"
+                )
+            else:
+                texto_entradas = "   (sin consulta)   "
+
+            print(
+                f"   #{registro['turno']:4d} "
+                f"{texto_entradas} | "
+                f"{registro['regla']} | "
+                f"{registro['accion'].upper():11s} | "
+                f"{registro['movimiento']:9s} <- {registro['fuente']} | "
+                f"{registro['estado']}"
+            )
+
+        print("===============================================")
 
     # ==========================================
     # TOMAR DECISIÓN SEGÚN SU ESTADO
@@ -280,6 +440,7 @@ class AgenteJaguar:
                 self.retirada -= 1
                 self.atacando = False
                 self.estado = "Retirándose tras el ataque"
+                self.fuente_movimiento = "escape"
                 return self.elegir_escape_inteligente(posicion_cazador)
 
             # 1. DECISIÓN DIFUSA: qué hacer
@@ -319,6 +480,7 @@ class AgenteJaguar:
                     self.cazador_anterior,
                     self.mundo
                 )
+                self.fuente_movimiento = "A*"
                 return self.paso_hacia(meta)
 
 
@@ -331,12 +493,14 @@ class AgenteJaguar:
                     if distancia <= 2:
                         self.atacando = True
                         self.estado = "¡Acorralado! Contraataca"
+                        self.fuente_movimiento = "A*"
                         return self.paso_hacia(posicion_cazador)
 
                     self.estado = "Acorralado"
                     return None
 
                 self.estado = "Huyendo (Escape Inteligente)"
+                self.fuente_movimiento = "escape"
                 return destino
 
 
@@ -360,9 +524,11 @@ class AgenteJaguar:
 
                     if distancia_raton <= self.rango_olfato_ratones:
                         self.estado = "Cazando ratón"
+                        self.fuente_movimiento = "A*"
                         return self.paso_hacia(cercano.posicion)
 
                 self.estado = "Buscando ratones"
+                self.fuente_movimiento = "merodeo"
                 return self.merodear(cruzar_arena=True)
 
 
@@ -373,6 +539,7 @@ class AgenteJaguar:
                 return None
 
             self.estado = "Merodeando"
+            self.fuente_movimiento = "merodeo"
             return self.merodear()
 
 
@@ -487,7 +654,7 @@ class AgenteJaguar:
         self.estado = "¡Atacó al cazador!"
 
 
-# ==========================================
+    # ==========================================
     # REGISTRAR POSICIÓN Y MEMORIA DEL ENTORNO
     # ==========================================
 
