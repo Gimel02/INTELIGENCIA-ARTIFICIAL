@@ -294,7 +294,35 @@ class Interfaz:
             self.usa_fondo_img = False
 
 
-        
+
+                # =========================================
+        # IMAGEN DEL DIOS ORQUESTADOR
+        # =========================================
+
+        ruta_dios = os.path.join(
+            "Recursos",
+            "images",
+            "dios.png"
+        )
+
+        try:
+
+            imagen_dios_raw = pygame.image.load(
+                ruta_dios
+            ).convert_alpha()
+
+            self.imagen_dios = pygame.transform.smoothscale(
+                imagen_dios_raw,
+                (110, 110)
+            )
+
+            print("Imagen de DIOS cargada correctamente.")
+
+        except Exception as error:
+
+            print(f"Error al cargar imagen de DIOS: {error}")
+
+            self.imagen_dios = None
 
 
         # =========================================
@@ -2042,11 +2070,13 @@ class Interfaz:
 
 
         dibujar_titulo(
-            "DIOS",
+            "ORQUESTADOR",
             x_dios + 15,
             25,
             (255, 255, 255)
         )
+
+
 
 
         # =====================================
@@ -2073,11 +2103,7 @@ class Interfaz:
             )
 
         else:
-
-        # =====================================
-        # SÍMBOLO TEMPORAL DE DIOS
-        # =====================================
-
+            #mostrar simbolo si no se pudo carga imagen
             simbolo_dios = self.fuente_titulo.render(
                 "♛",
                 True,
@@ -2090,20 +2116,16 @@ class Interfaz:
                 (
                     ancho_dios
                     -
-                    simbolo_dios.get_width()
-                )
-                // 2
+                    simbolo_dios.get_width())// 2
             )
 
             self.pantalla.blit(
                 simbolo_dios,
                 (
-                    simbolo_x,
-                    70
-                )
+                    simbolo_x,70)
             )
 
-
+           
         # =====================================
         # ESTADO DE LA SIMULACIÓN
         # =====================================
