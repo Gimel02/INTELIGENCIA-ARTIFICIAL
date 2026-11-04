@@ -149,6 +149,18 @@ class MundoSelva:
             self.inicio_cazador
         )
 
+
+        #cueva
+        self.cueva = None
+        
+        # =========================================
+        # CUEVA DEL JAGUAR
+        # =========================================
+        
+        self.cueva = self.posicion_aleatoria_valida(
+            exclude=[self.campamento]
+        )
+
     # =========================================
         # JAGUAR
         # =========================================
@@ -158,7 +170,8 @@ class MundoSelva:
         self.inicio_jaguar = (
             self.posicion_aleatoria_valida(
                 exclude=[
-                    self.campamento
+                    self.campamento,
+                    self.cueva
                 ]
             )
         )

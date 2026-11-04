@@ -30,13 +30,14 @@ from Recursos.campamento import Campamento
 from Recursos.cazador import Cazador
 from Recursos.jaguar import Jaguar
 from Recursos.raton import Raton
+
+from Recursos.cueva import Cueva
+
 class Interfaz:
 
     def __init__(self):
 
         pygame.init()
-
-
         # =========================================
         # MUNDO
         # =========================================
@@ -64,7 +65,6 @@ class Interfaz:
         self.agente_jaguar = AgenteJaguar(
             self.mundo
         )
-
 
         # =========================================
         # CUERPOS FÍSICOS
@@ -228,6 +228,37 @@ class Interfaz:
             "Agente Cazador vs Jaguar"
         )
 
+        
+        # =========================================
+        # IMAGEN DEL DIOS ORQUESTADOR
+        # =========================================
+
+        ruta_dios = os.path.join(
+            "Recursos",
+            "images",
+            "dios.png"
+        )
+
+        try:
+
+            imagen_dios_raw = pygame.image.load(
+                ruta_dios
+            ).convert_alpha()
+
+            self.imagen_dios = pygame.transform.smoothscale(
+                imagen_dios_raw,
+                (110, 110)
+            )
+
+            print("Imagen de DIOS cargada correctamente.")
+
+        except Exception as error:
+
+            print(f"Error al cargar imagen de DIOS: {error}")
+
+            self.imagen_dios = None
+
+
         # =========================================
         # FONDO VISUAL DE MAIN
         # =========================================
@@ -284,6 +315,10 @@ class Interfaz:
 
         self.campamento = Campamento(
             self.mundo.tamano_celda
+        )
+
+        self.cueva = Cueva(
+                    self.mundo.tamano_celda
         )
 
         self.cazador = Cazador(
@@ -529,6 +564,35 @@ class Interfaz:
             posicion=self.mundo.posicion_jaguar
         )
 
+           # =========================================
+        # IMAGEN DEL DIOS ORQUESTADOR
+        # =========================================
+
+        ruta_dios = os.path.join(
+            "Recursos",
+            "images",
+            "dios.png"
+        )
+
+        try:
+
+            imagen_dios_raw = pygame.image.load(
+                ruta_dios
+            ).convert_alpha()
+
+            self.imagen_dios = pygame.transform.smoothscale(
+                imagen_dios_raw,
+                (110, 110)
+            )
+
+            print("Imagen de DIOS cargada correctamente.")
+
+        except Exception as error:
+
+            print(f"Error al cargar imagen de DIOS: {error}")
+
+            self.imagen_dios = None
+
 
         # =========================================
         # RECURSOS GRÁFICOS
@@ -618,14 +682,33 @@ class Interfaz:
         # FIN DEL JUEGO
         # =====================================
 
-        if self.agente.vidas <= 0:
+        # El juego termina cuando el jaguar llega
+        # físicamente a su cueva.
+
+        if self.agente_jaguar.en_cueva:
+
+            self.en_curso = False
+
+            print("[JUEGO] ¡El jaguar llegó a su cueva!")
+
+            return
+
+
+        # Si el cazador murió, pero el jaguar todavía
+        # está regresando, permitimos que continúe.
+
+        if (
+            self.agente.vidas <= 0
+            and not self.agente_jaguar.regresando_cueva
+        ):
 
             self.en_curso = False
 
             return
 
 
-        grid = self.mundo.grid
+
+        
         # =====================================
         # CAZADOR
         # =====================================
@@ -634,7 +717,7 @@ class Interfaz:
 
         cuerpo.actualizar(
             dt,
-            grid[cuerpo.destino]
+            self.mundo.grid[cuerpo.destino]
         )
 
 
@@ -671,7 +754,7 @@ class Interfaz:
 
             cuerpo.actualizar(
                 dt,
-                grid[cuerpo.destino]
+                self.mundo.grid[cuerpo.destino]
             )
 
 
@@ -697,6 +780,19 @@ class Interfaz:
                     cuerpo.detener(
                         self.pausa_jaguar
                     )
+
+        # =========================================
+        # COMPROBAR SI LLEGÓ A SU CUEVA
+        # =========================================
+
+        if self.agente_jaguar.en_cueva:
+
+            self.en_curso = False
+
+            print("[JUEGO] El jaguar llegó a su cueva.")
+            print("[JUEGO] FIN DE LA SIMULACIÓN.")
+
+            return
 
          
         # =====================================
@@ -745,11 +841,9 @@ class Interfaz:
         # =====================================
 
         if (
-            self.mundo.jaguar_vivo
-            and
-            self.agente.posicion
-            ==
-            self.mundo.posicion_jaguar
+        self.agente.vidas > 0
+        and self.mundo.jaguar_vivo
+        and self.agente.posicion == self.mundo.posicion_jaguar
         ):
 
             if self.agente_jaguar.atacando:
@@ -757,6 +851,17 @@ class Interfaz:
                 self.agente.recibir_ataque()
 
                 self.agente_jaguar.despues_de_atacar()
+
+                # Si el cazador fue derrotado,
+                # el jaguar regresa a su cueva.
+                if self.agente.vidas <= 0:
+
+                    self.agente_jaguar.regresando_cueva = True
+                    self.agente_jaguar.en_cueva = False
+                    self.agente_jaguar.estado = "Regresando a la cueva"
+
+                    print("[JAGUAR] ¡Cazó al cazador!")
+                    print("[JAGUAR] Regresando a su cueva...")
 
             else:
 
@@ -1947,35 +2052,56 @@ class Interfaz:
         # =====================================
         # REPRESENTACIÓN VISUAL DE DIOS
         # =====================================
+        
+
+        if self.imagen_dios is not None:
+
+            # Centrar imagen dentro del panel
+            imagen_x = (
+                x_dios
+                +
+                (ancho_dios - self.imagen_dios.get_width()) // 2
+            )
+
+            # Dibujar imagen del Dios orquestador
+            self.pantalla.blit(
+                self.imagen_dios,
+                (
+                    imagen_x,
+                    45
+                )
+            )
+
+        else:
 
         # =====================================
         # SÍMBOLO TEMPORAL DE DIOS
         # =====================================
 
-        simbolo_dios = self.fuente_titulo.render(
-            "♛",
-            True,
-            self.C_ORO_PURO
-        )
-
-        simbolo_x = (
-            x_dios
-            +
-            (
-                ancho_dios
-                -
-                simbolo_dios.get_width()
+            simbolo_dios = self.fuente_titulo.render(
+                "♛",
+                True,
+                self.C_ORO_PURO
             )
-            // 2
-        )
 
-        self.pantalla.blit(
-            simbolo_dios,
-            (
-                simbolo_x,
-                70
+            simbolo_x = (
+                x_dios
+                +
+                (
+                    ancho_dios
+                    -
+                    simbolo_dios.get_width()
+                )
+                // 2
             )
-        )
+
+            self.pantalla.blit(
+                simbolo_dios,
+                (
+                    simbolo_x,
+                    70
+                )
+            )
 
 
         # =====================================
@@ -2414,6 +2540,19 @@ class Interfaz:
             columna,
             0
 
+        )
+
+        # =====================================
+        # CUEVA DEL JAGUAR
+        # =====================================
+
+        fila, columna = self.mundo.cueva
+
+        self.cueva.dibujar(
+            sup_entidades,
+            fila,
+            columna,
+            0
         )
 
     

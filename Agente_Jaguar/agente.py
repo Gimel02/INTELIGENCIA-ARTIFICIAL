@@ -78,12 +78,46 @@ class AgenteJaguar:
         self.retirada = 0
         self.decisiones_retirada = 6
 
+        # =========================================
+        # REGRESO A LA CUEVA
+        # =========================================
+
+        self.regresando_cueva = False
+        self.en_cueva = False
+
+
         # Estado del mundo
         mundo.jaguar_peligroso = False
         mundo.jaguar_atacando = False
 
         self.estado = "Descansando"
 
+
+
+        # =========================================
+        # REGRESO A LA CUEVA
+        # =========================================
+
+        self.regresando_cueva = False
+        self.en_cueva = False
+
+
+
+
+    def regresar_a_cueva(self):
+
+        if self.posicion == self.mundo.cueva:
+
+            self.en_cueva = True
+            self.estado = "Descansando en la cueva"
+            self.fuente_movimiento = "Cueva"
+
+            return None
+
+        self.estado = "Regresando a la cueva"
+        self.fuente_movimiento = "A*"
+
+        return self.paso_hacia(self.mundo.cueva)
 
 
     # ==========================================
@@ -231,6 +265,48 @@ class AgenteJaguar:
     ):
         if not self.mundo.jaguar_vivo:
             return None
+
+        # =========================================
+        # REGRESAR A LA CUEVA SI DERROTÓ AL CAZADOR
+        # =========================================
+
+        if self.regresando_cueva:
+
+            # Comprobar si ya llegó a la cueva
+            if self.posicion == self.mundo.cueva:
+
+                self.en_cueva = True
+                self.estado = "Descansando en su cueva"
+                self.fuente_movimiento = "Cueva"
+
+                return None
+
+            # Buscar el siguiente paso con A*
+            posicion_anterior = self.posicion
+
+            destino = self.paso_hacia(
+                self.mundo.cueva
+            )
+
+            if destino is not None:
+
+                self.recordar_posicion(posicion_anterior)
+
+                self.celdas_visitadas.add(destino)
+
+                self.mundo.mover_jaguar(destino)
+
+                self.estado = "Regresando a la cueva"
+                self.fuente_movimiento = "A*"
+
+                self.ultima_accion = self.nombre_movimiento(
+                    posicion_anterior,
+                    destino
+                )
+
+            return destino
+
+        
 
         self.actualizar_hambre()
 
