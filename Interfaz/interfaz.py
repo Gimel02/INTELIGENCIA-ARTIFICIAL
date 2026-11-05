@@ -1079,6 +1079,7 @@ class Interfaz:
         return f"  ({', '.join(partes)})" if partes else ""
 
 
+
     def dibujar_panel(self):
 
         # =====================================
@@ -1113,6 +1114,7 @@ class Interfaz:
         # FUNCIONES AUXILIARES
         # =====================================
 
+    
         def dibujar_titulo(
             texto,
             x,
@@ -1670,14 +1672,49 @@ class Interfaz:
 
         # =====================================
         # SENTIDOS DE RODRIGO
+        # Solo se muestran si sigue vivo
         # =====================================
 
-        dibujar_sentidos_agente(
-            self.agente,
-            x_sentidos_rodrigo,
-            ancho_sentidos_rodrigo,
-            "SENTIDOS R."
-        )
+        if self.agente.vidas > 0:
+
+            dibujar_sentidos_agente(
+                self.agente,
+                x_sentidos_rodrigo,
+                ancho_sentidos_rodrigo,
+                "SENTIDOS R."
+            )
+
+        else:
+
+            rect_sentidos_rodrigo = pygame.Rect(
+                x_sentidos_rodrigo,
+                y_panel,
+                ancho_sentidos_rodrigo,
+                alto_caja
+            )
+
+            self.dibujar_caja_biselada_solida(
+                rect_sentidos_rodrigo,
+                self.C_MADERA_BASE,
+                self.C_MADERA_LUZ,
+                self.C_MADERA_SOMBRA
+            )
+
+            dibujar_linea(
+                "SENTIDOS R.",
+                x_sentidos_rodrigo + 6,
+                30,
+                ancho_sentidos_rodrigo - 12,
+                self.C_ORO_PURO
+            )
+
+            dibujar_linea(
+                "DERROTADO",
+                x_sentidos_rodrigo + 6,
+                100,
+                ancho_sentidos_rodrigo - 12,
+                self.C_NEON_ROJO
+            )
        
         # =====================================
         # 3. AGENTE JAGUAR
@@ -2004,9 +2041,13 @@ class Interfaz:
 
         # =====================================
         # 5. SENTIDOS DE GONZALO
+        # Solo se muestran si sigue vivo
         # =====================================
 
-        if gonzalo is not None:
+        if (
+            gonzalo is not None
+            and gonzalo.vidas > 0
+        ):
 
             dibujar_sentidos_agente(
                 gonzalo,
@@ -2039,14 +2080,25 @@ class Interfaz:
                 self.C_ORO_PURO
             )
 
-            dibujar_linea(
-                "Inactivo",
-                x_sentidos_gonzalo + 6,
-                80,
-                ancho_sentidos_gonzalo - 12,
-                (150, 150, 150)
-            )
+            if gonzalo is None:
 
+                texto_estado_gonzalo = "INACTIVO"
+
+            else:
+
+                texto_estado_gonzalo = "DERROTADO"
+
+            dibujar_linea(
+                texto_estado_gonzalo,
+                x_sentidos_gonzalo + 6,
+                100,
+                ancho_sentidos_gonzalo - 12,
+                (
+                    (150, 150, 150)
+                    if gonzalo is None
+                    else self.C_NEON_ROJO
+                )
+            )
 
 
                 # =====================================
@@ -2352,6 +2404,8 @@ class Interfaz:
     # AVISO DE PELEA: estallido y "¡PELEA!"
     # donde se cruzaron los cazadores
     # =========================================
+
+    
 
     def dibujar_pelea(self):
 
