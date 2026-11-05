@@ -420,10 +420,50 @@ Estos archivos no forman parte de la lógica principal del proyecto.
 
 Control difuso (Mamdani): quién toma las decisiones
 
-DIOS (Logica_Difusa/dios.py) coordina a los agentes:
--Agente 1 = CAZADOR: control difuso con las reglas del equipo (23 reglas).
--Agente 2 = JAGUAR: control difuso con las reglas del equipo (11 reglas).
--Agente Tonto = RATONES: reglas fijas (huir del jaguar o caminar al azar), sin memoria y sin aprender.
+DIOS (Logica_Difusa/dios.py) es el orquestador: controla toda la simulación.
+-Crea el mundo (al azar o un escenario de demostración) y a los agentes.
+-Le da a cada agente su base de conocimiento:
+   Agente 1 = CAZADOR: control difuso con las reglas del equipo (23 reglas).
+   Agente 2 = JAGUAR: control difuso con las reglas del equipo (11 reglas).
+   Agente 3 = INTERCEPTOR, cazador RIVAL del Agente 1: igual al cazador (sus mismas 23 reglas,
+   con su propio controlador).
+   Agente Tonto = RATONES: reglas fijas (huir del jaguar o caminar al azar), sin memoria y sin aprender.
+-Controla los turnos: cazador -> interceptor -> jaguar -> ratones.
+-Aplica las reglas del mundo: el jaguar atrapa ratones; el jaguar reacciona al cazador que tenga
+ más cerca (cazador o interceptor); si un cazador y el jaguar quedan en la misma casilla, gana el
+ jaguar si estaba atacando y si no, el cazador lo atrapa; los dos cazadores pelean si se
+ encuentran; si ya no queda ningún cazador vivo, el jaguar regresa a su cueva.
+-La cueva es la casa del jaguar: el cazador nunca la pisa (está en sus zonas prohibidas, junto
+ con las bayas malas que recuerda, y la evitan el A*, el AG, la exploración y la huida).
+-Decide cuándo termina la partida: JAGUAR EN CUEVA (el jaguar ganó y llegó a su cueva) o
+ CAZADOR DERROTADO.
+-Lleva su propia bitácora (tecla B la imprime junto con la de cada agente).
+La interfaz solo dibuja: en cada cuadro le pide a DIOS que avance y dibuja lo que DIOS dejó.
+
+INTERCEPTOR (Agente 3): CAZADOR RIVAL
+Es un segundo cazador (el azul, con un aro en el suelo) IGUAL al primero: es otra copia de
+AgenteCazador, con los mismos 5 sentidos, su propia memoria, las mismas 23 reglas difusas (pero
+con su propio controlador, así que decide por su cuenta), el AG de movimiento, las bayas, la
+energía y el regreso a la cabaña. Tampoco pisa la cueva.
+-Tiene SU PROPIA CABAÑA (la azul, con marco azul): ahí empieza, recarga y regresa. DIOS la
+ pone en una casilla de pasto lo más lejos posible de la cabaña del cazador, a 4 casillas o más
+ de la cueva y del jaguar, y con camino desde la otra cabaña. No usa el azar, así que el mapa
+ es el mismo con o sin interceptor. El jaguar tampoco merodea sobre ninguna de las cabañas.
+La única diferencia: los dos COMPITEN por atrapar primero al jaguar y se ATACAN entre ellos.
+-Pelea a muerte (regla de DIOS): si los dos cazadores se cruzan (misma casilla, una al lado o
+ en diagonal, según donde se ven en pantalla), pelean. GANA EL QUE TENGA MÁS ENERGÍA: sigue en
+ el juego y suma 10 puntos. EL QUE PIERDE MUERE y sale del juego (ya no se dibuja). Si tienen
+ la misma energía, empatan: los dos pierden 10 de energía, siguen vivos y no pueden volver a
+ pelear durante 3 segundos. En el mapa aparece un estallido con "¡PELEA! Gana ...". En las
+ cabañas y junto a ellas no se pelea (son zona segura).
+-Carrera: el primero que atrapa al jaguar gana y el panel lo muestra (GANA CAZADOR o GANA
+ INTERCEPTOR). La partida NO se termina: cada uno regresa a su cabaña, como antes.
+-El jaguar reacciona al cazador que tenga más cerca. Si un cazador pierde su vida, sale del
+ juego; si ya no queda ninguno, el jaguar regresa a su cueva y termina la partida.
+-Tecla I: lo enciende o lo apaga (empieza otra partida). Sin interceptor el juego es como antes.
+-En 60 mapas (semillas 1000-1059): el cazador atrapó primero al jaguar en 27, el interceptor en
+ 22 y el jaguar ganó en 11. Hubo 31 peleas a muerte (murió el interceptor en 16 y el cazador en
+ 15) y 1 empate.
 
 En cada turno, el controlador difuso decide QUÉ hace el agente. Después, el AG del movimiento
 (o A*) decide CÓMO llega el cazador a su meta. El jaguar se mueve con A*, escape o merodeo.
@@ -464,7 +504,8 @@ Archivos (carpeta Logica_Difusa/):
 
 Otros archivos:
 -Mundo/escenarios.py: escenarios de demostración (teclas 1 y 2).
--pruebas/test_logica_difusa.py: 23 pruebas automáticas de la lógica difusa.
+-Recursos/interceptor.py: sus dibujos (el cazador y la cabaña en azul).
+-pruebas/test_logica_difusa.py: 28 pruebas automáticas de la lógica difusa.
 -Reporte/REPORTE_PROYECTO.md: el reporte completo del proyecto.
 
 Teclas en la ventana:
@@ -472,7 +513,8 @@ Teclas en la ventana:
    R        reiniciar con un mapa al azar
    1        escenario "Demo caza": explorar -> perseguir -> atacar -> cazar -> regresar
    2        escenario "Demo peligro": jaguar hambriento y cerca, el cazador huye o recarga
-   B        autoconciencia del cazador y del jaguar en la terminal
+   I        encender o apagar al interceptor (Agente 3, cazador rival)
+   B        autoconciencia del cazador, del jaguar y del interceptor, y bitácora de DIOS
    Esc      salir
 
 El panel muestra, para cada agente, la decisión difusa con su regla más fuerte y su centroide

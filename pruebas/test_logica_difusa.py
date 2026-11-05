@@ -14,6 +14,7 @@
 #   6. Decisiones del jaguar en casos
 #      controlados
 #   7. Bitácora del jaguar y escenarios
+#   8. Interceptor (Agente 3, cazador rival) y DIOS
 #
 # Cómo correrlas (desde la carpeta del
 # proyecto):
@@ -364,6 +365,155 @@ class PruebasAgentes(unittest.TestCase):
         )
 
         self.assertEqual(partida["secuencia"][0], "explorar")
+
+
+# ==========================================
+# 8. INTERCEPTOR (AGENTE 3, CAZADOR RIVAL) Y
+#    DIOS
+# ==========================================
+
+class PruebasInterceptor(unittest.TestCase):
+
+    def jugar_con_dios(self, con_interceptor, semilla=5, pasos=4000):
+
+        import random
+
+        from Logica_Difusa.dios import Dios
+
+        random.seed(semilla)
+
+        dios = Dios()
+
+        dios.con_interceptor = con_interceptor
+
+        pisadas_cueva = 0
+
+        with contextlib.redirect_stdout(io.StringIO()):
+
+            dios.nueva_partida()
+
+            for _ in range(pasos):
+
+                if not dios.paso(0.05):
+                    break
+
+                if (
+                    dios.interceptor is not None
+                    and dios.interceptor.posicion == dios.mundo.cueva
+                ):
+                    pisadas_cueva += 1
+
+        return dios, pisadas_cueva
+
+    def test_interceptor_es_otro_cazador(self):
+
+        # Mismas reglas que el cazador, pero su
+        # propio controlador (decide por su cuenta)
+
+        from Agente_Cazador.agente import AgenteCazador
+
+        dios, pisadas_cueva = self.jugar_con_dios(True)
+
+        self.assertIsInstance(dios.interceptor, AgenteCazador)
+        self.assertIsNot(dios.interceptor.controlador, dios.cazador.controlador)
+        self.assertEqual(len(dios.interceptor.controlador.base.reglas), 23)
+        self.assertGreater(dios.interceptor.turno, 0)
+        self.assertEqual(pisadas_cueva, 0)
+
+    def test_pelea_entre_cazadores(self):
+
+        # Gana el que tiene más energía; el que
+        # pierde muere
+
+        dios, _ = self.jugar_con_dios(True, pasos=1)
+
+        cazador = dios.cazador
+        interceptor = dios.interceptor
+
+        # Una casilla libre lejos de las dos cabañas
+        def distancia_a_cabanas(c):
+            return min(
+                abs(c[0] - cabana[0]) + abs(c[1] - cabana[1])
+                for cabana in dios.mundo.campamentos
+            )
+
+        lejos = max(
+            (
+                (fila, columna)
+                for fila in range(dios.mundo.filas)
+                for columna in range(dios.mundo.columnas)
+                if dios.mundo.es_transitable((fila, columna))
+            ),
+            key=distancia_a_cabanas
+        )
+
+        def juntar(energia_cazador, energia_interceptor):
+
+            for agente, cuerpo, energia in (
+                (cazador, dios.cuerpo_cazador, energia_cazador),
+                (interceptor, dios.cuerpo_interceptor, energia_interceptor),
+            ):
+                agente.posicion = lejos
+                agente.vidas = 1
+                agente.energia = energia
+                cuerpo.origen = cuerpo.destino = lejos
+
+            dios.espera_pelea = 0
+
+            with contextlib.redirect_stdout(io.StringIO()):
+                dios.pelea_entre_cazadores()
+
+        # El interceptor tiene más energía: gana
+        juntar(60, 90)
+
+        self.assertEqual(cazador.vidas, 0)
+        self.assertEqual(interceptor.vidas, 1)
+
+        # Ahora el cazador tiene más: gana él
+        juntar(80, 30)
+
+        self.assertEqual(cazador.vidas, 1)
+        self.assertEqual(interceptor.vidas, 0)
+
+        # Empate: nadie muere, los dos pierden 10
+        juntar(50, 50)
+
+        self.assertEqual((cazador.vidas, interceptor.vidas), (1, 1))
+        self.assertEqual((cazador.energia, interceptor.energia), (40, 40))
+
+    def test_cada_cazador_tiene_su_cabana(self):
+
+        dios, _ = self.jugar_con_dios(True, pasos=1)
+
+        cabana = dios.mundo.campamento_interceptor
+
+        self.assertNotEqual(cabana, dios.mundo.campamento)
+        self.assertEqual(dios.interceptor.campamento, cabana)
+        self.assertEqual(dios.cazador.campamento, dios.mundo.campamento)
+        self.assertNotEqual(cabana, dios.mundo.cueva)
+
+    def test_en_la_cabana_no_se_pelea(self):
+
+        dios, _ = self.jugar_con_dios(True, pasos=1)
+
+        campamento = dios.mundo.campamento
+
+        dios.cazador.posicion = campamento
+        dios.interceptor.posicion = campamento
+        dios.cazador.energia = 30
+        dios.interceptor.energia = 90
+        dios.espera_pelea = 0
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            dios.pelea_entre_cazadores()
+
+        self.assertEqual(dios.cazador.energia, 30)
+
+    def test_sin_interceptor(self):
+
+        dios, _ = self.jugar_con_dios(False, pasos=200)
+
+        self.assertIsNone(dios.interceptor)
 
 
 if __name__ == "__main__":

@@ -93,31 +93,47 @@ class AgenteJaguar:
         self.estado = "Descansando"
 
 
-
-        # =========================================
-        # REGRESO A LA CUEVA
-        # =========================================
-
-        self.regresando_cueva = False
-        self.en_cueva = False
-
-
-
+    # ==========================================
+    # REGRESO A LA CUEVA
+    #
+    # DIOS lo activa cuando el jaguar derrota
+    # al cazador. Camina con A* hasta su cueva;
+    # al llegar, DIOS termina la partida.
+    # ==========================================
 
     def regresar_a_cueva(self):
 
         if self.posicion == self.mundo.cueva:
 
             self.en_cueva = True
-            self.estado = "Descansando en la cueva"
+            self.estado = "Descansando en su cueva"
             self.fuente_movimiento = "Cueva"
 
             return None
 
-        self.estado = "Regresando a la cueva"
-        self.fuente_movimiento = "A*"
+        posicion_anterior = self.posicion
 
-        return self.paso_hacia(self.mundo.cueva)
+        destino = self.paso_hacia(
+            self.mundo.cueva
+        )
+
+        if destino is not None:
+
+            self.recordar_posicion(posicion_anterior)
+
+            self.celdas_visitadas.add(destino)
+
+            self.mundo.mover_jaguar(destino)
+
+            self.estado = "Regresando a la cueva"
+            self.fuente_movimiento = "A*"
+
+            self.ultima_accion = self.nombre_movimiento(
+                posicion_anterior,
+                destino
+            )
+
+        return destino
 
 
     # ==========================================
@@ -272,41 +288,7 @@ class AgenteJaguar:
 
         if self.regresando_cueva:
 
-            # Comprobar si ya llegó a la cueva
-            if self.posicion == self.mundo.cueva:
-
-                self.en_cueva = True
-                self.estado = "Descansando en su cueva"
-                self.fuente_movimiento = "Cueva"
-
-                return None
-
-            # Buscar el siguiente paso con A*
-            posicion_anterior = self.posicion
-
-            destino = self.paso_hacia(
-                self.mundo.cueva
-            )
-
-            if destino is not None:
-
-                self.recordar_posicion(posicion_anterior)
-
-                self.celdas_visitadas.add(destino)
-
-                self.mundo.mover_jaguar(destino)
-
-                self.estado = "Regresando a la cueva"
-                self.fuente_movimiento = "A*"
-
-                self.ultima_accion = self.nombre_movimiento(
-                    posicion_anterior,
-                    destino
-                )
-
-            return destino
-
-        
+            return self.regresar_a_cueva()
 
         self.actualizar_hambre()
 
@@ -662,11 +644,17 @@ class AgenteJaguar:
                 if self.mundo.grid.get(vecino, 0) != 4
             ]
 
-        # Evitar el campamento
+        # Evitar las cabañas de los cazadores
+        cabanas = getattr(
+            self.mundo,
+            "campamentos",
+            [self.mundo.campamento]
+        )
+
         opciones = [
             vecino
             for vecino in opciones
-            if vecino != self.mundo.campamento
+            if vecino not in cabanas
         ]
 
         if not opciones:

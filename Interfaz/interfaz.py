@@ -3,7 +3,6 @@ import pygame
 import os
 import math
 
-from Mundo.mundo import MundoSelva
 import Mundo.mundo as modulo_mundo
 print(
     "ARCHIVO MUNDO QUE PYTHON ESTÁ USANDO:"
@@ -13,14 +12,15 @@ print(
      modulo_mundo.__file__
 )
 
-from Agente_Cazador.agente import AgenteCazador
 from Agente_Cazador.sentidos import PLURAL_COLORES
-from Agente_Jaguar.agente import AgenteJaguar
-from Logica_Difusa.dios import obtener_dios
+from Logica_Difusa.dios import (
+    obtener_dios,
+    JAGUAR_EN_CUEVA,
+    CAZADOR_DERROTADO,
+    GANA_CAZADOR,
+    GANA_INTERCEPTOR,
+)
 from Mundo import escenarios
-import random
-
-from Fisica.cinematica import CuerpoFisico
 
 
 from Recursos.arbol import Arbol
@@ -32,89 +32,61 @@ from Recursos.jaguar import Jaguar
 from Recursos.raton import Raton
 
 from Recursos.cueva import Cueva
+from Recursos.interceptor import Interceptor, CampamentoInterceptor
 
 class Interfaz:
+
+    # =========================================
+    # LO QUE SE DIBUJA VIENE DE DIOS
+    # =========================================
+
+    @property
+    def mundo(self):
+        return self.dios.mundo
+
+    @property
+    def agente(self):
+        return self.dios.cazador
+
+    @property
+    def agente_jaguar(self):
+        return self.dios.jaguar
+
+    @property
+    def cuerpo_cazador(self):
+        return self.dios.cuerpo_cazador
+
+    @property
+    def cuerpo_jaguar(self):
+        return self.dios.cuerpo_jaguar
+
+    @property
+    def escenario_actual(self):
+        return self.dios.escenario
+
+    @property
+    def agente_interceptor(self):
+        return self.dios.interceptor
+
+    @property
+    def cuerpo_interceptor(self):
+        return self.dios.cuerpo_interceptor
 
     def __init__(self):
 
         pygame.init()
         # =========================================
-        # MUNDO
-        # =========================================
-
-        self.mundo = MundoSelva()
-
-        # Escenario de demostración cargado
-        # (None = mapa al azar)
-        self.escenario_actual = None
-
-
-        # =========================================
-        # AGENTE INTELIGENTE
-        # =========================================
-
-        self.agente = AgenteCazador(
-            self.mundo
-        )
-
-
-        # =========================================
-        # JAGUAR (huye cuando detecta al cazador)
-        # =========================================
-
-        self.agente_jaguar = AgenteJaguar(
-            self.mundo
-        )
-
-        # =========================================
-        # CUERPOS FÍSICOS
+        # DIOS (ORQUESTADOR)
         #
-        # masa (kg), fuerza motriz (N),
-        # coeficiente de arrastre (N·s/m)
-        #
-        # El jaguar es más ligero: acelera más
-        # rápido, pero su fuerza es menor y su
-        # velocidad máxima también. Así el
-        # cazador lo puede alcanzar.
+        # DIOS crea el mundo, los agentes y sus
+        # cuerpos, controla los turnos y decide
+        # cuándo termina la partida. La interfaz
+        # solo dibuja y recibe las teclas.
         # =========================================
 
-        self.cuerpo_cazador = CuerpoFisico(
+        self.dios = obtener_dios()
 
-            masa=75,
-
-            fuerza_motriz=400,
-
-            coeficiente_arrastre=120,
-
-            posicion=self.agente.posicion
-
-        )
-
-        # El cazador conoce su propio cuerpo
-        # (masa, fuerza, velocidad)
-
-        self.agente.cuerpo = self.cuerpo_cazador
-
-
-        self.cuerpo_jaguar = CuerpoFisico(
-
-            masa=55,
-
-            fuerza_motriz=330,
-
-            coeficiente_arrastre=120,
-
-            posicion=self.mundo.posicion_jaguar
-
-        )
-
-
-        # Segundos que espera quieto cuando
-        # decide no moverse
-
-        self.pausa_cazador = 0.3
-
-        self.pausa_jaguar = 0.4
+        self.dios.nueva_partida()
 
 
        # =========================================
@@ -295,36 +267,6 @@ class Interfaz:
 
 
 
-                # =========================================
-        # IMAGEN DEL DIOS ORQUESTADOR
-        # =========================================
-
-        ruta_dios = os.path.join(
-            "Recursos",
-            "images",
-            "dios.png"
-        )
-
-        try:
-
-            imagen_dios_raw = pygame.image.load(
-                ruta_dios
-            ).convert_alpha()
-
-            self.imagen_dios = pygame.transform.smoothscale(
-                imagen_dios_raw,
-                (110, 110)
-            )
-
-            print("Imagen de DIOS cargada correctamente.")
-
-        except Exception as error:
-
-            print(f"Error al cargar imagen de DIOS: {error}")
-
-            self.imagen_dios = None
-
-
         # =========================================
         # RECURSOS GRÁFICOS
         # =========================================
@@ -345,11 +287,19 @@ class Interfaz:
             self.mundo.tamano_celda
         )
 
+        self.campamento_interceptor = CampamentoInterceptor(
+            self.mundo.tamano_celda
+        )
+
         self.cueva = Cueva(
                     self.mundo.tamano_celda
         )
 
         self.cazador = Cazador(
+            self.mundo.tamano_celda
+        )
+
+        self.interceptor = Interceptor(
             self.mundo.tamano_celda
         )
 
@@ -441,23 +391,13 @@ class Interfaz:
     def reiniciar_simulacion(self, escenario=None):
 
         # =========================================
-        # CREAR MUNDO NUEVO
+        # DIOS CREA LA PARTIDA NUEVA
         #
         # Con escenario: siempre el mismo mapa
         # (teclas 1 y 2). Sin escenario: al azar.
         # =========================================
 
-        self.escenario_actual = escenario
-
-        if escenario is None:
-
-            self.mundo = MundoSelva()
-
-        else:
-
-            self.mundo = escenarios.crear_mundo(
-                escenario
-            )
+        self.dios.nueva_partida(escenario)
 
 
         # =========================================
@@ -536,93 +476,6 @@ class Interfaz:
 
 
         # =========================================
-        # NUEVOS AGENTES
-        # =========================================
-
-        self.agente = AgenteCazador(
-            self.mundo
-        )
-
-        self.agente_jaguar = AgenteJaguar(
-            self.mundo
-        )
-
-
-        # =========================================
-        # PREPARAR EL ESCENARIO DE DEMOSTRACIÓN
-        # =========================================
-
-        if escenario is not None:
-
-            escenarios.aplicar(
-                escenario,
-                self.mundo,
-                self.agente,
-                self.agente_jaguar,
-                fijar_azar=False
-            )
-
-            # Cada vez que se presiona la tecla,
-            # la partida es un poco distinta
-            random.seed()
-
-            print(
-                f"[DIOS] Escenario: {escenario.nombre} "
-                f"({escenario.descripcion})"
-            )
-
-
-        # =========================================
-        # NUEVA FÍSICA
-        # =========================================
-
-        self.cuerpo_cazador = CuerpoFisico(
-            masa=75,
-            fuerza_motriz=400,
-            coeficiente_arrastre=120,
-            posicion=self.agente.posicion
-        )
-
-        self.agente.cuerpo = self.cuerpo_cazador
-
-        self.cuerpo_jaguar = CuerpoFisico(
-            masa=55,
-            fuerza_motriz=330,
-            coeficiente_arrastre=120,
-            posicion=self.mundo.posicion_jaguar
-        )
-
-           # =========================================
-        # IMAGEN DEL DIOS ORQUESTADOR
-        # =========================================
-
-        ruta_dios = os.path.join(
-            "Recursos",
-            "images",
-            "dios.png"
-        )
-
-        try:
-
-            imagen_dios_raw = pygame.image.load(
-                ruta_dios
-            ).convert_alpha()
-
-            self.imagen_dios = pygame.transform.smoothscale(
-                imagen_dios_raw,
-                (110, 110)
-            )
-
-            print("Imagen de DIOS cargada correctamente.")
-
-        except Exception as error:
-
-            print(f"Error al cargar imagen de DIOS: {error}")
-
-            self.imagen_dios = None
-
-
-        # =========================================
         # RECURSOS GRÁFICOS
         # =========================================
 
@@ -642,7 +495,19 @@ class Interfaz:
             self.mundo.tamano_celda
         )
 
+        self.campamento_interceptor = CampamentoInterceptor(
+            self.mundo.tamano_celda
+        )
+
+        self.cueva = Cueva(
+            self.mundo.tamano_celda
+        )
+
         self.cazador = Cazador(
+            self.mundo.tamano_celda
+        )
+
+        self.interceptor = Interceptor(
             self.mundo.tamano_celda
         )
 
@@ -707,193 +572,17 @@ class Interfaz:
     ):
 
         # =====================================
-        # FIN DEL JUEGO
-        # =====================================
-
-        # El juego termina cuando el jaguar llega
-        # físicamente a su cueva.
-
-        if self.agente_jaguar.en_cueva:
-
-            self.en_curso = False
-
-            print("[JUEGO] ¡El jaguar llegó a su cueva!")
-
-            return
-
-
-        # Si el cazador murió, pero el jaguar todavía
-        # está regresando, permitimos que continúe.
-
-        if (
-            self.agente.vidas <= 0
-            and not self.agente_jaguar.regresando_cueva
-        ):
-
-            self.en_curso = False
-
-            return
-
-
-
-        
-        # =====================================
-        # CAZADOR
-        # =====================================
-
-        cuerpo = self.cuerpo_cazador
-
-        cuerpo.actualizar(
-            dt,
-            self.mundo.grid[cuerpo.destino]
-        )
-
-
-        if cuerpo.en_reposo():
-
-            antes = self.agente.posicion
-
-
-            self.agente.tomar_decision(
-                self.mundo.posicion_jaguar
-            )
-
-
-            if self.agente.posicion != antes:
-
-                cuerpo.mover_a(
-                    self.agente.posicion
-                )
-
-            else:
-
-                cuerpo.detener(
-                    self.pausa_cazador
-                )
-
-
-        # =====================================
-        # JAGUAR
-        # =====================================
-
-        if self.mundo.jaguar_vivo:
-
-            cuerpo = self.cuerpo_jaguar
-
-            cuerpo.actualizar(
-                dt,
-                self.mundo.grid[cuerpo.destino]
-            )
-
-
-            if cuerpo.en_reposo():
-
-                destino = (
-                    self.agente_jaguar.tomar_decision(
-                        self.agente.posicion,
-                        self.agente.energia,
-                        self.mundo.ratones
-                    )
-                )
-
-
-                if destino is not None:
-
-                    cuerpo.mover_a(
-                        destino
-                    )
-
-                else:
-
-                    cuerpo.detener(
-                        self.pausa_jaguar
-                    )
-
-        # =========================================
-        # COMPROBAR SI LLEGÓ A SU CUEVA
-        # =========================================
-
-        if self.agente_jaguar.en_cueva:
-
-            self.en_curso = False
-
-            print("[JUEGO] El jaguar llegó a su cueva.")
-            print("[JUEGO] FIN DE LA SIMULACIÓN.")
-
-            return
-
-         
-        # =====================================
-        # ACTUALIZAR RATONES
-        # =====================================
-
-        posicion_jaguar = (
-            self.cuerpo_jaguar.posicion_visual()
-            if self.mundo.jaguar_vivo
-            else None
-        )
-
-        for raton in self.mundo.ratones:
-
-            # No mover ratones que ya fueron cazados
-            if not raton.vivo:
-                continue
-
-            # Actualizar movimiento y dirección
-            raton.actualizar(
-                dt,
-                posicion_jaguar
-            )
-
-            # Comprobar si el jaguar alcanza al ratón
-            if posicion_jaguar is not None:
-
-                fila, columna = raton.posicion_visual()
-
-                distancia = (
-                    (fila - posicion_jaguar[0]) ** 2
-                    + (columna - posicion_jaguar[1]) ** 2
-                ) ** 0.5
-
-                if distancia < 0.6:
-                    raton.vivo = False
-                    self.agente_jaguar.comer_raton()
-           
-        
-        # =====================================
-        # ENCUENTRO CAZADOR - JAGUAR
+        # DIOS AVANZA LA SIMULACIÓN
         #
-        # Si el jaguar está atacando, el que
-        # pierde es el cazador. Si no, el
-        # cazador atrapa al jaguar.
+        # Turnos, encuentros y fin del juego los
+        # controla DIOS. Si la partida terminó,
+        # la interfaz se detiene.
         # =====================================
 
-        if (
-        self.agente.vidas > 0
-        and self.mundo.jaguar_vivo
-        and self.agente.posicion == self.mundo.posicion_jaguar
-        ):
+        if not self.dios.paso(dt):
 
-            if self.agente_jaguar.atacando:
+            self.en_curso = False
 
-                self.agente.recibir_ataque()
-
-                self.agente_jaguar.despues_de_atacar()
-
-                # Si el cazador fue derrotado,
-                # el jaguar regresa a su cueva.
-                if self.agente.vidas <= 0:
-
-                    self.agente_jaguar.regresando_cueva = True
-                    self.agente_jaguar.en_cueva = False
-                    self.agente_jaguar.estado = "Regresando a la cueva"
-
-                    print("[JAGUAR] ¡Cazó al cazador!")
-                    print("[JAGUAR] Regresando a su cueva...")
-
-            else:
-
-                self.agente.atrapar_jaguar()
 
     def manejar_eventos(self):
 
@@ -928,13 +617,38 @@ class Interfaz:
                     self.reiniciar_simulacion()
 
 
-                # B = imprimir la bitácora del cazador
-                # y la del jaguar
+                # B = imprimir la bitácora del cazador,
+                # la del jaguar y la de DIOS
                 elif evento.key == pygame.K_b:
 
                     self.agente.imprimir_conciencia()
 
                     self.agente_jaguar.imprimir_conciencia()
+
+                    if self.agente_interceptor is not None:
+
+                        self.agente_interceptor.imprimir_conciencia()
+
+                    print("\n=== BITÁCORA DE DIOS ===")
+
+                    for registro in self.dios.bitacora:
+
+                        print(registro)
+
+
+                # I = encender / apagar al interceptor
+                # (cazador rival)
+                # (empieza otra partida en el mismo
+                # escenario)
+                elif evento.key == pygame.K_i:
+
+                    self.dios.con_interceptor = (
+                        not self.dios.con_interceptor
+                    )
+
+                    self.reiniciar_simulacion(
+                        self.escenario_actual
+                    )
 
 
                 # 1 y 2 = escenarios de demostración
@@ -2130,8 +1844,14 @@ class Interfaz:
         # ESTADO DE LA SIMULACIÓN
         # =====================================
 
+        escenario_texto = (
+            self.escenario_actual.nombre
+            if self.escenario_actual is not None
+            else "Mapa al azar"
+        )
+
         dibujar_linea(
-            f"Turno: {self.agente.turno}",
+            f"Turno: {self.agente.turno} | {escenario_texto}",
             x_dios + 15,
             132,
             ancho_dios - 30,
@@ -2139,10 +1859,39 @@ class Interfaz:
         )
 
 
-        if self.agente.vidas <= 0:
+        # El resultado lo decide DIOS
+
+        if self.dios.terminada:
 
             estado_simulacion = (
-                "FIN DEL JUEGO"
+                self.dios.resultado
+            )
+
+            color_estado = self.C_NEON_ROJO
+
+        # Con rival: quién atrapó primero al
+        # jaguar (la partida sigue mientras
+        # regresan a la cabaña)
+
+        elif (
+            self.agente_interceptor is not None
+            and self.dios.ganador is not None
+        ):
+
+            if self.dios.ganador == "interceptor":
+
+                estado_simulacion = GANA_INTERCEPTOR
+                color_estado = (120, 170, 255)
+
+            else:
+
+                estado_simulacion = GANA_CAZADOR
+                color_estado = self.C_NEON_AMARILLO
+
+        elif self.agente_jaguar.regresando_cueva:
+
+            estado_simulacion = (
+                "JAGUAR A CUEVA"
             )
 
             color_estado = (
@@ -2180,10 +1929,14 @@ class Interfaz:
             )
 
 
+        # Los resultados largos se muestran sin
+        # "Estado:" para que quepan
+
         dibujar_linea(
             (
-                f"Estado: "
-                f"{estado_simulacion}"
+                estado_simulacion
+                if len(estado_simulacion) > 10
+                else f"Estado: {estado_simulacion}"
             ),
             x_dios + 15,
             154,
@@ -2192,18 +1945,36 @@ class Interfaz:
         )
 
 
-        escenario_texto = (
-            self.escenario_actual.nombre
-            if self.escenario_actual is not None
-            else "Mapa al azar"
-        )
+        # Agente 3: interceptor, cazador rival
+        # (tecla I)
+
+        interceptor = self.agente_interceptor
+
+        if interceptor is None:
+
+            texto_interceptor = "Interceptor: apagado"
+
+        elif interceptor.vidas <= 0:
+
+            texto_interceptor = "Interceptor: derrotado"
+
+        elif interceptor.decision_difusa is None:
+
+            texto_interceptor = "Interceptor: esperando"
+
+        else:
+
+            texto_interceptor = (
+                "Int.: "
+                f"{interceptor.decision_difusa['accion'].upper()}"
+            )
 
         dibujar_linea(
-            f"Escenario: {escenario_texto}",
+            texto_interceptor,
             x_dios + 15,
             174,
             ancho_dios - 30,
-            (200, 200, 200)
+            (120, 170, 255)
         )
 
 
@@ -2291,6 +2062,85 @@ class Interfaz:
                 230
             )
         )
+
+    # =========================================
+    # AVISO DE PELEA: estallido y "¡PELEA!"
+    # donde se cruzaron los cazadores
+    # =========================================
+
+    def dibujar_pelea(self):
+
+        pelea = self.dios.ultima_pelea
+
+        if pelea is None:
+
+            return
+
+        tamano = self.mundo.tamano_celda
+
+        fila, columna = pelea["lugar"]
+
+        x = int(self.offset_mapa_x + columna * tamano + tamano / 2)
+        y = int(self.offset_mapa_y + fila * tamano + tamano / 2)
+
+        # Crece y se desvanece con el tiempo
+        avance = 1 - max(0.0, pelea["tiempo"]) / 1.5
+
+        radio = int(tamano * (0.6 + 0.6 * avance))
+
+        estallido = pygame.Surface(
+            (radio * 2 + 4, radio * 2 + 4),
+            pygame.SRCALPHA
+        )
+
+        alfa = int(220 * (1 - avance)) + 35
+
+        pygame.draw.circle(
+            estallido,
+            (255, 90, 40, alfa // 2),
+            (radio + 2, radio + 2),
+            radio
+        )
+
+        pygame.draw.circle(
+            estallido,
+            (255, 220, 60, alfa),
+            (radio + 2, radio + 2),
+            radio,
+            4
+        )
+
+        self.pantalla.blit(
+            estallido,
+            (x - radio - 2, y - radio - 2)
+        )
+
+        texto = self.fuente_UI.render(
+            pelea["texto"],
+            True,
+            (255, 255, 255)
+        )
+
+        fondo = pygame.Rect(
+            0, 0,
+            texto.get_width() + 12,
+            texto.get_height() + 6
+        )
+
+        fondo.center = (x, y - tamano)
+
+        pygame.draw.rect(
+            self.pantalla,
+            (170, 30, 30),
+            fondo,
+            border_radius=6
+        )
+
+        self.pantalla.blit(
+            texto,
+            (fondo.x + 6, fondo.y + 3)
+        )
+
 
     def dibujar_alcance(
         self,
@@ -2564,6 +2414,23 @@ class Interfaz:
 
         )
 
+        # Cabaña del interceptor (azul)
+
+        cabana = getattr(
+            self.mundo,
+            "campamento_interceptor",
+            None
+        )
+
+        if cabana is not None:
+
+            self.campamento_interceptor.dibujar(
+                sup_entidades,
+                cabana[0],
+                cabana[1],
+                0
+            )
+
         # =====================================
         # CUEVA DEL JAGUAR
         # =====================================
@@ -2628,22 +2495,54 @@ class Interfaz:
 
 
         # =====================================
+        # INTERCEPTOR (cazador rival, azul)
+        # =====================================
+
+        if (
+            self.agente_interceptor is not None
+            and self.agente_interceptor.vidas > 0
+        ):
+
+            fila_i, columna_i = (
+                self.cuerpo_interceptor.posicion_visual()
+            )
+
+            self.interceptor.dibujar(
+
+                sup_entidades,
+
+                fila_i,
+                columna_i,
+                0
+
+            )
+
+
+        # =====================================
         # CAZADOR
         # =====================================
 
-        fila, columna = (
-            self.cuerpo_cazador.posicion_visual()
-        )
+        # Con rival, si el cazador muere ya no se
+        # dibuja (salió del juego)
 
-        self.cazador.dibujar(
+        if (
+            self.agente.vidas > 0
+            or self.agente_interceptor is None
+        ):
 
-            sup_entidades,
+            fila, columna = (
+                self.cuerpo_cazador.posicion_visual()
+            )
 
-            fila,
-            columna,
-            0
+            self.cazador.dibujar(
 
-        )
+                sup_entidades,
+
+                fila,
+                columna,
+                0
+
+            )
 
 
         # =====================================
@@ -2660,6 +2559,13 @@ class Interfaz:
             )
 
         )
+
+
+        # =====================================
+        # PELEA ENTRE CAZADORES (la decide DIOS)
+        # =====================================
+
+        self.dibujar_pelea()
 
 
         # =====================================

@@ -23,13 +23,23 @@ class AgenteCazador:
 
     PESO_TERRENO_NUEVO = 1
 
-    def __init__(self, mundo, controlador=None):
+    def __init__(self, mundo, controlador=None, campamento=None):
 
         # ==========================================
         # MUNDO
         # ==========================================
 
         self.mundo = mundo
+
+        # Su cabaña: ahí empieza, recarga y
+        # regresa. Por defecto es la del mundo; el
+        # cazador rival (interceptor) tiene otra.
+
+        self.campamento = (
+            campamento
+            if campamento is not None
+            else mundo.campamento
+        )
 
 
         # ==========================================
@@ -55,7 +65,7 @@ class AgenteCazador:
         self.decision_difusa = None
 
         self.posicion = (
-            mundo.inicio_cazador
+            self.campamento
         )
 
         # Recordar las últimas posiciones para evitar
@@ -437,7 +447,7 @@ class AgenteCazador:
             # No elegir bayas malas que recuerda
 
             if posicion in (
-                self.memoria.bayas_malas
+                self.zonas_prohibidas()
             ):
 
                 continue
@@ -499,7 +509,7 @@ class AgenteCazador:
 
 
                 if posicion in (
-                    self.memoria.bayas_malas
+                    self.zonas_prohibidas()
                 ):
 
                     continue
@@ -551,7 +561,7 @@ class AgenteCazador:
 
             self.mundo,
 
-            self.memoria.bayas_malas,
+            self.zonas_prohibidas(),
 
             self.memoria.visitas
 
@@ -876,11 +886,11 @@ class AgenteCazador:
 
             self.posicion,
 
-            self.mundo.campamento,
+            self.campamento,
 
             self.mundo,
 
-            self.memoria.bayas_malas
+            self.zonas_prohibidas()
 
         )
 
@@ -907,7 +917,7 @@ class AgenteCazador:
 
                 self.mundo,
 
-                self.memoria.bayas_malas
+                self.zonas_prohibidas()
 
             )
 
@@ -1005,7 +1015,7 @@ class AgenteCazador:
                 self.posicion,
                 baya,
                 self.mundo,
-                self.memoria.bayas_malas,
+                self.zonas_prohibidas(),
                 self.memoria.visitas
             )
 
@@ -1034,16 +1044,16 @@ class AgenteCazador:
 
     def energia_para_regresar(self):
 
-        if self.posicion == self.mundo.campamento:
+        if self.posicion == self.campamento:
 
             return 0
 
 
         camino = AEstrella.buscar(
             self.posicion,
-            self.mundo.campamento,
+            self.campamento,
             self.mundo,
-            self.memoria.bayas_malas,
+            self.zonas_prohibidas(),
             {}
         )
 
@@ -1667,13 +1677,13 @@ class AgenteCazador:
 
         camino = AEstrella.buscar(
             self.posicion,
-            self.mundo.campamento,
+            self.campamento,
             self.mundo,
-            self.memoria.bayas_malas,
+            self.zonas_prohibidas(),
             {}
         )
 
-        if self.posicion == self.mundo.campamento:
+        if self.posicion == self.campamento:
 
             return 0.0
 
@@ -1782,10 +1792,33 @@ class AgenteCazador:
     # CASILLAS QUE NO DEBE USAR COMO META
     # ==========================================
 
+    # ==========================================
+    # ZONAS PROHIBIDAS
+    #
+    # Casillas que el cazador nunca pisa:
+    #   - las bayas malas que recuerda
+    #   - la cueva del jaguar (su casa)
+    # Las usan el A*, el AG, la exploración y la
+    # huida, así que ningún camino pasa por ahí.
+    # ==========================================
+
+    def zonas_prohibidas(self):
+
+        zonas = set(self.memoria.bayas_malas)
+
+        cueva = getattr(self.mundo, "cueva", None)
+
+        if cueva is not None:
+
+            zonas.add(cueva)
+
+        return zonas
+
+
     def casillas_prohibidas(self):
 
         return (
-            set(self.memoria.bayas_malas)
+            set(self.zonas_prohibidas())
             |
             set(self.metas_descartadas)
         )
@@ -1833,7 +1866,7 @@ class AgenteCazador:
                 self.posicion,
                 vecina,
                 self.mundo,
-                self.memoria.bayas_malas,
+                self.zonas_prohibidas(),
                 {}
             ):
 
@@ -2297,7 +2330,7 @@ class AgenteCazador:
             if (
                 self.posicion
                 ==
-                self.mundo.campamento
+                self.campamento
             ):
 
                 self.energia = (
@@ -2419,7 +2452,7 @@ class AgenteCazador:
 
             # Nunca huye hacia una baya mala
 
-            if escape in self.memoria.bayas_malas:
+            if escape in self.zonas_prohibidas():
 
                 escape = None
 
@@ -2444,7 +2477,7 @@ class AgenteCazador:
         elif modo_supervivencia:
 
             meta = (
-                self.mundo.campamento
+                self.campamento
             )
 
             self.estado = (
@@ -2501,7 +2534,7 @@ class AgenteCazador:
             else:
 
                 meta = (
-                    self.mundo.campamento
+                    self.campamento
                 )
 
                 self.estado = (
@@ -2753,7 +2786,7 @@ class AgenteCazador:
         elif not self.mundo.jaguar_vivo:
 
             meta = (
-                self.mundo.campamento
+                self.campamento
             )
 
 
@@ -2960,7 +2993,7 @@ class AgenteCazador:
                 self.posicion,
                 meta,
                 self.mundo,
-                self.memoria.bayas_malas,
+                self.zonas_prohibidas(),
                 {}
             )
             self.fuente_decision = "A*"
@@ -2987,7 +3020,7 @@ class AgenteCazador:
                 posicion_inicial=self.posicion,
                 posicion_objetivo=meta,
                 visitas_previas=self.memoria.visitas,
-                prohibidas=self.memoria.bayas_malas,
+                prohibidas=self.zonas_prohibidas(),
 
                 # PERCEPCIÓN -> AG: dónde percibe al
                 # enemigo y si debe evitarlo
@@ -3041,7 +3074,7 @@ class AgenteCazador:
                     )
                     or
                     siguiente_posicion_genetica
-                    in self.memoria.bayas_malas
+                    in self.zonas_prohibidas()
                 )
             )
 
@@ -3058,7 +3091,7 @@ class AgenteCazador:
             costos_meta = AEstrella.costos_desde(
                 meta,
                 self.mundo,
-                self.memoria.bayas_malas
+                self.zonas_prohibidas()
             )
 
 
@@ -3090,7 +3123,7 @@ class AgenteCazador:
                 )
                 and
                 siguiente_posicion_genetica
-                not in self.memoria.bayas_malas
+                not in self.zonas_prohibidas()
                 and
                 acerca
             ):
@@ -3146,7 +3179,7 @@ class AgenteCazador:
                     self.posicion,
                     meta,
                     self.mundo,
-                    self.memoria.bayas_malas,
+                    self.zonas_prohibidas(),
                     self.memoria.visitas
                 )
 
@@ -3211,7 +3244,7 @@ class AgenteCazador:
                 )
                 if vecino != posicion_anterior
                 and self.mundo.es_transitable(vecino)
-                and vecino not in self.memoria.bayas_malas
+                and vecino not in self.zonas_prohibidas()
             ]
 
             if alternativas:
@@ -3244,7 +3277,7 @@ class AgenteCazador:
             )
             or
             siguiente_posicion
-            in self.memoria.bayas_malas
+            in self.zonas_prohibidas()
         ):
 
             self.estado = (
