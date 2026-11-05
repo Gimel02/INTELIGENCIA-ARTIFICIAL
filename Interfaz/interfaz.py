@@ -1221,69 +1221,274 @@ class Interfaz:
                 border_radius=6
             )
 
+        def dibujar_sentidos_agente(
+            agente,
+            x,
+            ancho,
+            titulo
+        ):
+
+            rect = pygame.Rect(
+                x,
+                y_panel,
+                ancho,
+                alto_caja
+            )
+
+            self.dibujar_caja_biselada_solida(
+                rect,
+                self.C_MADERA_BASE,
+                self.C_MADERA_LUZ,
+                self.C_MADERA_SOMBRA
+            )
+
+
+            titulo_render = (
+                self.fuente_subtitulo.render(
+                    titulo,
+                    True,
+                    self.C_ORO_PURO
+                )
+            )
+
+            self.pantalla.blit(
+                titulo_render,
+                (
+                    x + 6,
+                    30
+                )
+            )
+
+
+            sentidos = agente.sentidos
+
+
+            # ==============================
+            # VISTA
+            # ==============================
+
+            vista = (
+                "Jaguar"
+                if sentidos.ve_jaguar
+                else "Nada"
+            )
+
+
+            # ==============================
+            # OÍDO
+            # ==============================
+
+            oido = (
+                str(sentidos.direccion_sonido)
+                if sentidos.escucha_jaguar
+                else "Silencio"
+            )
+
+
+            # ==============================
+            # OLFATO
+            # ==============================
+
+            if sentidos.huele_jaguar:
+
+                olfato = "Jaguar"
+
+            elif sentidos.huele_bayas:
+
+                olfato = (
+                    "Bayas "
+                    +
+                    PLURAL_COLORES.get(
+                        sentidos.color_olor_bayas,
+                        ""
+                    )
+                )
+
+            else:
+
+                olfato = "Nada"
+
+
+            # ==============================
+            # TACTO
+            # ==============================
+
+            tacto = str(
+                sentidos.sensacion_tacto
+            )
+
+
+            # ==============================
+            # GUSTO
+            # ==============================
+
+            gusto = str(
+                sentidos.sensacion_gusto
+            )
+
+
+            ancho_slot = ancho - 10
+
+
+            self.dibujar_slot_sentido_animado(
+                x + 5,
+                55,
+                ancho_slot,
+                "Vista",
+                vista,
+                sentidos.ve_jaguar,
+                self.C_NEON_ROJO
+            )
+
+
+            self.dibujar_slot_sentido_animado(
+                x + 5,
+                91,
+                ancho_slot,
+                "Oído",
+                oido,
+                sentidos.escucha_jaguar,
+                self.C_NEON_AMARILLO
+            )
+
+
+            olfato_activo = (
+                sentidos.huele_jaguar
+                or
+                sentidos.huele_bayas
+            )
+
+            self.dibujar_slot_sentido_animado(
+                x + 5,
+                127,
+                ancho_slot,
+                "Olfato",
+                olfato,
+                olfato_activo,
+                self.C_NEON_MORADO
+            )
+
+
+            tacto_activo = bool(
+                sentidos.arena_cercana
+            )
+
+            self.dibujar_slot_sentido_animado(
+                x + 5,
+                163,
+                ancho_slot,
+                "Tacto",
+                tacto,
+                tacto_activo,
+                self.C_NEON_AZUL
+            )
+
+
+            gusto_activo = (
+                gusto != "Sin alimento"
+            )
+
+            self.dibujar_slot_sentido_animado(
+                x + 5,
+                199,
+                ancho_slot,
+                "Gusto",
+                gusto,
+                gusto_activo,
+                self.C_NEON_VERDE
+            )
 
         # =====================================
-        # DISTRIBUCIÓN DE LOS 4 PANELES
+        # DISTRIBUCIÓN DE LOS 6 PANELES
+        #
+        # Rodrigo | Sentidos R | Jaguar |
+        # Gonzalo | Sentidos G | DIOS
         # =====================================
 
-        margen = 18
-        separacion = 12
+        margen = 10
+        separacion = 6
 
         disponible = (
             self.ancho
             -
             margen * 2
             -
-            separacion * 3
+            separacion * 5
         )
 
-        ancho_cazador = int(
-            disponible * 0.32
-        )
+        # Rodrigo
+        ancho_rodrigo = int(disponible * 0.22)
 
-        ancho_sentidos = int(
-            disponible * 0.20
-        )
+        # Sentidos de Rodrigo
+        ancho_sentidos_rodrigo = int(disponible * 0.11)
 
-        ancho_jaguar = int(
-            disponible * 0.28
-        )
+        # Jaguar
+        ancho_jaguar = int(disponible * 0.18)
 
+        # Gonzalo
+        ancho_gonzalo = int(disponible * 0.22)
+
+        # Sentidos de Gonzalo
+        ancho_sentidos_gonzalo = int(disponible * 0.11)
+
+        # DIOS usa lo restante
         ancho_dios = (
             disponible
             -
-            ancho_cazador
+            ancho_rodrigo
             -
-            ancho_sentidos
+            ancho_sentidos_rodrigo
             -
             ancho_jaguar
+            -
+            ancho_gonzalo
+            -
+            ancho_sentidos_gonzalo
         )
 
-        x_cazador = margen
 
-        x_sentidos = (
-            x_cazador
+        x_rodrigo = margen
+
+        x_sentidos_rodrigo = (
+            x_rodrigo
             +
-            ancho_cazador
+            ancho_rodrigo
             +
             separacion
         )
 
         x_jaguar = (
-            x_sentidos
+            x_sentidos_rodrigo
             +
-            ancho_sentidos
+            ancho_sentidos_rodrigo
             +
             separacion
         )
 
-        x_dios = (
+        x_gonzalo = (
             x_jaguar
             +
             ancho_jaguar
             +
             separacion
         )
+
+        x_sentidos_gonzalo = (
+            x_gonzalo
+            +
+            ancho_gonzalo
+            +
+            separacion
+        )
+
+        x_dios = (
+            x_sentidos_gonzalo
+            +
+            ancho_sentidos_gonzalo
+            +
+            separacion
+        )
+
 
         y_panel = 15
 
@@ -1297,9 +1502,9 @@ class Interfaz:
         # =====================================
 
         rect_cazador = pygame.Rect(
-            x_cazador,
+            x_rodrigo,
             y_panel,
-            ancho_cazador,
+            ancho_rodrigo,
             alto_caja
         )
 
@@ -1311,8 +1516,23 @@ class Interfaz:
         )
 
         dibujar_titulo(
-            "AGENTE CAZADOR",
-            x_cazador + 15,
+            "RODRIGO",
+            x_rodrigo + 12,
+            24,
+            self.C_ORO_PURO
+        )
+
+        dibujar_linea(
+            "CAZADOR 1",
+            x_rodrigo + 12,
+            48,
+            ancho_rodrigo - 24,
+            (190, 170, 120)
+        )
+
+        dibujar_titulo(
+            "RODRIGO - C1",
+            x_rodrigo + 12,
             25,
             self.C_ORO_PURO
         )
@@ -1329,9 +1549,9 @@ class Interfaz:
         )
 
         dibujar_barra(
-            x_cazador + 15,
+            x_rodrigo + 15,
             58,
-            ancho_cazador - 30,
+            ancho_rodrigo - 30,
             energia,
             getattr(
                 self.agente,
@@ -1364,9 +1584,9 @@ class Interfaz:
 
         dibujar_linea(
             f"Baya roja: {roja}   |   Baya azul: {azul}",
-            x_cazador + 15,
+            x_rodrigo + 15,
             103,
-            ancho_cazador - 30
+            ancho_rodrigo - 30
         )
 
 
@@ -1376,9 +1596,9 @@ class Interfaz:
                 f"| Pasos: {memoria.pasos} "
                 f"| Rep: {memoria.pasos_repetidos}"
             ),
-            x_cazador + 15,
+            x_rodrigo + 15,
             125,
-            ancho_cazador - 30
+            ancho_rodrigo - 30
         )
 
 
@@ -1393,18 +1613,18 @@ class Interfaz:
                 f"Vidas: {self.agente.vidas}/{vidas_max} "
                 f"| Puntos: {self.agente.puntos}"
             ),
-            x_cazador + 15,
+            x_rodrigo + 15,
             147,
-            ancho_cazador - 30,
+            ancho_rodrigo - 30,
             self.C_ORO_VIEJO
         )
 
 
         dibujar_linea(
             f"Estado: {self.agente.estado}",
-            x_cazador + 15,
+            x_rodrigo + 15,
             169,
-            ancho_cazador - 30,
+            ancho_rodrigo - 30,
             (240, 190, 120)
         )
 
@@ -1429,9 +1649,9 @@ class Interfaz:
                 f"Difuso: {accion_difusa.upper()}"
                 f"{self.texto_regla_y_centroide(self.agente)}"
             ),
-            x_cazador + 15,
+            x_rodrigo + 15,
             191,
-            ancho_cazador - 30,
+            ancho_rodrigo - 30,
             self.C_NEON_VERDE
         )
 
@@ -1442,168 +1662,23 @@ class Interfaz:
                 f"{self.agente.ultima_accion}  "
                 f"| Motor: {self.agente.fuente_decision}"
             ),
-            x_cazador + 15,
+            x_rodrigo + 15,
             211,
-            ancho_cazador - 30,
+            ancho_rodrigo - 30,
             self.C_NEON_AZUL
         )
 
-
         # =====================================
-        # 2. SENTIDOS
+        # SENTIDOS DE RODRIGO
         # =====================================
 
-        rect_sentidos = pygame.Rect(
-            x_sentidos,
-            y_panel,
-            ancho_sentidos,
-            alto_caja
+        dibujar_sentidos_agente(
+            self.agente,
+            x_sentidos_rodrigo,
+            ancho_sentidos_rodrigo,
+            "SENTIDOS R."
         )
-
-        self.dibujar_caja_biselada_solida(
-            rect_sentidos,
-            self.C_MADERA_BASE,
-            self.C_MADERA_LUZ,
-            self.C_MADERA_SOMBRA
-        )
-
-        titulo_sentidos = (
-            self.fuente_subtitulo.render(
-                "SENTIDOS",
-                True,
-                self.C_ORO_PURO
-            )
-        )
-
-        self.pantalla.blit(
-            titulo_sentidos,
-            (
-                x_sentidos + 15,
-                30
-            )
-        )
-
-
-        sentidos = self.agente.sentidos
-
-
-        vista = (
-            "Jaguar"
-            if sentidos.ve_jaguar
-            else "Nada"
-        )
-
-        oido = (
-            str(
-                sentidos.direccion_sonido
-            )
-            if sentidos.escucha_jaguar
-            else "Silencio"
-        )
-
-        if sentidos.huele_jaguar:
-
-            olfato = "Jaguar"
-
-        elif sentidos.huele_bayas:
-
-            olfato = (
-                "Bayas "
-                +
-                PLURAL_COLORES.get(
-                    sentidos.color_olor_bayas,
-                    ""
-                )
-            )
-
-        else:
-
-            olfato = "Nada"
-
-
-        tacto = str(
-            sentidos.sensacion_tacto
-        )
-
-        gusto = str(
-            sentidos.sensacion_gusto
-        )
-
-
-        ancho_slot = (
-            ancho_sentidos - 20
-        )
-
-
-        self.dibujar_slot_sentido_animado(
-            x_sentidos + 10,
-            55,
-            ancho_slot,
-            "Vista",
-            vista,
-            sentidos.ve_jaguar,
-            self.C_NEON_ROJO
-        )
-
-
-        self.dibujar_slot_sentido_animado(
-            x_sentidos + 10,
-            91,
-            ancho_slot,
-            "Oído",
-            oido,
-            sentidos.escucha_jaguar,
-            self.C_NEON_AMARILLO
-        )
-
-
-        olfato_activo = (
-            sentidos.huele_jaguar
-            or
-            sentidos.huele_bayas
-        )
-
-        self.dibujar_slot_sentido_animado(
-            x_sentidos + 10,
-            127,
-            ancho_slot,
-            "Olfato",
-            olfato,
-            olfato_activo,
-            self.C_NEON_MORADO
-        )
-
-
-        tacto_activo = bool(
-            sentidos.arena_cercana
-        )
-
-        self.dibujar_slot_sentido_animado(
-            x_sentidos + 10,
-            163,
-            ancho_slot,
-            "Tacto",
-            tacto,
-            tacto_activo,
-            self.C_NEON_AZUL
-        )
-
-
-        gusto_activo = (
-            gusto != "Sin alimento"
-        )
-
-        self.dibujar_slot_sentido_animado(
-            x_sentidos + 10,
-            199,
-            ancho_slot,
-            "Gusto",
-            gusto,
-            gusto_activo,
-            self.C_NEON_VERDE
-        )
-
-
+       
         # =====================================
         # 3. AGENTE JAGUAR
         # =====================================
@@ -1624,7 +1699,7 @@ class Interfaz:
 
 
         dibujar_titulo(
-            "AGENTE JAGUAR",
+            "JAGUAR",
             x_jaguar + 15,
             25,
             (255, 150, 80)
@@ -1762,6 +1837,216 @@ class Interfaz:
                 else (170, 190, 170)
             )
         )
+
+        # =====================================
+        # 4. GONZALO - CAZADOR 2
+        # =====================================
+
+        gonzalo = self.agente_interceptor
+
+        rect_gonzalo = pygame.Rect(
+            x_gonzalo,
+            y_panel,
+            ancho_gonzalo,
+            alto_caja
+        )
+
+        self.dibujar_caja_biselada_solida(
+            rect_gonzalo,
+            self.C_MADERA_BASE,
+            self.C_MADERA_LUZ,
+            self.C_MADERA_SOMBRA
+        )
+
+        dibujar_titulo(
+            "GONZALO",
+            x_gonzalo + 12,
+            25,
+            self.C_NEON_AZUL
+        )
+
+        dibujar_linea(
+            "CAZADOR 2",
+            x_gonzalo + 12,
+            48,
+            ancho_gonzalo - 24,
+            (120, 170, 255)
+        )
+
+
+        if gonzalo is None:
+
+            dibujar_linea(
+                "DESACTIVADO",
+                x_gonzalo + 12,
+                90,
+                ancho_gonzalo - 24,
+                (160, 160, 160)
+            )
+
+            dibujar_linea(
+                "Tecla I para activar",
+                x_gonzalo + 12,
+                115,
+                ancho_gonzalo - 24,
+                self.C_NEON_AZUL
+            )
+
+        else:
+
+            energia_gonzalo = gonzalo.energia
+
+            color_energia_gonzalo = (
+                self.C_NEON_VERDE
+                if energia_gonzalo > 30
+                else self.C_NEON_ROJO
+            )
+
+            dibujar_barra(
+                x_gonzalo + 15,
+                58,
+                ancho_gonzalo - 30,
+                energia_gonzalo,
+                getattr(
+                    gonzalo,
+                    "energia_max",
+                    100
+                ),
+                color_energia_gonzalo,
+                "Energía"
+            )
+
+            memoria_gonzalo = gonzalo.memoria
+            conocimiento_gonzalo = memoria_gonzalo.conocimiento_bayas
+
+            roja_gonzalo = (
+                conocimiento_gonzalo["roja"]
+                if conocimiento_gonzalo["roja"] is not None
+                else "?"
+            )
+
+            azul_gonzalo = (
+                conocimiento_gonzalo["azul"]
+                if conocimiento_gonzalo["azul"] is not None
+                else "?"
+            )
+
+            dibujar_linea(
+                f"Baya roja: {roja_gonzalo} | Baya azul: {azul_gonzalo}",
+                x_gonzalo + 15,
+                103,
+                ancho_gonzalo - 30
+            )
+
+            dibujar_linea(
+                (
+                    f"Memoria: {len(memoria_gonzalo.celdas_revisadas)} "
+                    f"| Pasos: {memoria_gonzalo.pasos} "
+                    f"| Rep: {memoria_gonzalo.pasos_repetidos}"
+                ),
+                x_gonzalo + 15,
+                125,
+                ancho_gonzalo - 30
+            )
+
+            vidas_max_gonzalo = getattr(
+                gonzalo,
+                "vidas_max",
+                gonzalo.vidas
+            )
+
+            dibujar_linea(
+                (
+                    f"Vidas: {gonzalo.vidas}/{vidas_max_gonzalo} "
+                    f"| Puntos: {gonzalo.puntos}"
+                ),
+                x_gonzalo + 15,
+                147,
+                ancho_gonzalo - 30,
+                self.C_ORO_VIEJO
+            )
+
+            dibujar_linea(
+                f"Estado: {gonzalo.estado}",
+                x_gonzalo + 15,
+                169,
+                ancho_gonzalo - 30,
+                (120, 190, 255)
+            )
+
+            if gonzalo.decision_difusa:
+                accion_gonzalo = gonzalo.decision_difusa["accion"]
+            else:
+                accion_gonzalo = "-"
+
+            dibujar_linea(
+                (
+                    f"Difuso: {accion_gonzalo.upper()}"
+                    f"{self.texto_regla_y_centroide(gonzalo)}"
+                ),
+                x_gonzalo + 15,
+                191,
+                ancho_gonzalo - 30,
+                self.C_NEON_VERDE
+            )
+
+            dibujar_linea(
+                (
+                    f"Movimiento: {gonzalo.ultima_accion} "
+                    f"| Motor: {gonzalo.fuente_decision}"
+                ),
+                x_gonzalo + 15,
+                211,
+                ancho_gonzalo - 30,
+                self.C_NEON_AZUL
+            )
+
+
+        # =====================================
+        # 5. SENTIDOS DE GONZALO
+        # =====================================
+
+        if gonzalo is not None:
+
+            dibujar_sentidos_agente(
+                gonzalo,
+                x_sentidos_gonzalo,
+                ancho_sentidos_gonzalo,
+                "SENTIDOS G."
+            )
+
+        else:
+
+            rect_sentidos_gonzalo = pygame.Rect(
+                x_sentidos_gonzalo,
+                y_panel,
+                ancho_sentidos_gonzalo,
+                alto_caja
+            )
+
+            self.dibujar_caja_biselada_solida(
+                rect_sentidos_gonzalo,
+                self.C_MADERA_BASE,
+                self.C_MADERA_LUZ,
+                self.C_MADERA_SOMBRA
+            )
+
+            dibujar_linea(
+                "SENTIDOS G.",
+                x_sentidos_gonzalo + 6,
+                30,
+                ancho_sentidos_gonzalo - 12,
+                self.C_ORO_PURO
+            )
+
+            dibujar_linea(
+                "Inactivo",
+                x_sentidos_gonzalo + 6,
+                80,
+                ancho_sentidos_gonzalo - 12,
+                (150, 150, 150)
+            )
+
 
 
                 # =====================================
