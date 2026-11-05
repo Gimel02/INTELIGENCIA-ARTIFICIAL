@@ -64,6 +64,28 @@ class AgenteCazador:
 
         self.decision_difusa = None
 
+        # ==========================================
+        # IDENTIDAD Y COMPETENCIA ENTRE CAZADORES
+        #
+        # Los dos son cazadores equivalentes.
+        # "INTERCEPTAR" es una conducta temporal,
+        # no el nombre de un agente.
+        # ==========================================
+
+        self.nombre = "Cazador"
+
+        self.rival = None
+
+        # Última conducta decidida por la lógica difusa
+        self.modo_difuso_actual = None
+
+        # Estado de la capa competitiva
+        self.estado_competitivo = "normal"
+
+        # Si detectó al otro cazador y por qué medio
+        self.rival_detectado = False
+        self.rival_detectado_por = None
+
         self.posicion = (
             self.campamento
         )
@@ -1264,6 +1286,125 @@ class AgenteCazador:
             False
         )
 
+        # ==========================================
+    # DETECTAR AL CAZADOR RIVAL
+    #
+    # El cazador NO sabe mágicamente dónde está
+    # el otro.
+    #
+    # Solo puede detectar que el rival está
+    # cazando al Jaguar si:
+    #
+    # 1. El rival sigue vivo.
+    # 2. El Jaguar sigue vivo.
+    # 3. El control difuso del rival decidió
+    #    PERSEGUIR o ATACAR.
+    # 4. Puede verlo o escucharlo.
+    #
+    # Esto NO modifica los sentidos del Jaguar.
+    # ==========================================
+
+    def detectar_rival_cazando(self):
+
+        rival_detectado_antes = self.rival_detectado
+
+        self.rival_detectado = False
+        self.rival_detectado_por = None
+
+        rival = self.rival
+
+        if rival is None:
+
+            return False
+
+        if rival.vidas <= 0:
+
+            return False
+
+        if not self.mundo.jaguar_vivo:
+
+            return False
+
+
+        # ------------------------------------------
+        # ¿EL RIVAL ESTÁ CAZANDO AL JAGUAR?
+        #
+        # Esta información proviene de SU propia
+        # decisión difusa.
+        # ------------------------------------------
+
+        modo_rival = getattr(
+            rival,
+            "modo_difuso_actual",
+            None
+        )
+
+        if modo_rival not in (
+            "perseguir",
+            "atacar"
+        ):
+
+            return False
+
+
+        # ------------------------------------------
+        # VISTA
+        # ------------------------------------------
+
+        if self.sentidos.puede_ver(
+            self.posicion,
+            rival.posicion
+        ):
+
+            self.rival_detectado = True
+            self.rival_detectado_por = "vista"
+
+            if not rival_detectado_antes:
+
+                print(
+                    f"[COMPETENCIA] {self.nombre} detectó a "
+                    f"{rival.nombre} por VISTA | "
+                    f"Rival difuso: {modo_rival.upper()} | "
+                    f"Posición rival: {rival.posicion}"
+                )
+
+            return True
+
+
+        # ------------------------------------------
+        # OÍDO
+        #
+        # No usamos usar_oido() porque esa función
+        # pertenece a la percepción del Jaguar y
+        # modificaría esos valores.
+        # ------------------------------------------
+
+        distancia_rival = (
+            self.sentidos.distancia(
+                self.posicion,
+                rival.posicion
+            )
+        )
+
+        if distancia_rival <= self.sentidos.rango_oido:
+
+            self.rival_detectado = True
+            self.rival_detectado_por = "oído"
+
+            if not rival_detectado_antes:
+
+                print(
+                    f"[COMPETENCIA] {self.nombre} detectó a "
+                    f"{rival.nombre} por OÍDO | "
+                    f"Rival difuso: {modo_rival.upper()} | "
+                    f"Posición rival: {rival.posicion}"
+                )
+
+            return True
+
+
+        return False
+
 
         # ==========================================
     # ACTUALIZAR HAMBRE
@@ -2440,6 +2581,57 @@ class AgenteCazador:
             modo in ("perseguir", "atacar")
         )
 
+        # ==========================================
+        # COMPETENCIA ENTRE CAZADORES
+        #
+        # La lógica difusa YA decidió qué hacer
+        # respecto al Jaguar.
+        #
+        # Después de esa decisión, el cazador puede
+        # detectar que su rival también está cazando
+        # y activar temporalmente INTERCEPTAR.
+        #
+        # HUIR y RECARGAR tienen prioridad porque son
+        # decisiones de supervivencia.
+        # ==========================================
+
+        rival_cazando = (
+            self.detectar_rival_cazando()
+        )
+
+        interceptando = (
+            rival_cazando
+            and
+            not en_peligro
+            and
+            not modo_supervivencia
+        )
+
+        if interceptando:
+
+            if self.estado_competitivo != "interceptar":
+
+                print(
+                    f"[INTERCEPCIÓN] {self.nombre} activa INTERCEPTAR | "
+                    f"Objetivo: {self.rival.nombre} | "
+                    f"Mi energía: {self.energia} | "
+                    f"Energía rival: {self.rival.energia} | "
+                    f"Meta rival: {self.rival.posicion}"
+                )
+
+            self.estado_competitivo = "interceptar"
+
+        else:
+
+            if self.estado_competitivo == "interceptar":
+
+                print(
+                    f"[INTERCEPCIÓN] {self.nombre} termina INTERCEPTAR "
+                    f"y vuelve a su decisión difusa"
+                )
+
+            self.estado_competitivo = "normal"
+
 
         if en_peligro:
 
@@ -2542,6 +2734,29 @@ class AgenteCazador:
                     "regresando al campamento"
                 )
 
+
+        # ==========================================
+        # 4.1 INTERCEPTAR AL OTRO CAZADOR
+        # ==========================================
+
+        elif interceptando:
+
+            rival = self.rival
+
+            # La meta deja de ser temporalmente el
+            # Jaguar y pasa a ser el otro cazador.
+
+            meta = rival.posicion
+
+            self.estado = (
+                f"¡{rival.nombre} está cazando al Jaguar! "
+                f"INTERCEPTANDO por "
+                f"{self.rival_detectado_por}"
+            )
+
+            # Ya no está explorando mientras compite.
+
+            self.memoria.objetivo_busqueda = None
 
         # ==========================================
         # 5. VE AL JAGUAR
@@ -2960,6 +3175,8 @@ class AgenteCazador:
             distancia_jaguar == 1
             and
             modo == "atacar"
+            and
+            not interceptando
         ):
 
             print(

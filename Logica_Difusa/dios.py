@@ -327,6 +327,9 @@ class Dios:
             self.mundo,
             controlador=self.controlador("cazador")
         )
+        # Cazador 1
+
+        self.cazador.nombre = "Rodrigo"
 
         self.jaguar = AgenteJaguar(
             self.mundo,
@@ -391,6 +394,21 @@ class Dios:
                 controlador=self.controlador("interceptor"),
                 campamento=cabana
             )
+            # Cazador 2
+
+            self.interceptor.nombre = "Gonzalo"
+
+
+            # ==========================================
+            # LOS DOS CAZADORES SE RECONOCEN COMO RIVALES
+            #
+            # Ninguno es "el interceptor".
+            # Cualquiera puede activar la conducta
+            # INTERCEPTAR.
+            # ==========================================
+
+            self.cazador.rival = self.interceptor
+            self.interceptor.rival = self.cazador
 
             if escenario is not None:
 
@@ -407,8 +425,9 @@ class Dios:
 
             self.interceptor = None
             self.cuerpo_interceptor = None
+            self.cazador.rival = None
 
-
+       
         self.terminada = False
         self.resultado = None
         self.ganador = None
@@ -605,8 +624,14 @@ class Dios:
 
                 self.ultima_pelea = None
 
-        self.turno_cazador(dt, "cazador", self.cazador, self.cuerpo_cazador)
+        if self.cazador.vidas > 0:
 
+            self.turno_cazador(
+                dt,
+                "cazador",
+                self.cazador,
+                self.cuerpo_cazador
+            )
         if self.interceptor_activo():
 
             self.turno_cazador(
@@ -887,6 +912,18 @@ class Dios:
         a = self.cazador
         b = self.interceptor
 
+        nombre_a = getattr(
+            a,
+            "nombre",
+            "Rodrigo"
+        )
+
+        nombre_b = getattr(
+            b,
+            "nombre",
+            "Gonzalo"
+        )
+
         # Pelean solo si se tocan en pantalla:
         # a menos de 0.6 casillas (también cuando
         # se cruzan caminando). Se usa lo que se
@@ -917,6 +954,14 @@ class Dios:
 
                 return
 
+        print(
+            f"[DIOS - ENCUENTRO] {nombre_a} y {nombre_b} se encontraron | "
+            f"{nombre_a}: {a.energia} energía | "
+            f"{nombre_b}: {b.energia} energía | "
+            f"{nombre_a} competitivo: {a.estado_competitivo} | "
+            f"{nombre_b} competitivo: {b.estado_competitivo}"
+        )
+                
         if a.energia == b.energia:
 
             a.energia = max(0, a.energia - DANO_EMPATE)
@@ -955,6 +1000,22 @@ class Dios:
                 f"El {ganador[0]} le ganó la pelea al {perdedor[0]} "
                 f"(energía {ganador[1].energia} contra "
                 f"{perdedor[1].energia}): el {perdedor[0]} muere"
+            )
+            nombre_ganador = getattr(
+                ganador[1],
+                "nombre",
+                ganador[0]
+            )
+
+            nombre_perdedor = getattr(
+                perdedor[1],
+                "nombre",
+                perdedor[0]
+            )
+
+            print(
+                f"[PELEA] GANA {nombre_ganador} | "
+                f"{nombre_perdedor} queda fuera"
             )
 
         # Para que se vea en el mapa, a la mitad
