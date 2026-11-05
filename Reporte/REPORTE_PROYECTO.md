@@ -366,11 +366,11 @@ Son agentes continuos (se mueven en el plano, no por casillas), sin memoria ni a
 
 Es un segundo cazador **igual al primero**: otra copia de `AgenteCazador`, con los mismos 5 sentidos, su propia memoria, las mismas 23 reglas difusas (con su **propio controlador**, así que decide por su cuenta), el algoritmo genético de movimiento, las bayas, la energía y el regreso a la cabaña. Tampoco pisa la cueva del jaguar.
 
-Tiene **su propia cabaña** (la azul): ahí empieza, recarga y regresa. DIOS la pone en una casilla de pasto lo más lejos posible de la cabaña del cazador, a 4 casillas o más de la cueva y del jaguar, y con camino desde la otra cabaña. No usa el azar, así que el mapa es el mismo con o sin interceptor. El jaguar no merodea sobre ninguna de las dos cabañas.
+Tiene **su propia cabaña** (la azul): ahí empieza, recarga y regresa. DIOS la pone en una casilla de pasto lo más lejos posible de la cabaña del cazador, a 4 casillas o más de la cueva y del jaguar, con al menos 3 casillas de pasto alrededor y dentro de una zona limpia grande (25 casillas o más unidas sin bayas ni arena), para que una baya mala nunca le tape la salida. No usa el azar, así que el mapa es el mismo con o sin interceptor. El jaguar no merodea sobre ninguna de las dos cabañas.
 
 La única diferencia es que los dos **compiten** por atrapar primero al jaguar y **se atacan** entre ellos. Las reglas las aplica DIOS:
 
-- **Pelea a muerte:** si los dos cazadores se cruzan (misma casilla, una al lado o en diagonal, según donde se ven en pantalla), gana el que tenga **más energía**: sigue en el juego y suma 10 puntos. **El que pierde muere** y sale del juego. Si tienen la misma energía, empatan: los dos pierden 10, siguen vivos y no pueden volver a pelear durante 3 segundos. En el mapa aparece un estallido con "¡PELEA! Gana ...". En las cabañas y junto a ellas no se pelea. Por eso a cada cazador le conviene recargar energía (bayas o su cabaña) antes de toparse con su rival.
+- **Pelea a muerte:** si los dos cazadores se tocan (están en la misma casilla o se cruzan en el camino, según donde se ven en pantalla; si solo pasan cerca, no pelean), gana el que tenga **más energía**: sigue en el juego y suma 10 puntos. **El que pierde muere** y sale del juego. Si tienen la misma energía, empatan: los dos pierden 10, siguen vivos y no pueden volver a pelear durante 3 segundos. En el mapa aparece un estallido con "¡PELEA! Gana ...". En las cabañas y junto a ellas no se pelea. Por eso a cada cazador le conviene recargar energía (bayas o su cabaña) antes de toparse con su rival.
 - **Carrera:** el primero que atrapa al jaguar gana y el panel lo anuncia (GANA CAZADOR o GANA INTERCEPTOR). La partida sigue: cada uno regresa a su cabaña.
 - El jaguar reacciona al cazador que tenga más cerca. Si un cazador pierde su vida, sale del juego; si ya no queda ninguno, el jaguar regresa a su cueva.
 - **Tecla I** lo enciende o lo apaga. Sin interceptor el juego es como antes.
@@ -379,13 +379,13 @@ Resultados en 60 mapas (semillas 1000–1059), jugando con DIOS:
 
 | Atrapa primero el cazador | Atrapa primero el interceptor | Gana el jaguar | Peleas a muerte |
 | --- | --- | --- | --- |
-| 27 | 22 | 11 | 31 (murió el interceptor en 16 y el cazador en 15) y 1 empate |
+| 24 | 25 | 11 | 19 (murió el interceptor en 9 y el cazador en 10) |
 
 ---
 
 ## 14. Pruebas automáticas
 
-`pruebas/test_logica_difusa.py` tiene 28 pruebas que comprueban cada parte del sistema difuso. Se corren con:
+`pruebas/test_logica_difusa.py` tiene 29 pruebas que comprueban cada parte del sistema difuso. Se corren con:
 
 ```bash
 python3 -m unittest discover pruebas -v
@@ -402,7 +402,7 @@ python3 -m unittest discover pruebas -v
 | Agentes | La bitácora del jaguar se llena y los escenarios de demostración empiezan como deben |
 | Interceptor (cazador rival) | Es otro `AgenteCazador` con las mismas 23 reglas y su propio controlador, juega con DIOS y nunca pisa la cueva; tiene su propia cabaña; en una pelea gana el de más energía y el otro muere; si empatan, los dos pierden 10 y siguen vivos; en la cabaña no se pelea; sin interceptor no se crea |
 
-Resultado: **28 de 28 pruebas pasan.**
+Resultado: **29 de 29 pruebas pasan.**
 
 ---
 

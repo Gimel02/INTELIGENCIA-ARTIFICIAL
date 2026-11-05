@@ -492,6 +492,39 @@ class PruebasInterceptor(unittest.TestCase):
         self.assertEqual(dios.cazador.campamento, dios.mundo.campamento)
         self.assertNotEqual(cabana, dios.mundo.cueva)
 
+    def test_cabana_del_interceptor_tiene_salida(self):
+
+        # En varios mapas: la cabaña azul tiene al
+        # menos 3 casillas de pasto alrededor y
+        # está en una zona limpia grande, así que
+        # una baya mala no la puede encerrar
+
+        from Logica_Difusa.dios import (
+            PASTO_MINIMO_ALREDEDOR,
+            ZONA_LIMPIA_MINIMA,
+        )
+
+        for semilla in range(10):
+
+            with self.subTest(semilla=semilla):
+
+                dios, _ = self.jugar_con_dios(True, semilla=semilla, pasos=1)
+
+                mundo = dios.mundo
+                cabana = mundo.campamento_interceptor
+
+                pasto = sum(
+                    1
+                    for vecino in mundo.vecinos_validos(cabana)
+                    if mundo.grid[vecino] == 0
+                )
+
+                self.assertGreaterEqual(pasto, PASTO_MINIMO_ALREDEDOR)
+                self.assertGreaterEqual(
+                    dios.zonas_limpias()[cabana],
+                    ZONA_LIMPIA_MINIMA
+                )
+
     def test_en_la_cabana_no_se_pelea(self):
 
         dios, _ = self.jugar_con_dios(True, pasos=1)

@@ -447,11 +447,14 @@ con su propio controlador, así que decide por su cuenta), el AG de movimiento, 
 energía y el regreso a la cabaña. Tampoco pisa la cueva.
 -Tiene SU PROPIA CABAÑA (la azul, con marco azul): ahí empieza, recarga y regresa. DIOS la
  pone en una casilla de pasto lo más lejos posible de la cabaña del cazador, a 4 casillas o más
- de la cueva y del jaguar, y con camino desde la otra cabaña. No usa el azar, así que el mapa
- es el mismo con o sin interceptor. El jaguar tampoco merodea sobre ninguna de las cabañas.
+ de la cueva y del jaguar, con al menos 3 casillas de pasto alrededor (no en una esquina ni en
+ un pasillo) y dentro de una zona limpia grande (25 casillas o más unidas sin bayas ni arena),
+ para que una baya mala nunca le tape la salida. No usa el azar, así que el mapa es el mismo
+ con o sin interceptor. El jaguar tampoco merodea sobre ninguna de las cabañas.
 La única diferencia: los dos COMPITEN por atrapar primero al jaguar y se ATACAN entre ellos.
--Pelea a muerte (regla de DIOS): si los dos cazadores se cruzan (misma casilla, una al lado o
- en diagonal, según donde se ven en pantalla), pelean. GANA EL QUE TENGA MÁS ENERGÍA: sigue en
+-Pelea a muerte (regla de DIOS): si los dos cazadores se TOCAN (están en la misma casilla o se
+ cruzan en el camino, según donde se ven en pantalla), pelean. Si solo pasan cerca (una casilla
+ al lado o en diagonal), no pelean. GANA EL QUE TENGA MÁS ENERGÍA: sigue en
  el juego y suma 10 puntos. EL QUE PIERDE MUERE y sale del juego (ya no se dibuja). Si tienen
  la misma energía, empatan: los dos pierden 10 de energía, siguen vivos y no pueden volver a
  pelear durante 3 segundos. En el mapa aparece un estallido con "¡PELEA! Gana ...". En las
@@ -461,9 +464,9 @@ La única diferencia: los dos COMPITEN por atrapar primero al jaguar y se ATACAN
 -El jaguar reacciona al cazador que tenga más cerca. Si un cazador pierde su vida, sale del
  juego; si ya no queda ninguno, el jaguar regresa a su cueva y termina la partida.
 -Tecla I: lo enciende o lo apaga (empieza otra partida). Sin interceptor el juego es como antes.
--En 60 mapas (semillas 1000-1059): el cazador atrapó primero al jaguar en 27, el interceptor en
- 22 y el jaguar ganó en 11. Hubo 31 peleas a muerte (murió el interceptor en 16 y el cazador en
- 15) y 1 empate.
+-En 60 mapas (semillas 1000-1059): el cazador atrapó primero al jaguar en 24, el interceptor en
+ 25 y el jaguar ganó en 11. Hubo 19 peleas a muerte (murió el interceptor en 9 y el cazador en
+ 10).
 
 En cada turno, el controlador difuso decide QUÉ hace el agente. Después, el AG del movimiento
 (o A*) decide CÓMO llega el cazador a su meta. El jaguar se mueve con A*, escape o merodeo.
@@ -505,7 +508,7 @@ Archivos (carpeta Logica_Difusa/):
 Otros archivos:
 -Mundo/escenarios.py: escenarios de demostración (teclas 1 y 2).
 -Recursos/interceptor.py: sus dibujos (el cazador y la cabaña en azul).
--pruebas/test_logica_difusa.py: 28 pruebas automáticas de la lógica difusa.
+-pruebas/test_logica_difusa.py: 29 pruebas automáticas de la lógica difusa.
 -Reporte/REPORTE_PROYECTO.md: el reporte completo del proyecto.
 
 Teclas en la ventana:

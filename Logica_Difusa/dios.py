@@ -122,23 +122,35 @@ DISTANCIA_ATRAPAR_RATON = 0.6
 # ==========================================
 # CABAÑA DEL INTERCEPTOR
 #
-# DIOS la pone en una casilla de pasto lo más
-# lejos posible de la cabaña del cazador, a
-# por lo menos 4 casillas de la cueva y del
-# jaguar, y con camino desde la otra cabaña.
+# DIOS la pone en una casilla de pasto:
+#   - lo más lejos posible de la cabaña del
+#     cazador,
+#   - a por lo menos 4 casillas de la cueva y
+#     del jaguar,
+#   - con al menos 3 casillas de pasto
+#     alrededor (no en una esquina ni en un
+#     pasillo),
+#   - dentro de una zona limpia grande (por lo
+#     menos 25 casillas unidas sin bayas ni
+#     arena), para que nunca quede encerrado
+#     por una baya mala,
+#   - y con camino a la otra cabaña.
 # No usa el azar, así que el mapa es el mismo
 # con o sin interceptor.
 # ==========================================
 
 DISTANCIA_MINIMA_CUEVA = 4
+PASTO_MINIMO_ALREDEDOR = 3
+ZONA_LIMPIA_MINIMA = 25
 
 
 # ==========================================
 # PELEA ENTRE CAZADORES (RIVALES)
 #
-# Si los dos cazadores se cruzan (misma
-# casilla, una al lado o en diagonal, según
-# donde se ven en pantalla), pelean a muerte:
+# Si los dos cazadores se tocan (están en la
+# misma casilla o se cruzan en el camino,
+# según donde se ven en pantalla), pelean a
+# muerte:
 # gana el que tenga MÁS energía y sigue en el
 # juego; el que pierde MUERE y sale del juego.
 # Si empatan, los dos pierden 10 de energía,
@@ -151,8 +163,9 @@ DANO_EMPATE = 10
 ESPERA_PELEA = 3.0
 
 # Distancia (en casillas, como se ven en
-# pantalla) a la que se alcanzan para pelear
-DISTANCIA_PELEA = 1.5
+# pantalla) a la que se tocan para pelear:
+# menos de un cuerpo de distancia
+DISTANCIA_PELEA = 0.6
 
 # Segundos que se muestra "¡PELEA!" en el mapa
 DURACION_AVISO_PELEA = 1.5
@@ -427,8 +440,13 @@ class Dios:
         campamento = mundo.campamento
 
         # Casillas a las que se llega desde la
-        # cabaña del cazador
+        # cabaña del cazador (por cualquier
+        # camino)
         alcanzables = AEstrella.costos_desde(campamento, mundo)
+
+        # Zonas limpias: casillas unidas por
+        # pasto, sin bayas (5 y 6) ni arena (4)
+        tamano_zona = self.zonas_limpias()
 
         prohibidas = {
             campamento,
@@ -436,25 +454,91 @@ class Dios:
             mundo.posicion_jaguar,
         }
 
-        candidatas = [
+        def pasto_alrededor(casilla):
+
+            return sum(
+                1
+                for vecino in mundo.vecinos_validos(casilla)
+                if mundo.grid.get(vecino, 0) == 0
+            )
+
+        def buena(casilla, pasto_minimo, zona_minima):
+
+            return (
+                mundo.grid.get(casilla, 0) == 0
+                and casilla not in prohibidas
+                and AEstrella.heuristica(casilla, mundo.cueva) >= DISTANCIA_MINIMA_CUEVA
+                and AEstrella.heuristica(casilla, mundo.posicion_jaguar) >= DISTANCIA_MINIMA_CUEVA
+                and pasto_alrededor(casilla) >= pasto_minimo
+                and tamano_zona.get(casilla, 0) >= zona_minima
+            )
+
+        # Si ninguna cumple todo, se va aflojando
+        for pasto_minimo, zona_minima in (
+            (PASTO_MINIMO_ALREDEDOR, ZONA_LIMPIA_MINIMA),
+            (2, ZONA_LIMPIA_MINIMA),
+            (2, 1),
+            (1, 1),
+        ):
+
+            candidatas = [
+                casilla
+                for casilla in alcanzables
+                if buena(casilla, pasto_minimo, zona_minima)
+            ]
+
+            if candidatas:
+
+                # La más lejana a la otra cabaña (en
+                # un empate, la primera en orden)
+                return max(
+                    sorted(candidatas),
+                    key=lambda casilla: AEstrella.heuristica(casilla, campamento)
+                )
+
+        return campamento
+
+
+    def zonas_limpias(self):
+
+        # {casilla de pasto: tamaño de su zona
+        # limpia}. Recorrido por anchura.
+
+        mundo = self.mundo
+
+        pasto = {
             casilla
-            for casilla in alcanzables
-            if mundo.grid.get(casilla, 0) == 0
-            and casilla not in prohibidas
-            and AEstrella.heuristica(casilla, mundo.cueva) >= DISTANCIA_MINIMA_CUEVA
-            and AEstrella.heuristica(casilla, mundo.posicion_jaguar) >= DISTANCIA_MINIMA_CUEVA
-        ]
+            for casilla, tipo in mundo.grid.items()
+            if tipo == 0
+        }
 
-        if not candidatas:
+        tamano = {}
 
-            return campamento
+        for inicio in pasto:
 
-        # La más lejana a la otra cabaña (en un
-        # empate, la primera en orden)
-        return max(
-            sorted(candidatas),
-            key=lambda casilla: AEstrella.heuristica(casilla, campamento)
-        )
+            if inicio in tamano:
+                continue
+
+            zona = [inicio]
+            vistos = {inicio}
+            i = 0
+
+            while i < len(zona):
+
+                for vecino in mundo.vecinos_validos(zona[i]):
+
+                    if vecino in pasto and vecino not in vistos:
+
+                        vistos.add(vecino)
+                        zona.append(vecino)
+
+                i += 1
+
+            for casilla in zona:
+
+                tamano[casilla] = len(zona)
+
+        return tamano
 
 
     # ======================================
@@ -803,9 +887,12 @@ class Dios:
         a = self.cazador
         b = self.interceptor
 
-        # Se alcanzan si se ven juntos en pantalla
-        # (también en diagonal o al cruzarse) o si
-        # sus casillas están una al lado de otra
+        # Pelean solo si se tocan en pantalla:
+        # a menos de 0.6 casillas (también cuando
+        # se cruzan caminando). Se usa lo que se
+        # ve, porque la casilla de un cazador
+        # cambia en cuanto decide moverse, antes
+        # de que su cuerpo llegue
 
         visual_a = self.cuerpo_cazador.posicion_visual()
         visual_b = self.cuerpo_interceptor.posicion_visual()
@@ -815,10 +902,7 @@ class Dios:
             + (visual_a[1] - visual_b[1]) ** 2
         ) ** 0.5
 
-        if (
-            distancia_visual > DISTANCIA_PELEA
-            and AEstrella.heuristica(a.posicion, b.posicion) > 1
-        ):
+        if distancia_visual > DISTANCIA_PELEA:
 
             return
 
