@@ -1,4 +1,6 @@
+
 import pygame
+import os
 
 from Recursos.cazador import Cazador
 from Recursos.campamento import Campamento
@@ -6,10 +8,6 @@ from Recursos.campamento import Campamento
 
 # =========================================
 # SPRITE DEL INTERCEPTOR
-#
-# Usa los mismos dibujos del cazador, pero
-# teñidos de azul y con un aro azul debajo
-# para distinguirlos.
 # =========================================
 
 COLOR_INTERCEPTOR = (60, 130, 255)
@@ -19,30 +17,60 @@ class Interceptor(Cazador):
 
     def __init__(self, tamano_celda):
 
+        # Inicializar atributos y comportamiento del cazador
         super().__init__(tamano_celda)
 
-        for nombre in (
-            "sprite_arriba",
-            "sprite_abajo",
-            "sprite_izquierda",
-            "sprite_derecha",
-        ):
+        # Obtener carpeta de imágenes
+        carpeta_recursos = os.path.dirname(
+            os.path.abspath(__file__)
+        )
 
-            sprite = getattr(self, nombre).copy()
+        carpeta_imagenes = os.path.join(
+            carpeta_recursos,
+            "images"
+        )
 
-            # Tono azul sin oscurecer el dibujo
-            sprite.fill(
-                (170, 200, 255),
-                special_flags=pygame.BLEND_RGB_MULT
-            )
+        # Cargar los cuatro sprites propios del interceptor
+        self.sprite_arriba = pygame.image.load(
+            os.path.join(carpeta_imagenes, "interceptor_arriba.png")
+        ).convert_alpha()
 
-            sprite.fill(
-                (0, 25, 80),
-                special_flags=pygame.BLEND_RGB_ADD
-            )
+        self.sprite_abajo = pygame.image.load(
+            os.path.join(carpeta_imagenes, "interceptor_abajo.png")
+        ).convert_alpha()
 
-            setattr(self, nombre, sprite)
+        self.sprite_izquierda = pygame.image.load(
+            os.path.join(carpeta_imagenes, "interceptor_izquierda.png")
+        ).convert_alpha()
 
+        self.sprite_derecha = pygame.image.load(
+            os.path.join(carpeta_imagenes, "interceptor_derecha.png")
+        ).convert_alpha()
+
+        # Ajustar todos los sprites al tamaño de la celda
+        self.sprite_arriba = pygame.transform.scale(
+            self.sprite_arriba,
+            (tamano_celda, tamano_celda)
+        )
+
+        self.sprite_abajo = pygame.transform.scale(
+            self.sprite_abajo,
+            (tamano_celda, tamano_celda)
+        )
+
+        self.sprite_izquierda = pygame.transform.scale(
+            self.sprite_izquierda,
+            (tamano_celda, tamano_celda)
+        )
+
+        self.sprite_derecha = pygame.transform.scale(
+            self.sprite_derecha,
+            (tamano_celda, tamano_celda)
+        )
+
+    # =========================================
+    # DIBUJAR INTERCEPTOR
+    # =========================================
 
     def dibujar(
         self,
@@ -52,13 +80,13 @@ class Interceptor(Cazador):
         desplazamiento_y=0
     ):
 
-        # Aro azul en el suelo
-
+        # Centro de la celda
         centro = (
             int(columna * self.tamano_celda + self.tamano_celda // 2),
             int(desplazamiento_y + fila * self.tamano_celda + self.tamano_celda // 2)
         )
 
+        # Aro azul para distinguir al interceptor
         pygame.draw.circle(
             pantalla,
             COLOR_INTERCEPTOR,
@@ -67,6 +95,7 @@ class Interceptor(Cazador):
             3
         )
 
+        # Dibujar con sus propios sprites
         super().dibujar(
             pantalla,
             fila,
@@ -77,9 +106,6 @@ class Interceptor(Cazador):
 
 # =========================================
 # CABAÑA DEL INTERCEPTOR
-#
-# La misma cabaña, teñida de azul y con un
-# marco azul.
 # =========================================
 
 class CampamentoInterceptor(Campamento):
@@ -101,7 +127,6 @@ class CampamentoInterceptor(Campamento):
         )
 
         self.sprite = sprite
-
 
     def dibujar(
         self,
