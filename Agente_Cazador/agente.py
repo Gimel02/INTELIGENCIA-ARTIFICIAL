@@ -85,6 +85,31 @@ class AgenteCazador:
         # Si detectó al otro cazador y por qué medio
         self.rival_detectado = False
         self.rival_detectado_por = None
+        # ==========================================
+        # ESTADO DE HERIDA
+        #
+        # Un cazador derrotado por el otro NO muere.
+        # Regresa lentamente a su propia cabaña,
+        # descansa y después vuelve a la cacería.
+        # ==========================================
+
+        self.herido = False
+        self.recuperandose = False
+        self.tiempo_recuperacion_restante = 0.0
+
+        # ==========================================
+        # REFUGIO ANTE ATAQUE DEL JAGUAR
+        # ==========================================
+
+        self.refugiandose_jaguar = False
+
+        self.en_refugio_jaguar = False
+
+        self.tiempo_refugio_restante = 0.0
+
+        # Estado de emergencia separado del
+        # control difuso.
+        self.modo_emergencia = None
 
         self.posicion = (
             self.campamento
@@ -283,6 +308,354 @@ class AgenteCazador:
 
         return self.posicion[1]
 
+    # ==========================================
+    # SER HERIDO POR EL CAZADOR RIVAL
+    # ==========================================
+
+    def recibir_herida_rival(
+        self,
+        duracion_recuperacion=5.0
+    ):
+
+        self.herido = True
+
+        self.recuperandose = False
+
+        self.tiempo_recuperacion_restante = (
+            duracion_recuperacion
+        )
+
+
+        # Cancelar competencia
+
+        self.estado_competitivo = "normal"
+
+        self.rival_detectado = False
+
+        self.rival_detectado_por = None
+
+
+        # Mientras está herido, la última decisión
+        # difusa deja de controlar su conducta.
+
+        self.modo_difuso_actual = None
+
+        self.decision_difusa = None
+
+
+        # Cancelar cualquier objetivo anterior.
+
+        self.ruta_planeada = []
+
+        self.meta_actual = self.campamento
+
+        self.memoria.objetivo_busqueda = None
+
+
+        self.estado = (
+            "HERIDO: regresando a la cabaña"
+        )
+
+
+    # ==========================================
+    # RECUPERACIÓN COMPLETA
+    # ==========================================
+
+    def recuperarse_de_herida(self):
+
+        self.herido = False
+
+        self.recuperandose = False
+
+        self.tiempo_recuperacion_restante = 0.0
+
+
+        # Recuperación completa
+
+        self.energia = self.energia_max
+
+        self.vidas = self.vidas_max
+
+
+        # Limpiar problemas anteriores
+
+        self.ruta_planeada = []
+
+        self.meta_actual = None
+
+        self.problema_actual = None
+
+        self.fallo_decision = None
+
+        self.turnos_sin_moverse = 0
+
+        self.fallos_seguidos = 0
+
+
+        self.estado = (
+            "RECUPERADO: listo para volver a cazar"
+        )
+
+    # ==========================================
+    # ACTIVAR REFUGIO POR ATAQUE DEL JAGUAR
+    # ==========================================
+
+    def activar_refugio_por_jaguar(self):
+
+        # Si ya está herido, ya tiene prioridad
+        # absoluta de regresar a casa.
+
+        if self.herido:
+
+            return
+
+
+        if (
+            self.refugiandose_jaguar
+            or
+            self.en_refugio_jaguar
+        ):
+
+            return
+
+
+        self.refugiandose_jaguar = True
+
+        self.modo_emergencia = "huir_refugio"
+
+
+        # Cancelar competencia con el otro cazador.
+
+        self.estado_competitivo = "normal"
+
+        self.rival_detectado = False
+
+        self.rival_detectado_por = None
+
+
+        # Cancelar metas anteriores.
+
+        self.ruta_planeada = []
+
+        self.meta_actual = self.campamento
+
+        self.memoria.objetivo_busqueda = None
+
+
+        self.estado = (
+            "¡JAGUAR ATACANDO! "
+            "Huyendo hacia su refugio"
+        )
+
+
+        print(
+            f"[REFUGIO] {self.nombre} detectó "
+            "al Jaguar ATACANDO | "
+            "Prioridad máxima: volver a su cabaña"
+        )
+
+    # ==========================================
+    # HUIR A LA CABAÑA
+    #
+    # Usa A* porque es una situación de emergencia.
+    # ==========================================
+
+    def regresar_a_refugio_jaguar(self):
+
+        self.meta_actual = self.campamento
+
+        self.motivo = (
+            "EMERGENCIA: Jaguar atacando, "
+            "regresar al refugio"
+        )
+
+
+        # Ya llegó lógicamente a la cabaña.
+        # DIOS esperará la llegada física.
+
+        if self.posicion == self.campamento:
+
+            self.estado = (
+                "Llegando al refugio"
+            )
+
+            return
+
+
+        camino = AEstrella.buscar(
+            self.posicion,
+            self.campamento,
+            self.mundo,
+            self.zonas_prohibidas(),
+            {}
+        )
+
+
+        if not camino:
+
+            self.estado = (
+                "No encuentra ruta hacia su refugio"
+            )
+
+            self.fallo_decision = "sin ruta"
+
+            return
+
+
+        siguiente_posicion = camino[0]
+
+        self.ruta_planeada = camino
+
+
+        movimiento_valido = (
+            self.mundo.mover_cazador(
+                siguiente_posicion,
+                campamento_propio=self.campamento
+            )
+        )
+
+
+        if not movimiento_valido:
+
+            self.estado = (
+                "Ruta al refugio bloqueada"
+            )
+
+            self.fallo_decision = "bloqueado"
+
+            return
+
+
+        self.posicion = siguiente_posicion
+
+        self.ultimas_posiciones.append(
+            self.posicion
+        )
+
+        self.memoria.registrar_paso(
+            siguiente_posicion
+        )
+
+
+        self.fuente_decision = (
+            "A* REFUGIO"
+        )
+
+        self.estado = (
+            "¡JAGUAR ATACANDO! "
+            "Huyendo hacia su refugio"
+        )
+
+    # ==========================================
+    # REGRESAR HERIDO A SU CABAÑA
+    #
+    # Prioridad absoluta.
+    # No usa lógica difusa, intercepción ni AG.
+    # Usa A* para volver directamente a casa.
+    # ==========================================
+
+    def regresar_herido_a_cabana(self):
+
+        self.estado_competitivo = "normal"
+
+        self.meta_actual = self.campamento
+
+        self.motivo = (
+            "HERIDO: prioridad máxima, "
+            "regresar a la cabaña"
+        )
+
+
+        # Ya llegó lógicamente a casa.
+        # DIOS esperará a que el cuerpo termine
+        # de llegar visualmente y comenzará
+        # la recuperación.
+
+        if self.posicion == self.campamento:
+
+            self.estado = (
+                "HERIDO: esperando recuperación"
+            )
+
+            return
+
+
+        camino = AEstrella.buscar(
+            self.posicion,
+            self.campamento,
+            self.mundo,
+            self.zonas_prohibidas(),
+            {}
+        )
+
+
+        if not camino:
+
+            self.estado = (
+                "HERIDO: no encuentra ruta "
+                "hacia la cabaña"
+            )
+
+            self.fallo_decision = "sin ruta"
+
+            return
+
+
+        self.ruta_planeada = camino
+
+        siguiente_posicion = camino[0]
+
+
+        if not self.mundo.es_transitable(
+            siguiente_posicion
+        ):
+
+            self.estado = (
+                "HERIDO: camino bloqueado"
+            )
+
+            self.fallo_decision = "bloqueado"
+
+            return
+
+
+        movimiento_valido = (
+            self.mundo.mover_cazador(
+            siguiente_posicion,
+            campamento_propio=self.campamento
+        )
+        )
+
+
+        if not movimiento_valido:
+
+            self.estado = (
+                "HERIDO: no pudo avanzar"
+            )
+
+            self.fallo_decision = "bloqueado"
+
+            return
+
+
+        self.posicion = siguiente_posicion
+
+        self.ultimas_posiciones.append(
+            self.posicion
+        )
+
+        self.memoria.registrar_paso(
+            siguiente_posicion
+        )
+
+
+        self.fuente_decision = (
+            "A* emergencia"
+        )
+
+        self.estado = (
+            "HERIDO: regresando a la cabaña"
+        )
 
     # ==========================================
     # LIMPIAR INFORMACIÓN DEL JAGUAR
@@ -1320,6 +1693,13 @@ class AgenteCazador:
         if rival.vidas <= 0:
 
             return False
+        if getattr(
+            rival,
+            "herido",
+            False
+        ):
+
+            return False
 
         if not self.mundo.jaguar_vivo:
 
@@ -1945,13 +2325,56 @@ class AgenteCazador:
 
     def zonas_prohibidas(self):
 
-        zonas = set(self.memoria.bayas_malas)
+        zonas = set(
+            self.memoria.bayas_malas
+        )
 
-        cueva = getattr(self.mundo, "cueva", None)
+
+        # ==========================================
+        # CUEVA DEL JAGUAR
+        #
+        # Ningún cazador puede entrar.
+        # ==========================================
+
+        cueva = getattr(
+            self.mundo,
+            "cueva",
+            None
+        )
 
         if cueva is not None:
 
-            zonas.add(cueva)
+            zonas.add(
+                cueva
+            )
+
+
+        # ==========================================
+        # CABAÑAS DE OTROS CAZADORES
+        #
+        # Cada cazador puede entrar únicamente
+        # a SU propia cabaña.
+        # ==========================================
+
+        campamentos = getattr(
+            self.mundo,
+            "campamentos",
+            []
+        )
+
+
+        for campamento in campamentos:
+
+            if (
+                campamento
+                !=
+                self.campamento
+            ):
+
+                zonas.add(
+                    campamento
+                )
+
 
         return zonas
 
@@ -2457,6 +2880,22 @@ class AgenteCazador:
             )
 
             return
+        # ==========================================
+        # 0.1 HERIDO POR EL OTRO CAZADOR
+        #
+        # Esta conducta tiene prioridad sobre:
+        # - lógica difusa
+        # - intercepción
+        # - exploración
+        # - ataque
+        # - algoritmo genético
+        # ==========================================
+
+        if self.herido:
+
+            self.regresar_herido_a_cabana()
+
+            return
 
 
         # ==========================================
@@ -2523,6 +2962,44 @@ class AgenteCazador:
             or
             jaguar_olido
         )
+        # ==========================================
+        # EMERGENCIA: JAGUAR EN MODO ATAQUE
+        #
+        # Importante:
+        # no sabe mágicamente que el Jaguar ataca.
+        # Tiene que PERCIBIRLO primero.
+        # ==========================================
+
+        ataque_jaguar_detectado = (
+            jaguar_percibido
+            and
+            getattr(
+                self.mundo,
+                "jaguar_atacando",
+                False
+            )
+        )
+
+
+        if (
+            ataque_jaguar_detectado
+            and
+            not self.herido
+        ):
+
+            self.activar_refugio_por_jaguar()
+
+        # ==========================================
+        # PRIORIDAD ABSOLUTA DE REFUGIO
+        #
+        # Esto sucede ANTES del control difuso.
+        # ==========================================
+
+        if self.refugiandose_jaguar:
+
+            self.regresar_a_refugio_jaguar()
+
+            return
 
 
         # ==========================================
@@ -3494,8 +3971,9 @@ class AgenteCazador:
 
         movimiento_valido = (
             self.mundo.mover_cazador(
-                siguiente_posicion
-            )
+            siguiente_posicion,
+            campamento_propio=self.campamento
+        )
         )
 
 

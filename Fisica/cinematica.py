@@ -114,6 +114,11 @@ class CuerpoFisico:
         # de volver a decidir (segundos)
 
         self.espera = 0.0
+        # Multiplicador físico de velocidad.
+        # 1.0 = velocidad normal
+        # 0.5 = herido
+
+        self.factor_velocidad = 1.0
 
 
     # ==========================================
@@ -161,7 +166,7 @@ class CuerpoFisico:
 
         return max(
             VELOCIDAD_MINIMA,
-            v_max
+            v_max * self.factor_velocidad
         )
 
 
@@ -298,6 +303,15 @@ class CuerpoFisico:
         self.velocidad = max(
             VELOCIDAD_MINIMA,
             self.velocidad
+        )
+        # Respetar la velocidad máxima actual.
+        # Si está herido, será menor.
+
+        self.velocidad = min(
+            self.velocidad,
+            self.velocidad_maxima(
+                tipo_suelo
+            )
         )
 
 

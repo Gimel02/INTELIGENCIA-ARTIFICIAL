@@ -162,6 +162,20 @@ ZONA_LIMPIA_MINIMA = 25
 DANO_EMPATE = 10
 ESPERA_PELEA = 3.0
 
+# ==========================================
+# HERIDAS ENTRE CAZADORES
+# ==========================================
+
+# Tiempo que permanece recuperándose
+# dentro de su propia cabaña.
+
+DURACION_RECUPERACION = 5.0
+
+
+# Camina al 50 % mientras está herido.
+
+FACTOR_VELOCIDAD_HERIDO = 0.50
+
 # Distancia (en casillas, como se ven en
 # pantalla) a la que se tocan para pelear:
 # menos de un cuerpo de distancia
@@ -685,6 +699,78 @@ class Dios:
 
             return
 
+        # ======================================
+        # RECUPERACIÓN DE UN CAZADOR HERIDO
+        #
+        # Solo comienza cuando:
+        # - llegó a SU cabaña
+        # - su cuerpo terminó físicamente
+        #   de llegar a la casilla
+        # ======================================
+
+        if (
+            agente.herido
+            and
+            agente.posicion == agente.campamento
+        ):
+
+            if not agente.recuperandose:
+
+                agente.recuperandose = True
+
+                agente.tiempo_recuperacion_restante = (
+                    DURACION_RECUPERACION
+                )
+
+                cuerpo.velocidad = 0.0
+
+                agente.estado = (
+                    "HERIDO: recuperándose en la cabaña"
+                )
+
+                self.anotar(
+                    f"{agente.nombre} llegó herido "
+                    "a su cabaña y comienza a recuperarse"
+                )
+
+
+            agente.tiempo_recuperacion_restante = max(
+                0.0,
+                agente.tiempo_recuperacion_restante
+                -
+                dt
+            )
+
+
+            agente.estado = (
+                "HERIDO: recuperándose "
+                f"({agente.tiempo_recuperacion_restante:.1f}s)"
+            )
+
+
+            # --------------------------------------
+            # TERMINÓ SU RECUPERACIÓN
+            # --------------------------------------
+
+            if (
+                agente.tiempo_recuperacion_restante
+                <=
+                0
+            ):
+
+                agente.recuperarse_de_herida()
+
+                cuerpo.factor_velocidad = 1.0
+
+                cuerpo.velocidad = 0.0
+
+                self.anotar(
+                    f"{agente.nombre} se recuperó "
+                    "por completo"
+                )
+
+
+            return
 
         # ======================================
         # LLEGADA FÍSICA A LA CASILLA
@@ -699,6 +785,86 @@ class Dios:
             agente.procesar_terreno(
                 agente.posicion
             )
+
+        # ======================================
+        # LLEGÓ AL REFUGIO HUYENDO DEL JAGUAR
+        # ======================================
+
+        if (
+            agente.refugiandose_jaguar
+            and
+            agente.posicion
+            ==
+            agente.campamento
+        ):
+
+            agente.refugiandose_jaguar = False
+
+            agente.en_refugio_jaguar = True
+
+            agente.tiempo_refugio_restante = 5.0
+
+            cuerpo.velocidad = 0.0
+
+            agente.estado = (
+                "REFUGIADO: protegido del Jaguar"
+            )
+
+
+            self.anotar(
+                f"{agente.nombre} logró llegar "
+                "a su refugio"
+            )
+
+
+            # Empieza a contar en el siguiente frame.
+
+            return
+
+        # ======================================
+        # PERMANECER 5 SEGUNDOS EN EL REFUGIO
+        # ======================================
+
+        if agente.en_refugio_jaguar:
+
+            agente.tiempo_refugio_restante = max(
+                0.0,
+                agente.tiempo_refugio_restante
+                -
+                dt
+            )
+
+
+            agente.estado = (
+                "REFUGIADO DEL JAGUAR "
+                f"({agente.tiempo_refugio_restante:.1f}s)"
+            )
+
+
+            if (
+                agente.tiempo_refugio_restante
+                <=
+                0
+            ):
+
+                agente.en_refugio_jaguar = False
+
+                agente.tiempo_refugio_restante = 0.0
+
+                agente.modo_emergencia = None
+
+                agente.estado = (
+                    "Refugio terminado: "
+                    "vuelve a la cacería"
+                )
+
+
+                self.anotar(
+                    f"{agente.nombre} sale de su refugio"
+                )
+
+
+            return
 
         antes = agente.posicion
 
@@ -791,6 +957,56 @@ class Dios:
             self.jaguar.procesar_terreno_jaguar(
                 self.mundo.posicion_jaguar
             )
+        # ======================================
+        # ¿EL JAGUAR DETECTÓ A UNA PRESA
+        # PROTEGIDA EN SU REFUGIO?
+        # ======================================
+
+        for _, agente, _ in self.cazadores():
+
+            if (
+                agente.vidas <= 0
+                or
+                not getattr(
+                    agente,
+                    "en_refugio_jaguar",
+                    False
+                )
+            ):
+
+                continue
+
+
+            distancia_refugio = (
+                self.jaguar.distancia_ortogonal(
+                    self.mundo.posicion_jaguar,
+                    agente.campamento
+                )
+            )
+
+
+            if (
+                distancia_refugio
+                <=
+                self.jaguar.rango_deteccion
+            ):
+
+                if (
+                    not
+                    self.jaguar
+                    .prioridad_ratones_refugio
+                ):
+
+                    self.anotar(
+                        f"El Jaguar detectó que "
+                        f"{agente.nombre} logró "
+                        "refugiarse: ahora prioriza ratones"
+                    )
+
+
+                self.jaguar.prioridad_ratones_refugio = True
+
+                break 
 
         posicion_cazador, energia_cazador = (
             self.cazador_mas_cercano()
@@ -1003,14 +1219,66 @@ class Dios:
 
         if (
             not self.interceptor_activo()
-            or self.cazador.vidas <= 0
-            or self.espera_pelea > 0
+            or
+            self.cazador.vidas <= 0
+            or
+            self.espera_pelea > 0
+            or
+            getattr(
+                self.cazador,
+                "herido",
+                False
+            )
+            or
+            getattr(
+                self.interceptor,
+                "herido",
+                False
+            )
         ):
 
             return
 
         a = self.cazador
         b = self.interceptor
+
+        # ======================================
+        # SOLO HAY PELEA SI EXISTE COMPETENCIA
+        #
+        # Si ambos simplemente están explorando,
+        # persiguiendo, etc. y se cruzan por
+        # casualidad, no pelean.
+        #
+        # Basta con que UNO tenga activa la
+        # conducta INTERCEPTAR.
+        # ======================================
+
+        a_interceptando = (
+            getattr(
+                a,
+                "estado_competitivo",
+                "normal"
+            )
+            == "interceptar"
+        )
+
+        b_interceptando = (
+            getattr(
+                b,
+                "estado_competitivo",
+                "normal"
+            )
+            == "interceptar"
+        )
+
+
+        if (
+            not a_interceptando
+            and
+            not b_interceptando
+        ):
+
+            return
 
         nombre_a = getattr(
             a,
@@ -1086,20 +1354,80 @@ class Dios:
 
                 ganador, perdedor = ("interceptor", b), ("cazador", a)
 
-            # El que pierde muere y sale del juego
-            self.eliminar_cazador(
-                perdedor[1],
-                f"¡Derrotado por el {ganador[0]}! Fuera del juego"
+            # ======================================
+            # EL PERDEDOR QUEDA HERIDO
+            #
+            # Ya NO muere ni desaparece.
+            # Regresa a su propia cabaña.
+            # ======================================
+
+            agente_perdedor = perdedor[1]
+
+
+            if agente_perdedor is self.cazador:
+
+                cuerpo_perdedor = (
+                    self.cuerpo_cazador
+                )
+
+            else:
+
+                cuerpo_perdedor = (
+                    self.cuerpo_interceptor
+                )
+
+
+            agente_perdedor.recibir_herida_rival(
+                DURACION_RECUPERACION
             )
+
+
+            # Reducir físicamente su velocidad
+
+            cuerpo_perdedor.factor_velocidad = (
+                FACTOR_VELOCIDAD_HERIDO
+            )
+
+
+            # Si llevaba mucha velocidad al pelear,
+            # limitarla inmediatamente.
+
+            cuerpo_perdedor.velocidad = min(
+                cuerpo_perdedor.velocidad,
+                cuerpo_perdedor.velocidad_maxima(
+                    self.mundo.grid[
+                        cuerpo_perdedor.destino
+                    ]
+                )
+            )
+
 
             ganador[1].puntos += 10
 
-            texto = f"¡PELEA! Gana {ganador[0]}"
+            nombre_ganador = getattr(
+                ganador[1],
+                "nombre",
+                ganador[0]
+            )
 
+            nombre_perdedor = getattr(
+                perdedor[1],
+                "nombre",
+                perdedor[0]
+            )
+
+
+            texto = (
+                f"¡PELEA! Gana {nombre_ganador} | "
+                f"{nombre_perdedor} HERIDO"
+            )
             self.anotar(
-                f"El {ganador[0]} le ganó la pelea al {perdedor[0]} "
+                f"{nombre_ganador} le ganó la pelea a "
+                f"{nombre_perdedor} "
                 f"(energía {ganador[1].energia} contra "
-                f"{perdedor[1].energia}): el {perdedor[0]} muere"
+                f"{perdedor[1].energia}): "
+                f"{nombre_perdedor} queda HERIDO "
+                "y regresa a su cabaña"
             )
             nombre_ganador = getattr(
                 ganador[1],
@@ -1115,7 +1443,8 @@ class Dios:
 
             print(
                 f"[PELEA] GANA {nombre_ganador} | "
-                f"{nombre_perdedor} queda fuera"
+                f"{nombre_perdedor} queda HERIDO | "
+                "Regresando a su cabaña"
             )
 
         # Para que se vea en el mapa, a la mitad

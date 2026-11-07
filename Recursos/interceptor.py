@@ -87,13 +87,13 @@ class Interceptor(Cazador):
         )
 
         # Aro azul para distinguir al interceptor
-        pygame.draw.circle(
-            pantalla,
-            COLOR_INTERCEPTOR,
-            centro,
-            self.tamano_celda // 2 - 2,
-            3
-        )
+       # pygame.draw.circle(
+       ##     pantalla,
+        #    COLOR_INTERCEPTOR,
+        #    centro,
+        #    self.tamano_celda // 2 - 2,
+        #    3
+       # )
 
         # Dibujar con sus propios sprites
         super().dibujar(

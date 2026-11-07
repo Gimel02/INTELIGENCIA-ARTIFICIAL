@@ -77,6 +77,14 @@ class AgenteJaguar:
         self.atacando = False
         self.retirada = 0
         self.decisiones_retirada = 6
+        # ==========================================
+        # PRIORIDAD DE ALIMENTO
+        #
+        # Se activa cuando una presa logra refugiarse
+        # mientras el Jaguar la estaba atacando.
+        # ==========================================
+
+        self.prioridad_ratones_refugio = False
 
         # =========================================
         # REGRESO A LA CUEVA
@@ -179,17 +187,46 @@ class AgenteJaguar:
 
         permitidos = []
 
+
+        # Las cabañas son territorio exclusivo
+        # de los cazadores.
+
+        cabanas_prohibidas = set(
+            getattr(
+                self.mundo,
+                "campamentos",
+                []
+            )
+        )
+
+
         for vecino in vecinos_validos:
 
             if vecino not in candidatos:
+
                 continue
+
 
             if self.distancia_ortogonal(
-                posicion, vecino
+                posicion,
+                vecino
             ) != 1:
+
                 continue
 
-            permitidos.append(vecino)
+
+            # ======================================
+            # NO ENTRAR A CABAÑAS
+            # ======================================
+
+            if vecino in cabanas_prohibidas:
+
+                continue
+
+
+            permitidos.append(
+                vecino
+            )
 
         return permitidos
 
@@ -480,6 +517,93 @@ class AgenteJaguar:
         print("===============================================")
 
     # ==========================================
+    # BUSCAR RATONES COMO PRIORIDAD
+    # ==========================================
+
+    def buscar_ratones_prioridad(
+        self,
+        ratones_vivos
+    ):
+
+        self.atacando = False
+
+
+        # Ya no quedan ratones disponibles.
+
+        if not ratones_vivos:
+
+            self.prioridad_ratones_refugio = False
+
+            self.estado = (
+                "No quedan ratones"
+            )
+
+            return self.merodear()
+
+
+        # ======================================
+        # SOLO PUEDE DIRIGIRSE DIRECTAMENTE
+        # A RATONES QUE PUEDA OLER
+        # ======================================
+
+        detectados = [
+
+            raton
+
+            for raton in ratones_vivos
+
+            if self.distancia_ortogonal(
+                self.posicion,
+                raton.posicion
+            )
+            <=
+            self.rango_olfato_ratones
+
+        ]
+
+
+        if detectados:
+
+            cercano = min(
+                detectados,
+                key=lambda raton:
+                self.distancia_ortogonal(
+                    self.posicion,
+                    raton.posicion
+                )
+            )
+
+
+            self.estado = (
+                "Presa refugiada: "
+                "prioridad RATONES"
+            )
+
+            self.fuente_movimiento = "A* ratón"
+
+            return self.paso_hacia(
+                cercano.posicion
+            )
+
+
+        # Todavía no huele ninguno:
+        # recorre el mundo buscándolos.
+
+        self.estado = (
+            "Presa refugiada: "
+            "buscando ratones"
+        )
+
+        self.fuente_movimiento = (
+            "búsqueda ratones"
+        )
+
+
+        return self.merodear(
+            cruzar_arena=True
+        )
+
+    # ==========================================
     # TOMAR DECISIÓN SEGÚN SU ESTADO
     # ==========================================
 
@@ -498,6 +622,18 @@ class AgenteJaguar:
                 self.fuente_movimiento = "escape"
                 return self.elegir_escape_inteligente(posicion_cazador)
 
+            # ==========================================
+            # PRESA PROTEGIDA EN SU REFUGIO
+            #
+            # Temporalmente tiene prioridad alimentarse.
+            # ==========================================
+
+            if self.prioridad_ratones_refugio:
+
+                return self.buscar_ratones_prioridad(
+                    ratones_vivos
+                )
+            
             # 1. DECISIÓN DIFUSA: qué hacer
 
             entradas = {
@@ -609,10 +745,23 @@ class AgenteJaguar:
         if meta is None or meta == self.posicion:
             return None
 
+        # Las cabañas pertenecen a los cazadores.
+        # Para el Jaguar funcionan como obstáculos.
+
+        cabanas_prohibidas = set(
+            getattr(
+                self.mundo,
+                "campamentos",
+                []
+            )
+        )
+
+
         camino = AEstrella.buscar(
             self.posicion,
             meta,
-            self.mundo
+            self.mundo,
+            evitar=cabanas_prohibidas
         )
 
         if not camino:
@@ -688,6 +837,10 @@ class AgenteJaguar:
             0,
             self.hambre - self.saciedad_raton
         )
+        # Ya consiguió alimento.
+        # Puede volver a su comportamiento difuso.
+
+        self.prioridad_ratones_refugio = False
 
         self.actualizar_nivel_hambre()
 

@@ -386,14 +386,67 @@ class MundoSelva:
 
     def mover_cazador(
         self,
-        nueva_posicion
+        nueva_posicion,
+        campamento_propio=None
     ):
+
+        # =========================================
+        # TERRENO NORMALMENTE TRANSITABLE
+        # =========================================
 
         if not self.es_transitable(
             nueva_posicion
         ):
 
             return False
+
+
+        # =========================================
+        # CUEVA DEL JAGUAR
+        #
+        # Ningún cazador puede entrar.
+        # =========================================
+
+        if (
+            nueva_posicion
+            ==
+            getattr(
+                self,
+                "cueva",
+                None
+            )
+        ):
+
+            return False
+
+
+        # =========================================
+        # CABAÑAS
+        #
+        # El cazador únicamente puede entrar
+        # a su propia cabaña.
+        # =========================================
+
+        campamentos = getattr(
+            self,
+            "campamentos",
+            []
+        )
+
+
+        for campamento in campamentos:
+
+            if (
+                nueva_posicion
+                ==
+                campamento
+                and
+                campamento
+                !=
+                campamento_propio
+            ):
+
+                return False
 
 
         self.posicion_cazador = (
@@ -414,6 +467,28 @@ class MundoSelva:
 
         if not self.es_transitable(
             nueva_posicion
+        ):
+
+            return False
+
+
+        # =========================================
+        # CABAÑAS DE LOS CAZADORES
+        #
+        # El Jaguar no puede entrar en ninguna.
+        # =========================================
+
+        campamentos = getattr(
+            self,
+            "campamentos",
+            []
+        )
+
+
+        if (
+            nueva_posicion
+            in
+            campamentos
         ):
 
             return False
