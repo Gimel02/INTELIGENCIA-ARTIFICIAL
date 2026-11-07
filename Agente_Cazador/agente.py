@@ -2492,24 +2492,6 @@ class AgenteCazador:
 
 
         # ==========================================
-        # 2. COMPROBAR SI YA ESTÁ
-        # SOBRE EL JAGUAR
-        # ==========================================
-
-        if (
-            self.mundo.jaguar_vivo
-            and
-            self.posicion == posicion_jaguar
-            and
-            self.modo_difuso_actual == "atacar"
-        ):
-
-            self.comprobar_caza_jaguar(
-                posicion_jaguar
-            )
-
-
-        # ==========================================
         # 3. UTILIZAR SENTIDOS
         # ==========================================
 
@@ -3535,34 +3517,6 @@ class AgenteCazador:
             self.memoria.registrar_paso(
                 siguiente_posicion
             )
-
-
-            # ======================================
-            # 15. PROCESAR TERRENO
-            # ======================================
-
-            self.procesar_terreno(
-                siguiente_posicion
-            )
-
-
-            # ======================================
-            # 16. COMPROBAR SI CAZÓ AL JAGUAR
-            # ======================================
-
-            if (
-                self.mundo.jaguar_vivo
-                and
-                self.posicion == posicion_jaguar
-                and
-                modo == "atacar"
-            ):
-
-                self.comprobar_caza_jaguar(
-                    posicion_jaguar
-                )
-
-
             # ======================================
             # 17. VOLVER A PERCIBIR
             #

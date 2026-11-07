@@ -166,6 +166,10 @@ ESPERA_PELEA = 3.0
 # pantalla) a la que se tocan para pelear:
 # menos de un cuerpo de distancia
 DISTANCIA_PELEA = 0.6
+# Distancia visual a la que un cazador y el
+# Jaguar realmente se consideran en contacto.
+
+DISTANCIA_ENCUENTRO_JAGUAR = 0.45
 
 # Segundos que se muestra "¡PELEA!" en el mapa
 DURACION_AVISO_PELEA = 1.5
@@ -663,14 +667,38 @@ class Dios:
 
     def turno_cazador(self, dt, nombre, agente, cuerpo):
 
+        # Saber si venía caminando antes de actualizar
+        # la física.
+
+        estaba_moviendose = (
+            cuerpo.origen != cuerpo.destino
+        )
+
+
         cuerpo.actualizar(
             dt,
             self.mundo.grid[cuerpo.destino]
         )
 
+
         if not cuerpo.en_reposo():
 
             return
+
+
+        # ======================================
+        # LLEGADA FÍSICA A LA CASILLA
+        #
+        # Solo ahora procesa el terreno.
+        # Así una baya desaparece exactamente
+        # cuando el sprite llega encima.
+        # ======================================
+
+        if estaba_moviendose:
+
+            agente.procesar_terreno(
+                agente.posicion
+            )
 
         antes = agente.posicion
 
@@ -737,14 +765,32 @@ class Dios:
 
         cuerpo = self.cuerpo_jaguar
 
+
+        estaba_moviendose = (
+            cuerpo.origen != cuerpo.destino
+        )
+
+
         cuerpo.actualizar(
             dt,
             self.mundo.grid[cuerpo.destino]
         )
 
+
         if not cuerpo.en_reposo():
 
             return
+
+
+        # ======================================
+        # JAGUAR LLEGÓ FÍSICAMENTE
+        # ======================================
+
+        if estaba_moviendose:
+
+            self.jaguar.procesar_terreno_jaguar(
+                self.mundo.posicion_jaguar
+            )
 
         posicion_cazador, energia_cazador = (
             self.cazador_mas_cercano()
@@ -822,9 +868,13 @@ class Dios:
 
         self.pelea_entre_cazadores()
 
-        for nombre, agente, _ in self.cazadores():
+        for nombre, agente, cuerpo in self.cazadores():
 
-            self.encuentro_con_jaguar(nombre, agente)
+            self.encuentro_con_jaguar(
+                nombre,
+                agente,
+                cuerpo
+            )
 
 
     # --------------------------------------
@@ -835,12 +885,62 @@ class Dios:
     #   - si no, el cazador atrapa al jaguar.
     # --------------------------------------
 
-    def encuentro_con_jaguar(self, nombre, agente):
+    def encuentro_con_jaguar(
+        self,
+        nombre,
+        agente,
+        cuerpo
+    ):
 
         if (
             agente.vidas <= 0
-            or not self.mundo.jaguar_vivo
-            or agente.posicion != self.mundo.posicion_jaguar
+            or
+            not self.mundo.jaguar_vivo
+            or
+            cuerpo is None
+            or
+            self.cuerpo_jaguar is None
+        ):
+
+            return
+
+
+        # ======================================
+        # CONTACTO FÍSICO / VISUAL
+        #
+        # No usamos las posiciones lógicas porque
+        # cambian antes de terminar la animación.
+        # ======================================
+
+        visual_cazador = (
+            cuerpo.posicion_visual()
+        )
+
+        visual_jaguar = (
+            self.cuerpo_jaguar
+            .posicion_visual()
+        )
+
+
+        distancia_visual = (
+            (
+                visual_cazador[0]
+                -
+                visual_jaguar[0]
+            ) ** 2
+            +
+            (
+                visual_cazador[1]
+                -
+                visual_jaguar[1]
+            ) ** 2
+        ) ** 0.5
+
+
+        if (
+            distancia_visual
+            >
+            DISTANCIA_ENCUENTRO_JAGUAR
         ):
 
             return

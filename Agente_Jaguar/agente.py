@@ -339,9 +339,6 @@ class AgenteJaguar:
             self.celdas_visitadas.add(destino)
             self.mundo.mover_jaguar(destino)
 
-            # Procesar consumo de bayas en la casilla alcanzada
-            self.procesar_terreno_jaguar(destino)
-
         self.ultima_accion = self.nombre_movimiento(
             posicion_anterior,
             destino
