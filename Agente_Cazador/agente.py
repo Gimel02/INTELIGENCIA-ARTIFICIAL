@@ -1850,9 +1850,26 @@ class AgenteCazador:
         # DECIDIR Y ACTUAR
         # ==========================================
 
+        # Se marcan en decidir_y_actuar si
+        # percibe al jaguar
+        self.red_percibe_jaguar = False
+        self.red_ve_ataque = False
+
         self.decidir_y_actuar(
             posicion_jaguar
         )
+
+
+        # ==========================================
+        # RED NEURONAL (MODO OBSERVADOR)
+        #
+        # Con lo que percibió, su red predice si
+        # el jaguar lo va a atacar y aprende de lo
+        # que pasó en los turnos anteriores. No
+        # cambia lo que el cazador decide.
+        # ==========================================
+
+        self.observar_con_red()
 
 
         # ==========================================
@@ -1940,6 +1957,40 @@ class AgenteCazador:
             )
 
         })
+
+
+    # ==========================================
+    # RED NEURONAL: ¿EL JAGUAR VA A ATACAR?
+    # (la crea DIOS; ver Redes_Neuronales/)
+    # ==========================================
+
+    def observar_con_red(self):
+
+        red = getattr(self, "red_ataque", None)
+
+        if red is None:
+
+            return
+
+        percibe = self.red_percibe_jaguar and self.mundo.jaguar_vivo
+
+        distancia = (
+            AEstrella.heuristica(
+                self.posicion,
+                self.mundo.posicion_jaguar
+            )
+            if percibe
+            else None
+        )
+
+        red.observar(
+            turno=self.turno,
+            percibe=percibe,
+            distancia=distancia,
+            hambre=getattr(self.mundo, "hambre_jaguar", 0),
+            energia=self.energia,
+            atacando=self.red_ve_ataque,
+        )
 
 
     # ==========================================
@@ -2979,6 +3030,11 @@ class AgenteCazador:
                 False
             )
         )
+
+        # Lo que percibió en este turno, para su
+        # red neuronal (no cambia la decisión)
+        self.red_percibe_jaguar = jaguar_percibido
+        self.red_ve_ataque = ataque_jaguar_detectado
 
 
         if (

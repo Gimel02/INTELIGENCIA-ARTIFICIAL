@@ -629,6 +629,17 @@ class Interfaz:
 
                         self.agente_interceptor.imprimir_conciencia()
 
+                    for nombre_red, agente_red in (
+                        ("Rodrigo", self.agente),
+                        ("Gonzalo", self.agente_interceptor),
+                    ):
+
+                        red = getattr(agente_red, "red_ataque", None)
+
+                        if red is not None:
+
+                            red.imprimir(nombre_red)
+
                     print("\n=== BITÁCORA DE DIOS ===")
 
                     for registro in self.dios.bitacora:
@@ -644,6 +655,20 @@ class Interfaz:
 
                     self.dios.con_interceptor = (
                         not self.dios.con_interceptor
+                    )
+
+                    self.reiniciar_simulacion(
+                        self.escenario_actual
+                    )
+
+
+                # N = encender / apagar la red neuronal
+                # de los cazadores (empieza otra
+                # partida; lo aprendido se conserva)
+                elif evento.key == pygame.K_n:
+
+                    self.dios.con_red_neuronal = (
+                        not self.dios.con_red_neuronal
                     )
 
                     self.reiniciar_simulacion(
@@ -1053,6 +1078,25 @@ class Interfaz:
     # TEXTO DE LA REGLA MÁS FUERTE Y DEL
     # CENTROIDE (para el panel)
     # =========================================
+
+    # =========================================
+    # LÍNEA DE LA RED NEURONAL DE UN CAZADOR
+    # =========================================
+
+    def texto_red(self, agente):
+
+        red = getattr(agente, "red_ataque", None)
+
+        if red is None:
+
+            return "Red neuronal: apagada (N)", (160, 160, 160)
+
+        if red.ultima_prediccion == 1:
+
+            return red.texto_panel(), self.C_NEON_ROJO
+
+        return red.texto_panel(), (200, 170, 255)
+
 
     def texto_regla_y_centroide(self, agente):
 
@@ -1592,15 +1636,15 @@ class Interfaz:
         )
 
 
+        # Red neuronal: ¿el jaguar va a atacar?
+        texto_red, color_red = self.texto_red(self.agente)
+
         dibujar_linea(
-            (
-                f"Memoria: {len(memoria.celdas_revisadas)} "
-                f"| Pasos: {memoria.pasos} "
-                f"| Rep: {memoria.pasos_repetidos}"
-            ),
+            texto_red,
             x_rodrigo + 15,
             125,
-            ancho_rodrigo - 30
+            ancho_rodrigo - 30,
+            color_red
         )
 
 
@@ -1613,7 +1657,8 @@ class Interfaz:
         dibujar_linea(
             (
                 f"Vidas: {self.agente.vidas}/{vidas_max} "
-                f"| Puntos: {self.agente.puntos}"
+                f"| Puntos: {self.agente.puntos} "
+                f"| Mem: {len(memoria.celdas_revisadas)}"
             ),
             x_rodrigo + 15,
             147,
@@ -1975,15 +2020,15 @@ class Interfaz:
                 ancho_gonzalo - 30
             )
 
+            # Red neuronal: ¿el jaguar va a atacar?
+            texto_red_g, color_red_g = self.texto_red(gonzalo)
+
             dibujar_linea(
-                (
-                    f"Memoria: {len(memoria_gonzalo.celdas_revisadas)} "
-                    f"| Pasos: {memoria_gonzalo.pasos} "
-                    f"| Rep: {memoria_gonzalo.pasos_repetidos}"
-                ),
+                texto_red_g,
                 x_gonzalo + 15,
                 125,
-                ancho_gonzalo - 30
+                ancho_gonzalo - 30,
+                color_red_g
             )
 
             vidas_max_gonzalo = getattr(
@@ -1995,7 +2040,8 @@ class Interfaz:
             dibujar_linea(
                 (
                     f"Vidas: {gonzalo.vidas}/{vidas_max_gonzalo} "
-                    f"| Puntos: {gonzalo.puntos}"
+                    f"| Puntos: {gonzalo.puntos} "
+                    f"| Mem: {len(memoria_gonzalo.celdas_revisadas)}"
                 ),
                 x_gonzalo + 15,
                 147,

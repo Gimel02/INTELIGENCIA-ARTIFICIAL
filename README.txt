@@ -451,22 +451,29 @@ energía y el regreso a la cabaña. Tampoco pisa la cueva.
  un pasillo) y dentro de una zona limpia grande (25 casillas o más unidas sin bayas ni arena),
  para que una baya mala nunca le tape la salida. No usa el azar, así que el mapa es el mismo
  con o sin interceptor. El jaguar tampoco merodea sobre ninguna de las cabañas.
-La única diferencia: los dos COMPITEN por atrapar primero al jaguar y se ATACAN entre ellos.
--Pelea a muerte (regla de DIOS): si los dos cazadores se TOCAN (están en la misma casilla o se
- cruzan en el camino, según donde se ven en pantalla), pelean. Si solo pasan cerca (una casilla
- al lado o en diagonal), no pelean. GANA EL QUE TENGA MÁS ENERGÍA: sigue en
- el juego y suma 10 puntos. EL QUE PIERDE MUERE y sale del juego (ya no se dibuja). Si tienen
- la misma energía, empatan: los dos pierden 10 de energía, siguen vivos y no pueden volver a
- pelear durante 3 segundos. En el mapa aparece un estallido con "¡PELEA! Gana ...". En las
- cabañas y junto a ellas no se pelea (son zona segura).
+Los dos se llaman RODRIGO (cazador 1) y GONZALO (cazador 2, el azul). La única diferencia con
+un solo cazador: los dos COMPITEN por atrapar primero al jaguar y se ATACAN entre ellos.
+-Conducta INTERCEPTAR (cualquiera de los dos puede activarla): primero decide su lógica difusa;
+ después, si detecta que su rival está PERSIGUIENDO o ATACANDO al jaguar (lo ve, o lo oye a 2
+ casillas), deja un momento al jaguar y va directo hacia el rival para frenarlo. Huir y
+ recargar tienen prioridad, porque son decisiones de supervivencia.
+-Pelea (regla de DIOS): solo hay pelea si uno de los dos está interceptando y se TOCAN (a menos
+ de 0.6 casillas en pantalla, también al cruzarse). Si solo se cruzan por casualidad, no
+ pelean. GANA EL QUE TENGA MÁS ENERGÍA: sigue jugando y suma 10 puntos. EL QUE PIERDE NO
+ MUERE: queda HERIDO, regresa a su cabaña caminando a la mitad de velocidad, se recupera 5
+ segundos y vuelve con la energía llena. Si tienen la misma energía, empatan: los dos pierden
+ 10, nadie queda herido y no pueden volver a pelear durante 3 segundos. En el mapa aparece un
+ estallido con "¡PELEA! Gana ...". En las cabañas y junto a ellas no se pelea (zona segura).
 -Carrera: el primero que atrapa al jaguar gana y el panel lo muestra (GANA CAZADOR o GANA
  INTERCEPTOR). La partida NO se termina: cada uno regresa a su cabaña, como antes.
--El jaguar reacciona al cazador que tenga más cerca. Si un cazador pierde su vida, sale del
- juego; si ya no queda ninguno, el jaguar regresa a su cueva y termina la partida.
--Tecla I: lo enciende o lo apaga (empieza otra partida). Sin interceptor el juego es como antes.
--En 60 mapas (semillas 1000-1059): el cazador atrapó primero al jaguar en 24, el interceptor en
- 25 y el jaguar ganó en 11. Hubo 19 peleas a muerte (murió el interceptor en 9 y el cazador en
- 10).
+-El jaguar reacciona al cazador que tenga más cerca. Si el jaguar le quita la vida a un
+ cazador, ese sale del juego; si ya no queda ninguno, el jaguar regresa a su cueva y termina
+ la partida.
+-Tecla I: enciende o apaga al segundo cazador (empieza otra partida). Sin él el juego es como
+ antes.
+-En 60 mapas (semillas 1000-1059): Rodrigo atrapó primero al jaguar en 29, Gonzalo en 19, el
+ jaguar ganó en 10 y en 2 nadie lo atrapó. En las peleas quedó herido Rodrigo 12 veces y
+ Gonzalo 8, y hubo 1 empate.
 
 En cada turno, el controlador difuso decide QUÉ hace el agente. Después, el AG del movimiento
 (o A*) decide CÓMO llega el cazador a su meta. El jaguar se mueve con A*, escape o merodeo.
@@ -508,7 +515,7 @@ Archivos (carpeta Logica_Difusa/):
 Otros archivos:
 -Mundo/escenarios.py: escenarios de demostración (teclas 1 y 2).
 -Recursos/interceptor.py: sus dibujos (el cazador y la cabaña en azul).
--pruebas/test_logica_difusa.py: 29 pruebas automáticas de la lógica difusa.
+-pruebas/test_logica_difusa.py: 30 pruebas automáticas de la lógica difusa.
 -Reporte/REPORTE_PROYECTO.md: el reporte completo del proyecto.
 
 Teclas en la ventana:
@@ -517,7 +524,9 @@ Teclas en la ventana:
    1        escenario "Demo caza": explorar -> perseguir -> atacar -> cazar -> regresar
    2        escenario "Demo peligro": jaguar hambriento y cerca, el cazador huye o recarga
    I        encender o apagar al interceptor (Agente 3, cazador rival)
-   B        autoconciencia del cazador, del jaguar y del interceptor, y bitácora de DIOS
+   N        encender o apagar la red neuronal de los cazadores
+   B        autoconciencia del cazador, del jaguar y del interceptor, su red neuronal y la
+            bitácora de DIOS
    Esc      salir
 
 El panel muestra, para cada agente, la decisión difusa con su regla más fuerte y su centroide
@@ -527,7 +536,63 @@ El panel muestra, para cada agente, la decisión difusa con su regla más fuerte
 Comandos:
    python3 -m unittest discover pruebas -v     (pruebas automáticas)
    python3 -m Logica_Difusa.graficas           (volver a dibujar las gráficas)
+   python3 -m Redes_Neuronales.entrenar_red    (entrenamiento offline de la red, ~2 minutos)
+   python3 -m Redes_Neuronales.graficas        (gráficas de la red neuronal)
 
 Para entender todo con más detalle (variables, reglas, ejemplo con números, centroide,
 algoritmo genético de movimiento, A*, física, autoconciencia y resultados), ver
 Reporte/REPORTE_PROYECTO.md.
+
+
+Redes neuronales: ¿el jaguar me va a atacar?
+
+Cada cazador (Rodrigo y Gonzalo) tiene su propia RED NEURONAL, programada a mano en la carpeta
+Redes_Neuronales/ (sin librerías). Con lo que percibe del jaguar, calcula el RIESGO de que el
+jaguar lo ataque en los próximos 3 turnos. Está en MODO OBSERVADOR: predice y aprende, pero NO
+cambia las decisiones del cazador (se comprobó que las partidas salen idénticas con y sin red).
+
+La neurona y sus 3 secciones:
+   ENTRADA            x1 cercanía  = 1 - distancia / 10
+                      x2 hambre    = hambre del jaguar / 100
+                      x3 se acerca = 1 si está más cerca que la vez anterior
+                      x4 debilidad = 1 - energía del cazador / 100
+   PROCESAMIENTO      regla de propagación: net = Σ wi · xi - θ
+                      función de activación: identidad (el estado de activación es el net)
+   SALIDA             función de transferencia SIGMOIDAL -> riesgo entre 0 y 1;
+                      después un ESCALÓN decide sí o no: riesgo >= 0.6 -> "ATACA"
+-Los PESOS wi son la SINAPSIS: ahí se guarda lo que la red sabe. El umbral θ se maneja como una
+ "neurona ficticia" con entrada 1 y peso -θ.
+-Estructura: 2 niveles (entrada y salida), 4 neuronas de entrada + 1 de salida, conexiones hacia
+ adelante (feed-forward).
+-Funciones de transferencia programadas: escalón, lineal, lineal-mixta, sigmoidal y gaussiana.
+
+Aprendizaje: supervisado, por corrección de error, con la regla delta de Widrow-Hoff:
+   Δwi = α · xi · (d - y)        (d = respuesta correcta, y = la que dio la red)
+-Con salida escalón, esta misma fórmula es la regla del perceptrón (aprende OR y AND del PDF en
+ 4 y 6 épocas). Para el jaguar se usa la salida sigmoidal (regla delta), porque los ataques no
+ se pueden separar con una línea y el perceptrón nunca se estabilizaba.
+-El supervisor es lo que pasa después: si en los siguientes 3 turnos el cazador ve al jaguar
+ atacándolo, la respuesta correcta era 1; si no, era 0.
+-OFFLINE (Redes_Neuronales/entrenar_red.py): 150 partidas sin ventana dan 4017 ejemplos (128
+ ataques). Como los ataques son pocos (3 %), se repiten hasta igualar a los "no ataca"
+ (preprocesamiento). Se entrena 30 épocas con α = 0.05 y los pesos se guardan en
+ Redes_Neuronales/pesos/predictor_ataque.json.
+-ONLINE: en el juego sigue aprendiendo con α = 0.01, y lo aprendido se conserva entre partidas.
+-Resultado en 60 mapas nuevos (1400 ejemplos): anticipa 33 de 72 ataques, con 200 falsas
+ alarmas de 1328 (83 % de aciertos). Sin entrenar anticipaba 0. No puede anticipar todos porque
+ el jaguar también decide por cosas que el cazador no ve (por ejemplo, si el otro cazador está
+ más cerca).
+-Lo que aprendió: la debilidad del cazador es lo que más sube el riesgo (peso 3.74); la
+ cercanía lo sube un poco (0.26).
+
+En pantalla: el panel de cada cazador muestra "Red: ATACA (riesgo 61%)" (en rojo) o "Red: no
+ataca (riesgo 20%)". La tecla B imprime sus pesos, aciertos y últimas predicciones.
+
+Archivos (carpeta Redes_Neuronales/):
+-funciones_transferencia.py: escalón, lineal, lineal-mixta, sigmoidal, gaussiana.
+-neurona.py: la neurona (propagación, activación, salida y aprendizaje).
+-predictor_ataque.py: la red "¿el jaguar va a atacar?".
+-entrenar_red.py: entrenamiento offline.
+-graficas.py: funciones de transferencia, curva de aprendizaje y pesos (en reporte/).
+-pesos/: los pesos aprendidos (el conocimiento de la red) en JSON.
+-pruebas/test_redes_neuronales.py: 20 pruebas automáticas de la red.

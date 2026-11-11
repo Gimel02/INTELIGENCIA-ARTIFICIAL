@@ -423,7 +423,11 @@ class PruebasInterceptor(unittest.TestCase):
     def test_pelea_entre_cazadores(self):
 
         # Gana el que tiene más energía; el que
-        # pierde muere
+        # pierde queda HERIDO (no muere): camina
+        # a la mitad de velocidad hacia su cabaña
+        # y ahí se recupera
+
+        from Logica_Difusa.dios import FACTOR_VELOCIDAD_HERIDO
 
         dios, _ = self.jugar_con_dios(True, pasos=1)
 
@@ -456,30 +460,95 @@ class PruebasInterceptor(unittest.TestCase):
                 agente.posicion = lejos
                 agente.vidas = 1
                 agente.energia = energia
+                agente.herido = False
+                agente.recuperandose = False
                 cuerpo.origen = cuerpo.destino = lejos
+                cuerpo.factor_velocidad = 1.0
+
+            # Solo pelean si uno va a interceptar
+            # al otro
+            cazador.estado_competitivo = "interceptar"
+            interceptor.estado_competitivo = "normal"
 
             dios.espera_pelea = 0
 
             with contextlib.redirect_stdout(io.StringIO()):
                 dios.pelea_entre_cazadores()
 
-        # El interceptor tiene más energía: gana
+        # El interceptor tiene más energía: gana y
+        # el cazador queda herido, pero vivo
         juntar(60, 90)
 
-        self.assertEqual(cazador.vidas, 0)
-        self.assertEqual(interceptor.vidas, 1)
+        self.assertTrue(cazador.herido)
+        self.assertFalse(interceptor.herido)
+        self.assertEqual((cazador.vidas, interceptor.vidas), (1, 1))
+        self.assertEqual(
+            dios.cuerpo_cazador.factor_velocidad,
+            FACTOR_VELOCIDAD_HERIDO
+        )
 
         # Ahora el cazador tiene más: gana él
         juntar(80, 30)
 
-        self.assertEqual(cazador.vidas, 1)
-        self.assertEqual(interceptor.vidas, 0)
+        self.assertFalse(cazador.herido)
+        self.assertTrue(interceptor.herido)
+        self.assertEqual((cazador.vidas, interceptor.vidas), (1, 1))
 
-        # Empate: nadie muere, los dos pierden 10
+        # Al recuperarse en su cabaña vuelve con
+        # la energía llena
+        interceptor.recuperarse_de_herida()
+
+        self.assertFalse(interceptor.herido)
+        self.assertEqual(interceptor.energia, interceptor.energia_max)
+
+        # Empate: nadie queda herido, los dos
+        # pierden 10
         juntar(50, 50)
 
-        self.assertEqual((cazador.vidas, interceptor.vidas), (1, 1))
+        self.assertFalse(cazador.herido or interceptor.herido)
         self.assertEqual((cazador.energia, interceptor.energia), (40, 40))
+
+    def test_sin_competencia_no_hay_pelea(self):
+
+        # Si ninguno está interceptando al otro y
+        # solo se cruzan, no pelean
+
+        dios, _ = self.jugar_con_dios(True, pasos=1)
+
+        cazador = dios.cazador
+        interceptor = dios.interceptor
+
+        casilla = max(
+            (
+                (fila, columna)
+                for fila in range(dios.mundo.filas)
+                for columna in range(dios.mundo.columnas)
+                if dios.mundo.es_transitable((fila, columna))
+            ),
+            key=lambda c: min(
+                abs(c[0] - cabana[0]) + abs(c[1] - cabana[1])
+                for cabana in dios.mundo.campamentos
+            )
+        )
+
+        for agente, cuerpo in (
+            (cazador, dios.cuerpo_cazador),
+            (interceptor, dios.cuerpo_interceptor),
+        ):
+            agente.posicion = casilla
+            agente.herido = False
+            agente.estado_competitivo = "normal"
+            cuerpo.origen = cuerpo.destino = casilla
+
+        cazador.energia = 30
+        interceptor.energia = 90
+        dios.espera_pelea = 0
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            dios.pelea_entre_cazadores()
+
+        self.assertFalse(cazador.herido)
+        self.assertEqual(cazador.energia, 30)
 
     def test_cada_cazador_tiene_su_cabana(self):
 

@@ -368,24 +368,61 @@ Es un segundo cazador **igual al primero**: otra copia de `AgenteCazador`, con l
 
 Tiene **su propia cabaña** (la azul): ahí empieza, recarga y regresa. DIOS la pone en una casilla de pasto lo más lejos posible de la cabaña del cazador, a 4 casillas o más de la cueva y del jaguar, con al menos 3 casillas de pasto alrededor y dentro de una zona limpia grande (25 casillas o más unidas sin bayas ni arena), para que una baya mala nunca le tape la salida. No usa el azar, así que el mapa es el mismo con o sin interceptor. El jaguar no merodea sobre ninguna de las dos cabañas.
 
-La única diferencia es que los dos **compiten** por atrapar primero al jaguar y **se atacan** entre ellos. Las reglas las aplica DIOS:
+Los dos se llaman **Rodrigo** (cazador 1) y **Gonzalo** (cazador 2, el azul). La única diferencia con un solo cazador es que **compiten** por atrapar primero al jaguar y **se atacan** entre ellos:
 
-- **Pelea a muerte:** si los dos cazadores se tocan (están en la misma casilla o se cruzan en el camino, según donde se ven en pantalla; si solo pasan cerca, no pelean), gana el que tenga **más energía**: sigue en el juego y suma 10 puntos. **El que pierde muere** y sale del juego. Si tienen la misma energía, empatan: los dos pierden 10, siguen vivos y no pueden volver a pelear durante 3 segundos. En el mapa aparece un estallido con "¡PELEA! Gana ...". En las cabañas y junto a ellas no se pelea. Por eso a cada cazador le conviene recargar energía (bayas o su cabaña) antes de toparse con su rival.
+- **Conducta INTERCEPTAR:** cualquiera de los dos puede activarla. Primero decide su lógica difusa; después, si detecta que su rival está persiguiendo o atacando al jaguar (lo ve, o lo oye a 2 casillas), deja un momento al jaguar y va directo hacia el rival para frenarlo. Huir y recargar tienen prioridad, porque son decisiones de supervivencia.
+- **Pelea (regla de DIOS):** solo hay pelea si uno de los dos está interceptando y se tocan (a menos de 0.6 casillas en pantalla, también al cruzarse); si solo se cruzan por casualidad, no pelean. Gana el que tenga **más energía**: sigue jugando y suma 10 puntos. **El que pierde no muere: queda herido**, regresa a su cabaña a la mitad de velocidad, se recupera 5 segundos y vuelve con la energía llena. Si tienen la misma energía, empatan: los dos pierden 10, nadie queda herido y no pueden volver a pelear durante 3 segundos. En el mapa aparece un estallido con "¡PELEA! Gana ...". En las cabañas y junto a ellas no se pelea.
 - **Carrera:** el primero que atrapa al jaguar gana y el panel lo anuncia (GANA CAZADOR o GANA INTERCEPTOR). La partida sigue: cada uno regresa a su cabaña.
-- El jaguar reacciona al cazador que tenga más cerca. Si un cazador pierde su vida, sale del juego; si ya no queda ninguno, el jaguar regresa a su cueva.
-- **Tecla I** lo enciende o lo apaga. Sin interceptor el juego es como antes.
+- El jaguar reacciona al cazador que tenga más cerca. Si el jaguar le quita la vida a un cazador, ese sale del juego; si ya no queda ninguno, el jaguar regresa a su cueva.
+- **Tecla I** enciende o apaga al segundo cazador. Sin él el juego es como antes.
 
 Resultados en 60 mapas (semillas 1000–1059), jugando con DIOS:
 
-| Atrapa primero el cazador | Atrapa primero el interceptor | Gana el jaguar | Peleas a muerte |
-| --- | --- | --- | --- |
-| 24 | 25 | 11 | 19 (murió el interceptor en 9 y el cazador en 10) |
+| Atrapa primero Rodrigo | Atrapa primero Gonzalo | Gana el jaguar | Nadie lo atrapa | Heridos en pelea |
+| --- | --- | --- | --- | --- |
+| 29 | 19 | 10 | 2 | Rodrigo 12, Gonzalo 8 (y 1 empate) |
+
+---
+
+## 13.2 Red neuronal: ¿el jaguar me va a atacar?
+
+Cada cazador tiene su propia red neuronal, programada a mano en `Redes_Neuronales/`, que calcula el **riesgo** de que el jaguar lo ataque en los próximos 3 turnos. En 60 mapas nuevos anticipa 33 de 72 ataques (sin entrenar, 0). Está en **modo observador**: predice y aprende, pero no cambia las decisiones del cazador; las partidas salen idénticas con y sin red.
+
+| Parte de la neurona | En el proyecto |
+| --- | --- |
+| Entrada | x1 cercanía = 1 − distancia/10 · x2 hambre del jaguar/100 · x3 se acerca (0/1) · x4 debilidad = 1 − energía/100 |
+| Pesos (sinapsis) | Uno por entrada; ahí se guarda lo aprendido |
+| Regla de propagación | net = Σ wᵢ·xᵢ − θ (θ como neurona ficticia con entrada 1) |
+| Función de activación | Identidad: el estado de activación es el net |
+| Función de transferencia | Sigmoidal → riesgo de 0 a 1; luego escalón: riesgo ≥ 0.6 → "ATACA" |
+| Estructura | 2 niveles, 4 neuronas de entrada + 1 de salida, conexiones hacia adelante |
+| Aprendizaje | Supervisado, corrección de error, regla delta de Widrow-Hoff: Δwᵢ = α·xᵢ·(d − y) |
+
+- **Perceptrón y regla delta:** la misma fórmula con salida escalón es la regla del perceptrón; las pruebas muestran que aprende OR (ejemplo del PDF) en 4 épocas y AND en 6. Para el jaguar se usa la salida sigmoidal porque los ataques no se separan con una línea y el perceptrón no se estabilizaba.
+- **Supervisor:** lo que pasa después. Si en 3 turnos el cazador ve al jaguar atacándolo, la respuesta correcta era 1; si no, 0.
+- **Offline:** 150 partidas sin ventana dan 4017 ejemplos (128 ataques). Los ataques se repiten hasta igualar a los "no ataca" (preprocesamiento) y se entrena 30 épocas con α = 0.05 (`python3 -m Redes_Neuronales.entrenar_red`).
+- **Online:** en el juego sigue aprendiendo con α = 0.01; lo aprendido se conserva entre partidas.
+- **Lo que aprendió:** la debilidad del cazador es lo que más sube el riesgo (peso 3.74) y la cercanía lo sube un poco (0.26).
+
+| Prueba en 60 mapas nuevos (1400 ejemplos) | Resultado |
+| --- | --- |
+| Ataques anticipados | 33 de 72 |
+| Falsas alarmas | 200 de 1328 |
+| Aciertos | 83 % |
+
+No anticipa todos porque el jaguar también decide por cosas que el cazador no percibe, como si el otro cazador está más cerca.
+
+![Funciones de transferencia](../Redes_Neuronales/reporte/funciones_transferencia.svg)
+
+![Curva de aprendizaje](../Redes_Neuronales/reporte/curva_aprendizaje.svg)
+
+![Pesos aprendidos](../Redes_Neuronales/reporte/pesos.svg)
 
 ---
 
 ## 14. Pruebas automáticas
 
-`pruebas/test_logica_difusa.py` tiene 29 pruebas que comprueban cada parte del sistema difuso. Se corren con:
+`pruebas/test_logica_difusa.py` tiene 30 pruebas que comprueban cada parte del sistema difuso. Se corren con:
 
 ```bash
 python3 -m unittest discover pruebas -v
@@ -400,9 +437,11 @@ python3 -m unittest discover pruebas -v
 | Cazador | reserva muy baja + tranquilo → recargar · reserva alta + jaguar muy cerca → atacar · agresivo + cerca → huir · reserva alta + media distancia → perseguir · reserva media + lejos → explorar |
 | Jaguar | saciado + cerca → huir · voraz + cerca → atacar · hambriento + media → cazar ratón · saciado + lejos → merodear · cazador débil + cerca → atacar |
 | Agentes | La bitácora del jaguar se llena y los escenarios de demostración empiezan como deben |
-| Interceptor (cazador rival) | Es otro `AgenteCazador` con las mismas 23 reglas y su propio controlador, juega con DIOS y nunca pisa la cueva; tiene su propia cabaña; en una pelea gana el de más energía y el otro muere; si empatan, los dos pierden 10 y siguen vivos; en la cabaña no se pelea; sin interceptor no se crea |
+| Segundo cazador (rival) | Es otro `AgenteCazador` con las mismas 23 reglas y su propio controlador, juega con DIOS y nunca pisa la cueva; tiene su propia cabaña; en una pelea gana el de más energía y el otro queda herido (sigue vivo, más lento) y al recuperarse vuelve con la energía llena; si empatan, los dos pierden 10; si nadie está interceptando no hay pelea; en la cabaña no se pelea; sin segundo cazador no se crea |
 
-Resultado: **29 de 29 pruebas pasan.**
+Además, `pruebas/test_redes_neuronales.py` tiene 20 pruebas de la red neuronal: funciones de transferencia, regla de propagación, el perceptrón aprende OR y AND, la regla delta baja el error, el supervisor etiqueta bien, guardar y cargar pesos, y que el juego sea idéntico con y sin red.
+
+Resultado: **50 de 50 pruebas pasan.**
 
 ---
 

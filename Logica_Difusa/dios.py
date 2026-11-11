@@ -37,6 +37,11 @@
 #        - el jaguar llegó a su cueva
 #        - el cazador perdió todas sus vidas
 #   6. Anota lo que pasa en su bitácora.
+#   7. Le da a cada cazador su RED NEURONAL
+#      (Redes_Neuronales/): predice si el
+#      jaguar lo va a atacar y aprende durante
+#      el juego. Está en MODO OBSERVADOR: no
+#      cambia las decisiones.
 #
 # La interfaz solo dibuja: cada cuadro le
 # pide a DIOS que avance (paso) y luego
@@ -223,6 +228,12 @@ class Dios:
 
         # ¿Juega el interceptor? (tecla I)
         self.con_interceptor = True
+
+        # Red neuronal de cada cazador (tecla N).
+        # Se conservan entre partidas, así siguen
+        # aprendiendo cada vez que se reinicia.
+        self.con_red_neuronal = True
+        self.redes = {}
 
         # Partida actual (la crea nueva_partida)
         self.mundo = None
@@ -445,7 +456,13 @@ class Dios:
             self.cuerpo_interceptor = None
             self.cazador.rival = None
 
-       
+
+        # Red neuronal de cada cazador
+        for nombre, agente, _ in self.cazadores():
+
+            agente.red_ataque = self.red_de(nombre)
+
+
         self.terminada = False
         self.resultado = None
         self.ganador = None
@@ -576,6 +593,33 @@ class Dios:
                 tamano[casilla] = len(zona)
 
         return tamano
+
+
+    # --------------------------------------
+    # La red neuronal de un cazador
+    #
+    # La primera vez carga los pesos que dejó
+    # el entrenamiento offline (si existen);
+    # después la conserva entre partidas.
+    # --------------------------------------
+
+    def red_de(self, nombre):
+
+        if not self.con_red_neuronal:
+
+            return None
+
+        from Redes_Neuronales.predictor_ataque import PredictorAtaque
+
+        if nombre not in self.redes:
+
+            self.redes[nombre] = PredictorAtaque.cargar()
+
+        red = self.redes[nombre]
+
+        red.reiniciar_partida()
+
+        return red
 
 
     # ======================================

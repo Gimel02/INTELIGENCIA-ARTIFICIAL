@@ -1,0 +1,78 @@
+{
+  "entradas": [
+    "cercania",
+    "hambre",
+    "se_acerca",
+    "debilidad"
+  ],
+  "corte": 0.6,
+  "neurona": {
+    "transferencia": "sigmoidal",
+    "alfa": 0.05,
+    "pesos": [
+      0.26400694000115676,
+      -0.242303617331531,
+      -0.7309640833578807,
+      3.7356773277070765
+    ],
+    "w0": -1.4358693549950647,
+    "entrenamientos": 231870,
+    "correcciones": 231870
+  },
+  "entrenamiento": {
+    "partidas": 150,
+    "ejemplos": 4017,
+    "ataques": 128,
+    "ejemplos_balanceados": 7729,
+    "epocas": 30,
+    "alfa": 0.05,
+    "error_por_epoca": [
+      0.23184,
+      0.22763,
+      0.22737,
+      0.22713,
+      0.22712,
+      0.22766,
+      0.22663,
+      0.22751,
+      0.22723,
+      0.22716,
+      0.2269,
+      0.22691,
+      0.22741,
+      0.22732,
+      0.22763,
+      0.22721,
+      0.22729,
+      0.22669,
+      0.22725,
+      0.22722,
+      0.22687,
+      0.22771,
+      0.22741,
+      0.2272,
+      0.22737,
+      0.22691,
+      0.22737,
+      0.22673,
+      0.22718,
+      0.22754
+    ]
+  },
+  "prueba": {
+    "ejemplos": 1400,
+    "aciertos": 1161,
+    "ataques_reales": 72,
+    "ataques_anticipados": 33,
+    "no_ataques": 1328,
+    "falsas_alarmas": 200
+  },
+  "prueba_sin_entrenar": {
+    "ejemplos": 1400,
+    "aciertos": 1328,
+    "ataques_reales": 72,
+    "ataques_anticipados": 0,
+    "no_ataques": 1328,
+    "falsas_alarmas": 0
+  }
+}
