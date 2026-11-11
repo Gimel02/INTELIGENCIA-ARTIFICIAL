@@ -70,13 +70,17 @@ CORTE = 0.6
 # Factor de aprendizaje α
 ALFA_OFFLINE = 0.05
 ALFA_ONLINE = 0.01
+# Aprendizaje que utiliza realmente
+# el juego actual.
+
+ALFA_REFUERZO = 0.03
 
 CARPETA_PESOS = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "pesos"
 )
 
-ARCHIVO_PESOS = "predictor_ataque.json"
+ARCHIVO_PESOS = "predictor_refuerzo.json"
 
 
 class PredictorAtaque:
@@ -88,7 +92,7 @@ class PredictorAtaque:
         self.neurona = neurona or Neurona(
             len(NOMBRES_ENTRADAS),
             transferencia="sigmoidal",
-            alfa=ALFA_ONLINE
+            alfa=ALFA_REFUERZO
         )
 
         # Estadísticas de todo lo que ha
@@ -98,6 +102,17 @@ class PredictorAtaque:
         self.ataques_reales = 0
         self.ataques_anticipados = 0
         self.falsas_alarmas = 0
+        # ======================================
+        # ESTADÍSTICAS DE REFUERZO
+        # ======================================
+
+        self.refuerzos_positivos = 0
+
+        self.refuerzos_negativos = 0
+
+        self.recompensa_acumulada = 0
+
+        self.historial_refuerzos = []
 
         # Error de cada entrenamiento online
         self.historial_errores = []
@@ -184,105 +199,272 @@ class PredictorAtaque:
     #   atacando:  ¿lo percibe atacando ahora?
     # ======================================
 
-    def observar(self, turno, percibe, distancia, hambre, energia, atacando):
+    def observar(
+        self,
+        turno,
+        percibe,
+        distancia,
+        hambre,
+        energia,
+        atacando
+    ):
 
-        # ---- Supervisor: revisa predicciones
-        # pasadas y aprende ----
+        # ======================================
+        # CRÍTICO DEL APRENDIZAJE
+        #
+        # No entrega una respuesta correcta.
+        #
+        # Únicamente decide:
+        #
+        #   +1 éxito
+        #   -1 fracaso
+        # ======================================
 
         while self.pendientes:
 
-            turno_pred, x, y = self.pendientes[0]
+            (
+                turno_pred,
+                x,
+                accion,
+                riesgo
+            ) = self.pendientes[0]
+
+
+            # ----------------------------------
+            # EL JAGUAR SÍ ATACÓ
+            # ----------------------------------
 
             if atacando:
 
-                deseada = 1
+                if accion == 1:
 
-            elif turno - turno_pred >= HORIZONTE:
+                    refuerzo = +1
 
-                deseada = 0
+                    motivo = (
+                        "anticipó correctamente "
+                        "el ataque"
+                    )
+
+                else:
+
+                    refuerzo = -1
+
+                    motivo = (
+                        "no anticipó el ataque"
+                    )
+
+
+            # ----------------------------------
+            # PASÓ EL HORIZONTE Y NO ATACÓ
+            # ----------------------------------
+
+            elif (
+                turno - turno_pred
+                >=
+                HORIZONTE
+            ):
+
+                if accion == 0:
+
+                    refuerzo = +1
+
+                    motivo = (
+                        "correctamente continuó "
+                        "sin alarma"
+                    )
+
+                else:
+
+                    refuerzo = -1
+
+                    motivo = (
+                        "falsa alarma de ataque"
+                    )
+
 
             else:
 
                 break
 
+
             self.pendientes.popleft()
 
-            self.evaluar_y_aprender(turno_pred, x, y, deseada)
 
-        # ---- Nueva predicción ----
+            self.aplicar_refuerzo(
+                turno_pred,
+                x,
+                accion,
+                riesgo,
+                refuerzo,
+                motivo
+            )
+
+
+        # ======================================
+        # NUEVA PREDICCIÓN
+        # ======================================
 
         if not percibe or atacando:
 
-            # Sin percibir al jaguar no hay datos;
-            # y si ya ataca, ya no es predecir
-
             self.ultima_prediccion = None
+
             self.ultimo_riesgo = None
+
 
             if not percibe:
 
                 self.distancia_anterior = None
 
+
             return None
 
-        x = self.entradas(distancia, hambre, energia)
+
+        x = self.entradas(
+            distancia,
+            hambre,
+            energia
+        )
+
 
         riesgo = self.riesgo(x)
 
-        y = self.decidir(riesgo)
+        accion = self.decidir(
+            riesgo
+        )
 
-        self.distancia_anterior = distancia
+
+        self.distancia_anterior = (
+            distancia
+        )
 
         self.ultima_entrada = x
+
         self.ultimo_riesgo = riesgo
-        self.ultima_prediccion = y
 
-        self.pendientes.append((turno, x, y))
-
-        return y
+        self.ultima_prediccion = accion
 
 
-    def evaluar_y_aprender(self, turno, x, y, deseada):
+        # La experiencia queda esperando
+        # la opinión del crítico.
+
+        self.pendientes.append(
+            (
+                turno,
+                x,
+                accion,
+                riesgo
+            )
+        )
+
+
+        return accion
+
+    # ======================================
+    # RECIBIR REFUERZO DEL CRÍTICO
+    # ======================================
+
+    def aplicar_refuerzo(
+        self,
+        turno,
+        entradas,
+        accion,
+        riesgo,
+        refuerzo,
+        motivo
+    ):
 
         self.evaluadas += 1
 
-        if y == deseada:
 
+        # ==================================
+        # ÉXITO / FRACASO
+        # ==================================
+
+        if refuerzo > 0:
+
+            self.refuerzos_positivos += 1
+
+            # Conservamos esta variable porque
+            # ya la usa código anterior.
             self.aciertos += 1
-
-        if deseada == 1:
-
-            self.ataques_reales += 1
-
-            if y == 1:
-
-                self.ataques_anticipados += 1
-
-        elif y == 1:
-
-            self.falsas_alarmas += 1
-
-        self.ejemplos.append((x, deseada))
-
-        # Regla delta: Δwi = α · xi · (d − y)
-        if self.aprende:
-
-            error = self.neurona.entrenar(x, deseada)
-
-            self.historial_errores.append(abs(error))
 
         else:
 
-            error = deseada - self.riesgo(x)
+            self.refuerzos_negativos += 1
+
+
+        self.recompensa_acumulada += (
+            refuerzo
+        )
+
+
+        self.historial_refuerzos.append(
+            refuerzo
+        )
+
+
+        # ==================================
+        # APRENDIZAJE ONLINE
+        #
+        # Aquí ya NO existe:
+        #
+        # deseada = 0 / 1
+        #
+        # Solo:
+        #
+        # +1 / -1
+        # ==================================
+
+        if self.aprende:
+
+            ajuste = (
+                self.neurona.reforzar(
+                    entradas,
+                    accion,
+                    refuerzo
+                )
+            )
+
+        else:
+
+            ajuste = 0.0
+
 
         self.bitacora.append({
+
             "turno": turno,
-            "entradas": dict(zip(NOMBRES_ENTRADAS, (round(v, 2) for v in x))),
-            "prediccion": y,
-            "real": deseada,
-            "error": error,
+
+            "entradas": dict(
+                zip(
+                    NOMBRES_ENTRADAS,
+                    (
+                        round(v, 2)
+                        for v in entradas
+                    )
+                )
+            ),
+
+            "accion": accion,
+
+            "riesgo": round(
+                riesgo,
+                4
+            ),
+
+            "refuerzo": refuerzo,
+
+            "motivo": motivo,
+
+            "ajuste": ajuste,
         })
 
+
+        print(
+            f"[RED - REFUERZO] "
+            f"acción={'ATACA' if accion else 'NO ATACA'} | "
+            f"{refuerzo:+d} | "
+            f"{motivo}"
+        )
 
     # ======================================
     # RESUMEN (panel y bitácora)
@@ -327,17 +509,25 @@ class PredictorAtaque:
             f"| corte para decir ATACA: {CORTE}"
         )
         print(
-            f"En el juego: aciertos {self.aciertos}/{self.evaluadas} "
-            f"| ataques anticipados {self.ataques_anticipados}/{self.ataques_reales} "
-            f"| falsas alarmas {self.falsas_alarmas}"
+            f"Aprendizaje por REFUERZO ONLINE | "
+            f"+1: {self.refuerzos_positivos} | "
+            f"-1: {self.refuerzos_negativos} | "
+            f"recompensa acumulada: "
+            f"{self.recompensa_acumulada:+d}"
         )
 
-        for registro in list(self.bitacora)[-ultimas:]:
+        for registro in list(
+            self.bitacora
+        )[-ultimas:]:
 
             print(
-                f"T{registro['turno']:>4} | {registro['entradas']} | "
-                f"predijo {registro['prediccion']} | real {registro['real']} | "
-                f"error {registro['error']:+.2f}"
+                f"T{registro['turno']:>4} | "
+                f"{registro['entradas']} | "
+                f"acción "
+                f"{'ATACA' if registro['accion'] else 'NO ATACA'} | "
+                f"refuerzo "
+                f"{registro['refuerzo']:+d} | "
+                f"{registro['motivo']}"
             )
 
 
@@ -388,6 +578,6 @@ class PredictorAtaque:
         neurona = Neurona.desde_diccionario(datos["neurona"])
 
         # En el juego aprende más despacio
-        neurona.alfa = ALFA_ONLINE
+        neurona.alfa = ALFA_REFUERZO
 
         return cls(neurona)

@@ -168,6 +168,107 @@ class Neurona:
 
         return error
 
+    # ======================================
+    # APRENDIZAJE POR REFUERZO
+    #
+    # El crítico NO indica la salida correcta.
+    # Solo entrega:
+    #
+    #   +1 = éxito
+    #   -1 = fracaso
+    #
+    # La salida sigmoidal representa la
+    # probabilidad de elegir la acción ATACA.
+    # ======================================
+
+    def reforzar(
+        self,
+        entradas,
+        accion,
+        refuerzo
+    ):
+
+        if len(entradas) != self.numero_entradas:
+
+            raise ValueError(
+                f"Se esperaban "
+                f"{self.numero_entradas} entradas"
+            )
+
+
+        if accion not in (0, 1):
+
+            raise ValueError(
+                "La acción debe ser 0 o 1"
+            )
+
+
+        if refuerzo not in (-1, 1):
+
+            raise ValueError(
+                "El refuerzo debe ser +1 o -1"
+            )
+
+
+        # Probabilidad que produjo la red.
+
+        probabilidad = self.salida(
+            entradas
+        )
+
+
+        # ==================================
+        # AJUSTE POR REFUERZO
+        #
+        # Si la acción recibió +1:
+        # aumenta su probabilidad.
+        #
+        # Si recibió -1:
+        # disminuye su probabilidad.
+        #
+        # NO existe una salida deseada d.
+        # ==================================
+
+        direccion = (
+            float(accion)
+            -
+            probabilidad
+        )
+
+
+        ajuste = (
+            self.alfa
+            *
+            refuerzo
+            *
+            direccion
+        )
+
+
+        self.pesos = [
+
+            w + ajuste * x
+
+            for w, x
+            in zip(
+                self.pesos,
+                entradas
+            )
+        ]
+
+
+        # La neurona ficticia x0 = 1
+        # también aprende.
+
+        self.w0 += ajuste
+
+
+        self.entrenamientos += 1
+
+        self.correcciones += 1
+
+
+        return ajuste
 
     # ======================================
     # GUARDAR Y CARGAR LOS PESOS
