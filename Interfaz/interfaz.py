@@ -1178,6 +1178,63 @@ class Interfaz:
             )
 
 
+        def dibujar_nombre_cazador(
+            nombre,
+            subtitulo,
+            x,
+            color_nombre,
+            color_subtitulo,
+            ancho_caja,
+            subtitulo_corto
+        ):
+
+            # Título grande y, a su derecha en la
+            # misma línea, el subtítulo pequeño
+            # (así no se encima con la energía)
+
+            y_titulo = 24
+
+            render = self.fuente_titulo.render(
+                nombre,
+                True,
+                color_nombre
+            )
+
+            self.pantalla.blit(
+                render,
+                (x, y_titulo)
+            )
+
+            x_sub = x + render.get_width() + 10
+
+            # Si no cabe en la caja, la versión
+            # corta ("C1")
+            if (
+                x_sub
+                + self.fuente_pequena.size(subtitulo)[0]
+                > x - 12 + ancho_caja - 10
+            ):
+
+                subtitulo = subtitulo_corto
+
+            sub = self.fuente_pequena.render(
+                subtitulo,
+                True,
+                color_subtitulo
+            )
+
+            self.pantalla.blit(
+                sub,
+                (
+                    x_sub,
+                    y_titulo
+                    + render.get_height()
+                    - sub.get_height()
+                    - 4
+                )
+            )
+
+
         def dibujar_linea(
             texto,
             x,
@@ -1561,26 +1618,16 @@ class Interfaz:
             self.C_MADERA_SOMBRA
         )
 
-        dibujar_titulo(
+        # Nombre y, en la misma línea, a qué
+        # cazador corresponde
+        dibujar_nombre_cazador(
             "RODRIGO",
-            x_rodrigo + 12,
-            24,
-            self.C_ORO_PURO
-        )
-
-        dibujar_linea(
             "CAZADOR 1",
             x_rodrigo + 12,
-            48,
-            ancho_rodrigo - 24,
-            (190, 170, 120)
-        )
-
-        dibujar_titulo(
-            "RODRIGO - C1",
-            x_rodrigo + 12,
-            25,
-            self.C_ORO_PURO
+            self.C_ORO_PURO,
+            (190, 170, 120),
+            ancho_rodrigo,
+            "C1"
         )
 
 
@@ -1940,19 +1987,14 @@ class Interfaz:
             self.C_MADERA_SOMBRA
         )
 
-        dibujar_titulo(
+        dibujar_nombre_cazador(
             "GONZALO",
-            x_gonzalo + 12,
-            25,
-            self.C_NEON_AZUL
-        )
-
-        dibujar_linea(
             "CAZADOR 2",
             x_gonzalo + 12,
-            48,
-            ancho_gonzalo - 24,
-            (120, 170, 255)
+            self.C_NEON_AZUL,
+            (120, 170, 255),
+            ancho_gonzalo,
+            "C2"
         )
 
 

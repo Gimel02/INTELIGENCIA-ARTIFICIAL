@@ -272,8 +272,15 @@ class AEstrella:
 
                 # Baya conocida como mala:
                 # se considera una zona prohibida.
+                # La meta sí se puede alcanzar (por
+                # ejemplo, la cabaña propia cuando
+                # el cazador va a ella).
 
-                if vecino in evitar:
+                if (
+                    vecino in evitar
+                    and
+                    vecino != objetivo
+                ):
 
                     continue
 

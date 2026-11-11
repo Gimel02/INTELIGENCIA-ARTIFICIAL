@@ -139,6 +139,9 @@ DISTANCIA_ATRAPAR_RATON = 0.6
 #     menos 25 casillas unidas sin bayas ni
 #     arena), para que nunca quede encerrado
 #     por una baya mala,
+#   - que NO sea la única entrada de un rincón
+#     (si no, el otro cazador, que no puede
+#     pisarla, quedaría encerrado),
 #   - y con camino a la otra cabaña.
 # No usa el azar, así que el mapa es el mismo
 # con o sin interceptor.
@@ -516,11 +519,49 @@ class Dios:
                 if mundo.grid.get(vecino, 0) == 0
             )
 
+        def es_cuello(casilla):
+
+            # ¿Quitando esta casilla, sus vecinas
+            # transitables quedan separadas? Entonces
+            # es la única entrada de un rincón.
+
+            vecinas = [
+                v
+                for v in mundo.vecinos_validos(casilla)
+                if mundo.es_transitable(v) and v != mundo.cueva
+            ]
+
+            if len(vecinas) < 2:
+
+                return False
+
+            vistos = {vecinas[0], casilla}
+            pendientes = [vecinas[0]]
+
+            while pendientes:
+
+                actual = pendientes.pop()
+
+                for v in mundo.vecinos_validos(actual):
+
+                    if (
+                        v not in vistos
+                        and v != mundo.cueva
+                        and mundo.es_transitable(v)
+                    ):
+
+                        vistos.add(v)
+                        pendientes.append(v)
+
+            return any(v not in vistos for v in vecinas)
+
+
         def buena(casilla, pasto_minimo, zona_minima):
 
             return (
                 mundo.grid.get(casilla, 0) == 0
                 and casilla not in prohibidas
+                and not es_cuello(casilla)
                 and AEstrella.heuristica(casilla, mundo.cueva) >= DISTANCIA_MINIMA_CUEVA
                 and AEstrella.heuristica(casilla, mundo.posicion_jaguar) >= DISTANCIA_MINIMA_CUEVA
                 and pasto_alrededor(casilla) >= pasto_minimo

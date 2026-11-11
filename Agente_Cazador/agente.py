@@ -821,58 +821,80 @@ class AgenteCazador:
         self
     ):
 
-        candidatas = []
-
-
         # ==========================================
-        # BUSCAR CELDAS NO REVISADAS
+        # EXPLORACIÓN POR FRONTERAS
+        #
+        # 1. Con una sola búsqueda calcula cuánto
+        #    le cuesta llegar a cada casilla
+        #    (suelo, bayas malas y casillas que
+        #    ya pisó cuestan más).
+        # 2. A cada candidata le resta cuántas
+        #    casillas nuevas vería desde ahí.
+        # 3. Elige la de menor puntaje: cerca,
+        #    sin repetir camino y que descubra
+        #    mucho terreno.
         # ==========================================
 
-        for posicion, tipo in (
-            self.mundo.grid.items()
-        ):
+        prohibidas = self.zonas_prohibidas()
 
-            # Los árboles no son transitables
+        costos = AEstrella.costos_desde(
 
-            if tipo == 1:
+            self.posicion,
 
-                continue
+            self.mundo,
 
+            prohibidas,
 
-            # No elegir bayas malas que recuerda
+            self.memoria.visitas
 
-            if posicion in (
-                self.zonas_prohibidas()
-            ):
-
-                continue
+        )
 
 
-            # Metas descartadas por un problema
-            # (por ejemplo, no tenían ruta)
+        def buscar_candidatas():
 
-            if posicion in self.metas_descartadas:
+            # Casillas NO revisadas a las que SÍ
+            # puede llegar. Las que están
+            # encerradas (por árboles, bayas malas
+            # o la cueva) no cuentan: si contaran,
+            # el cazador creería que aún le falta
+            # explorar, no podría ir a ninguna y se
+            # quedaría parado.
 
-                continue
+            return [
 
-
-            # Si ya fue revisada,
-            # no necesitamos volver todavía
-
-            if self.memoria.fue_revisada(
                 posicion
-            ):
 
-                continue
+                for posicion, tipo in (
+                    self.mundo.grid.items()
+                )
+
+                # Los árboles no son transitables
+                if tipo != 1
+
+                # Bayas malas que recuerda y la
+                # cueva
+                and posicion not in prohibidas
+
+                # Metas descartadas por un problema
+                # (por ejemplo, no tenían ruta)
+                and posicion not in self.metas_descartadas
+
+                # Ya revisada: no hace falta volver
+                and not self.memoria.fue_revisada(
+                    posicion
+                )
+
+                # Puede llegar
+                and posicion in costos
+
+            ]
 
 
-            candidatas.append(
-                posicion
-            )
+        candidatas = buscar_candidatas()
 
 
         # ==========================================
-        # YA REVISÓ TODO EL MAPA
+        # YA REVISÓ TODO LO QUE PUEDE ALCANZAR
         # ==========================================
 
         if not candidatas:
@@ -894,73 +916,25 @@ class AgenteCazador:
 
             # Volver a buscar candidatas
 
-            for posicion, tipo in (
-                self.mundo.grid.items()
-            ):
-
-                if tipo == 1:
-
-                    continue
-
-
-                if posicion in (
-                    self.zonas_prohibidas()
-                ):
-
-                    continue
-
-
-                if posicion in self.metas_descartadas:
-
-                    continue
-
-
-                if self.memoria.fue_revisada(
-                    posicion
-                ):
-
-                    continue
-
-
-                candidatas.append(
-                    posicion
-                )
+            candidatas = buscar_candidatas()
 
 
         # ==========================================
         # NO HAY CANDIDATAS
+        #
+        # Si está encerrado y la única salida es
+        # su cabaña, en este turno sí la cruza.
         # ==========================================
+
+        if not candidatas and not self.cruzar_cabana:
+
+            self.cruzar_cabana = True
+
+            return self.seleccionar_objetivo_busqueda()
 
         if not candidatas:
 
             return None
-
-
-        # ==========================================
-        # EXPLORACIÓN POR FRONTERAS
-        #
-        # 1. Con una sola búsqueda calcula cuánto
-        #    le cuesta llegar a cada casilla
-        #    (suelo, bayas malas y casillas que
-        #    ya pisó cuestan más).
-        # 2. A cada candidata le resta cuántas
-        #    casillas nuevas vería desde ahí.
-        # 3. Elige la de menor puntaje: cerca,
-        #    sin repetir camino y que descubra
-        #    mucho terreno.
-        # ==========================================
-
-        costos = AEstrella.costos_desde(
-
-            self.posicion,
-
-            self.mundo,
-
-            self.zonas_prohibidas(),
-
-            self.memoria.visitas
-
-        )
 
 
         mejor = None
@@ -1855,6 +1829,14 @@ class AgenteCazador:
         self.red_percibe_jaguar = False
         self.red_ve_ataque = False
 
+        # Se marca en decidir_y_actuar si su meta
+        # es su propia cabaña
+        self.va_a_su_cabana = False
+
+        # Se marca al explorar si solo puede salir
+        # cruzando su cabaña
+        self.cruzar_cabana = False
+
         self.decidir_y_actuar(
             posicion_jaguar
         )
@@ -2401,25 +2383,42 @@ class AgenteCazador:
 
 
         # ==========================================
-        # CABAÑAS DE OTROS CAZADORES
+        # CABAÑAS
         #
-        # Cada cazador puede entrar únicamente
-        # a SU propia cabaña.
+        # - La del rival: nunca la pisa.
+        # - La suya: no la usa como atajo; solo la
+        #   pisa cuando VA a ella (recargar,
+        #   refugiarse, regresar) o cuando ya está
+        #   adentro.
+        # Excepción, para no quedarse encerrado:
+        # si una cabaña es la ÚNICA salida hacia
+        # otra parte del mapa, sí la puede cruzar.
         # ==========================================
 
         campamentos = getattr(
             self.mundo,
             "campamentos",
-            []
+            [self.campamento]
         )
-
 
         for campamento in campamentos:
 
+            if campamento == self.campamento:
+
+                permitida = (
+                    getattr(self, "va_a_su_cabana", False)
+                    or getattr(self, "cruzar_cabana", False)
+                    or self.posicion == self.campamento
+                )
+
+            else:
+
+                permitida = False
+
             if (
-                campamento
-                !=
-                self.campamento
+                not permitida
+                and
+                not self.cabana_es_unico_paso(campamento, zonas)
             ):
 
                 zonas.add(
@@ -2428,6 +2427,64 @@ class AgenteCazador:
 
 
         return zonas
+
+
+    def cabana_es_unico_paso(self, cabana, prohibidas):
+
+        # ¿Cruzar esta cabaña le abre una parte del
+        # mapa a la que no puede llegar de otra
+        # forma? Se revisa recorriendo el mapa
+        # desde donde está, sin pasar por ninguna
+        # cabaña ni por las zonas prohibidas. Se
+        # calcula una vez por turno.
+
+        clave = (
+            self.turno,
+            self.posicion,
+            len(prohibidas)
+        )
+
+        cache = getattr(self, "_alcance_sin_cabanas", None)
+
+        if cache is None or cache[0] != clave:
+
+            cabanas = set(
+                getattr(self.mundo, "campamentos", [self.campamento])
+            )
+
+            vistos = {self.posicion}
+            pendientes = [self.posicion]
+
+            while pendientes:
+
+                actual = pendientes.pop()
+
+                for vecino in self.mundo.vecinos_validos(actual):
+
+                    if (
+                        vecino not in vistos
+                        and vecino not in cabanas
+                        and vecino not in prohibidas
+                        and self.mundo.es_transitable(vecino)
+                    ):
+
+                        vistos.add(vecino)
+                        pendientes.append(vecino)
+
+            cache = (clave, vistos)
+
+            self._alcance_sin_cabanas = cache
+
+        alcance = cache[1]
+
+        # Es paso si del otro lado de la cabaña hay
+        # casillas a las que no llega sin cruzarla
+        return any(
+            vecino not in alcance
+            and vecino not in prohibidas
+            and self.mundo.es_transitable(vecino)
+            for vecino in self.mundo.vecinos_validos(cabana)
+        )
 
 
     def casillas_prohibidas(self):
@@ -3157,11 +3214,32 @@ class AgenteCazador:
             )
 
 
-            # Nunca huye hacia una baya mala
+            # Nunca huye hacia una baya mala ni a la
+            # cueva; a su propia cabaña sí (es su
+            # refugio)
 
-            if escape in self.zonas_prohibidas():
+            if (
+                escape in self.zonas_prohibidas()
+                and
+                escape != self.campamento
+            ):
 
                 escape = None
+
+
+            # Acorralado pero junto a su cabaña: se
+            # mete a ella
+
+            if (
+                escape is None
+                and
+                AEstrella.heuristica(
+                    self.posicion,
+                    self.campamento
+                ) == 1
+            ):
+
+                escape = self.campamento
 
 
             if escape is not None:
@@ -3616,6 +3694,13 @@ class AgenteCazador:
                     return
 
 
+        # ¿Va a su cabaña? Solo entonces puede
+        # pisarla (ver zonas_prohibidas)
+        self.va_a_su_cabana = (
+            meta == self.campamento
+        )
+
+
         # ==========================================
         # META PROHIBIDA: ACECHAR AL LADO
         #
@@ -3921,6 +4006,34 @@ class AgenteCazador:
         # ==========================================
         # 11. NO EXISTE CAMINO
         # ==========================================
+
+        # Si su cabaña le estorbaba, intenta otra
+        # vez permitiendo cruzarla (puede ser la
+        # única salida de un rincón)
+
+        if (
+            not camino
+            and
+            not self.cruzar_cabana
+            and
+            not self.va_a_su_cabana
+            and
+            self.posicion != self.campamento
+        ):
+
+            self.cruzar_cabana = True
+
+            camino = AEstrella.buscar(
+                self.posicion,
+                meta,
+                self.mundo,
+                self.zonas_prohibidas(),
+                self.memoria.visitas
+            )
+
+            if camino:
+
+                self.fuente_decision = "A*"
 
         if not camino:
 

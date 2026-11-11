@@ -165,6 +165,84 @@ class AgenteJaguar:
     # VECINOS ORTOGONALES
     # ==========================================
 
+    # ==========================================
+    # CASILLAS QUE EL JAGUAR NO PISA
+    #
+    # - Las cabañas de los cazadores.
+    # - Su cueva, salvo cuando regresa a ella:
+    #   no la usa como atajo. Excepción: si la
+    #   cueva es la ÚNICA salida hacia otra
+    #   parte del mapa, sí la cruza (si no, se
+    #   quedaría encerrado).
+    # ==========================================
+
+    def zonas_prohibidas(self):
+
+        zonas = set(
+            getattr(
+                self.mundo,
+                "campamentos",
+                []
+            )
+        )
+
+        cueva = getattr(self.mundo, "cueva", None)
+
+        if (
+            cueva is not None
+            and not self.regresando_cueva
+            and self.posicion != cueva
+            and not self.cueva_es_unico_paso(cueva, zonas)
+        ):
+
+            zonas.add(cueva)
+
+        return zonas
+
+
+    def cueva_es_unico_paso(self, cueva, cabanas):
+
+        # ¿Del otro lado de la cueva hay casillas a
+        # las que no llega sin cruzarla? Se
+        # calcula una vez por posición.
+
+        cache = getattr(self, "_alcance_sin_cueva", None)
+
+        if cache is None or cache[0] != self.posicion:
+
+            vistos = {self.posicion}
+            pendientes = [self.posicion]
+
+            while pendientes:
+
+                actual = pendientes.pop()
+
+                for vecino in self.mundo.vecinos_validos(actual):
+
+                    if (
+                        vecino not in vistos
+                        and vecino != cueva
+                        and vecino not in cabanas
+                        and self.mundo.es_transitable(vecino)
+                    ):
+
+                        vistos.add(vecino)
+                        pendientes.append(vecino)
+
+            cache = (self.posicion, vistos)
+
+            self._alcance_sin_cueva = cache
+
+        alcance = cache[1]
+
+        return any(
+            vecino not in alcance
+            and vecino not in cabanas
+            and self.mundo.es_transitable(vecino)
+            for vecino in self.mundo.vecinos_validos(cueva)
+        )
+
+
     def vecinos_ortogonales(self, posicion=None):
 
         if posicion is None:
@@ -189,15 +267,10 @@ class AgenteJaguar:
 
 
         # Las cabañas son territorio exclusivo
-        # de los cazadores.
+        # de los cazadores, y la cueva solo la
+        # pisa cuando regresa a ella.
 
-        cabanas_prohibidas = set(
-            getattr(
-                self.mundo,
-                "campamentos",
-                []
-            )
-        )
+        cabanas_prohibidas = self.zonas_prohibidas()
 
 
         for vecino in vecinos_validos:
@@ -216,7 +289,8 @@ class AgenteJaguar:
 
 
             # ======================================
-            # NO ENTRAR A CABAÑAS
+            # NO ENTRAR A CABAÑAS NI A LA CUEVA
+            # (salvo que regrese a ella)
             # ======================================
 
             if vecino in cabanas_prohibidas:
@@ -746,15 +820,10 @@ class AgenteJaguar:
             return None
 
         # Las cabañas pertenecen a los cazadores.
-        # Para el Jaguar funcionan como obstáculos.
+        # Para el Jaguar funcionan como obstáculos,
+        # igual que su cueva cuando no va a ella.
 
-        cabanas_prohibidas = set(
-            getattr(
-                self.mundo,
-                "campamentos",
-                []
-            )
-        )
+        cabanas_prohibidas = self.zonas_prohibidas()
 
 
         camino = AEstrella.buscar(
