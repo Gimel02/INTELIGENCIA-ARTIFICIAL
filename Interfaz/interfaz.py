@@ -95,6 +95,18 @@ class Interfaz:
 
         self.alto_panel = 260
 
+        # =========================================
+        # PANEL LATERAL DE DIOS
+        #
+        # Solo para demostración visual del
+        # funcionamiento del orquestador.
+        # =========================================
+
+        self.ancho_panel_dios_lateral = 340
+
+        self.margen_mapa = 30
+
+        self.separacion_panel_dios = 20
 
         # =========================================
         # RESOLUCIÓN NATIVA
@@ -116,7 +128,11 @@ class Interfaz:
         espacio_disponible_x = (
             self.ancho
             -
-            margen_lateral
+            self.ancho_panel_dios_lateral
+            -
+            self.separacion_panel_dios
+            -
+            (self.margen_mapa * 2)
         )
 
         espacio_disponible_y = (
@@ -161,10 +177,34 @@ class Interfaz:
         # CENTRAR MAPA
         # =========================================
 
+        # =========================================
+        # CENTRAR MAPA SOLO DENTRO DEL ÁREA
+        # IZQUIERDA
+        # =========================================
+
+        ancho_area_mapa = (
+            self.ancho
+            -
+            self.ancho_panel_dios_lateral
+            -
+            self.separacion_panel_dios
+            -
+            (self.margen_mapa * 2)
+        )
+
+
         self.offset_mapa_x = (
-            (self.ancho - self.mundo.ancho)
-            //
-            2
+            self.margen_mapa
+            +
+            max(
+                0,
+                (
+                    ancho_area_mapa
+                    -
+                    self.mundo.ancho
+                )
+                // 2
+            )
         )
 
         self.offset_mapa_y = (
@@ -452,11 +492,30 @@ class Interfaz:
         # CENTRAR NUEVO MAPA
         # =========================================
 
-        self.offset_mapa_x = (
+        ancho_area_mapa = (
             self.ancho
             -
-            self.mundo.ancho
-        ) // 2
+            self.ancho_panel_dios_lateral
+            -
+            self.separacion_panel_dios
+            -
+            (self.margen_mapa * 2)
+        )
+
+
+        self.offset_mapa_x = (
+            self.margen_mapa
+            +
+            max(
+                0,
+                (
+                    ancho_area_mapa
+                    -
+                    self.mundo.ancho
+                )
+                // 2
+            )
+        )
 
         self.offset_mapa_y = (
             self.alto_panel
@@ -761,17 +820,33 @@ class Interfaz:
 
 
         # =====================================
-        # MUNDO
+        # MAPA
         # =====================================
 
         self.dibujar_tablero()
 
 
         # =====================================
-        # PANEL
+        # HUD SUPERIOR ORIGINAL
+        #
+        # Rodrigo + sentidos + Jaguar +
+        # Gonzalo + sentidos + DIOS.
+        #
+        # ESTO NO SE QUITA.
         # =====================================
 
         self.dibujar_panel()
+
+
+        # =====================================
+        # PANEL LATERAL EXTRA DE DIOS
+        #
+        # Solo para demostrar visualmente
+        # el funcionamiento del orquestador.
+        # =====================================
+
+        self.dibujar_panel_dios_lateral()
+
 
     def dibujar_caja_biselada_solida(
         self,
@@ -1073,7 +1148,522 @@ class Interfaz:
 
         return texto + "..."
 
+    # =========================================
+    # DIVIDIR TEXTO EN VARIAS LÍNEAS
+    # PARA EL PANEL DE DIOS
+    # =========================================
 
+    def envolver_texto(
+        self,
+        texto,
+        fuente,
+        ancho_maximo
+    ):
+
+        palabras = str(texto).split()
+
+        lineas = []
+
+        linea_actual = ""
+
+
+        for palabra in palabras:
+
+            prueba = (
+                f"{linea_actual} {palabra}"
+                .strip()
+            )
+
+
+            if (
+                fuente.size(prueba)[0]
+                <=
+                ancho_maximo
+            ):
+
+                linea_actual = prueba
+
+            else:
+
+                if linea_actual:
+
+                    lineas.append(
+                        linea_actual
+                    )
+
+                linea_actual = palabra
+
+
+        if linea_actual:
+
+            lineas.append(
+                linea_actual
+            )
+
+
+        return lineas
+    
+    # =========================================
+    # PANEL LATERAL DEL ORQUESTADOR DIOS
+    # =========================================
+
+    def dibujar_panel_dios_lateral(self):
+
+        margen_derecho = 25
+
+        x = (
+            self.ancho
+            -
+            self.ancho_panel_dios_lateral
+            -
+            margen_derecho
+        )
+
+        y = (
+            self.alto_panel
+            +
+            25
+        )
+
+        ancho = (
+            self.ancho_panel_dios_lateral
+        )
+
+        alto = (
+            self.alto
+            -
+            y
+            -
+            25
+        )
+
+
+        rect_panel = pygame.Rect(
+            x,
+            y,
+            ancho,
+            alto
+        )
+
+
+        # =====================================
+        # CAJA PRINCIPAL
+        # =====================================
+
+        self.dibujar_caja_biselada_solida(
+            rect_panel,
+            self.C_MADERA_BASE,
+            self.C_MADERA_LUZ,
+            self.C_MADERA_SOMBRA,
+            grosor_borde=3
+        )
+
+
+        # =====================================
+        # TÍTULO
+        # =====================================
+
+        titulo = self.fuente_titulo.render(
+            "ORQUESTADOR DIOS",
+            True,
+            self.C_ORO_PURO
+        )
+
+
+        self.pantalla.blit(
+            titulo,
+            (
+                x + 18,
+                y + 18
+            )
+        )
+
+
+        subtitulo = (
+            self.fuente_pequena.render(
+                "Decisiones y eventos en tiempo real",
+                True,
+                (190, 170, 120)
+            )
+        )
+
+
+        self.pantalla.blit(
+            subtitulo,
+            (
+                x + 18,
+                y + 50
+            )
+        )
+
+
+        # Línea divisoria
+
+        pygame.draw.line(
+            self.pantalla,
+            self.C_ORO_VIEJO,
+            (
+                x + 15,
+                y + 78
+            ),
+            (
+                x + ancho - 15,
+                y + 78
+            ),
+            2
+        )
+
+
+        # =====================================
+        # ESTADO ACTUAL
+        # =====================================
+
+        cursor_y = (
+            y + 95
+        )
+
+
+        turno = (
+            self.dios.turno_actual()
+        )
+
+
+        estado_partida = (
+            "FINALIZADA"
+            if self.dios.terminada
+            else "EN CURSO"
+        )
+
+
+        jaguar_estado = (
+            "VIVO"
+            if self.mundo.jaguar_vivo
+            else "CAPTURADO"
+        )
+
+
+        cazadores_vivos = 0
+
+
+        for _, agente, _ in self.dios.cazadores():
+
+            if (
+                agente is not None
+                and
+                agente.vidas > 0
+            ):
+
+                cazadores_vivos += 1
+
+
+        estado_red = (
+            "ACTIVA"
+            if self.dios.con_red_neuronal
+            else "APAGADA"
+        )
+
+
+        datos_estado = [
+
+            (
+                "Turno",
+                str(turno)
+            ),
+
+            (
+                "Partida",
+                estado_partida
+            ),
+
+            (
+                "Jaguar",
+                jaguar_estado
+            ),
+
+            (
+                "Cazadores activos",
+                str(cazadores_vivos)
+            ),
+
+            (
+                "Red neuronal",
+                estado_red
+            ),
+        ]
+
+
+        for etiqueta, valor in datos_estado:
+
+            texto_etiqueta = (
+                self.fuente_UI.render(
+                    f"{etiqueta}:",
+                    True,
+                    (190, 170, 120)
+                )
+            )
+
+
+            self.pantalla.blit(
+                texto_etiqueta,
+                (
+                    x + 18,
+                    cursor_y
+                )
+            )
+
+
+            texto_valor = (
+                self.fuente_UI.render(
+                    valor,
+                    True,
+                    (
+                        self.C_NEON_VERDE
+                        if valor
+                        in (
+                            "EN CURSO",
+                            "VIVO",
+                            "ACTIVA"
+                        )
+                        else
+                        (235, 235, 235)
+                    )
+                )
+            )
+
+
+            self.pantalla.blit(
+                texto_valor,
+                (
+                    x + 155,
+                    cursor_y
+                )
+            )
+
+
+            cursor_y += 25
+
+
+        # =====================================
+        # ÚLTIMA DECISIÓN DE DIOS
+        # =====================================
+
+        cursor_y += 8
+
+
+        pygame.draw.line(
+            self.pantalla,
+            self.C_ORO_VIEJO,
+            (
+                x + 15,
+                cursor_y
+            ),
+            (
+                x + ancho - 15,
+                cursor_y
+            ),
+            1
+        )
+
+
+        cursor_y += 15
+
+
+        titulo_ultima = (
+            self.fuente_UI.render(
+                "ÚLTIMA DECISIÓN",
+                True,
+                self.C_NEON_AMARILLO
+            )
+        )
+
+
+        self.pantalla.blit(
+            titulo_ultima,
+            (
+                x + 18,
+                cursor_y
+            )
+        )
+
+
+        cursor_y += 27
+
+
+        bitacora = list(
+            self.dios.bitacora
+        )
+
+
+        if bitacora:
+
+            ultima = bitacora[-1]
+
+            ultima = ultima.replace(
+                "[DIOS] ",
+                "",
+                1
+            )
+
+
+            lineas = self.envolver_texto(
+                ultima,
+                self.fuente_UI,
+                ancho - 36
+            )
+
+
+            for linea in lineas:
+
+                render = (
+                    self.fuente_UI.render(
+                        linea,
+                        True,
+                        self.C_NEON_VERDE
+                    )
+                )
+
+
+                self.pantalla.blit(
+                    render,
+                    (
+                        x + 18,
+                        cursor_y
+                    )
+                )
+
+
+                cursor_y += 20
+
+        else:
+
+            render = (
+                self.fuente_UI.render(
+                    "Sin decisiones todavía",
+                    True,
+                    (160, 160, 160)
+                )
+            )
+
+
+            self.pantalla.blit(
+                render,
+                (
+                    x + 18,
+                    cursor_y
+                )
+            )
+
+
+            cursor_y += 20
+
+
+        # =====================================
+        # HISTORIAL DE DECISIONES
+        # =====================================
+
+        cursor_y += 12
+
+
+        pygame.draw.line(
+            self.pantalla,
+            self.C_ORO_VIEJO,
+            (
+                x + 15,
+                cursor_y
+            ),
+            (
+                x + ancho - 15,
+                cursor_y
+            ),
+            1
+        )
+
+
+        cursor_y += 15
+
+
+        titulo_historial = (
+            self.fuente_UI.render(
+                "DECISIONES RECIENTES",
+                True,
+                self.C_ORO_PURO
+            )
+        )
+
+
+        self.pantalla.blit(
+            titulo_historial,
+            (
+                x + 18,
+                cursor_y
+            )
+        )
+
+
+        cursor_y += 30
+
+
+        # Últimos 8 eventos
+
+        eventos = (
+            bitacora[-8:]
+            if bitacora
+            else []
+        )
+
+
+        for evento in eventos:
+
+            evento = evento.replace(
+                "[DIOS] ",
+                "",
+                1
+            )
+
+
+            lineas = self.envolver_texto(
+                "• " + evento,
+                self.fuente_pequena,
+                ancho - 38
+            )
+
+
+            for linea in lineas:
+
+                # Evitar salir del panel
+
+                if (
+                    cursor_y
+                    >
+                    rect_panel.bottom - 25
+                ):
+
+                    return
+
+
+                render = (
+                    self.fuente_pequena.render(
+                        linea,
+                        True,
+                        (220, 220, 220)
+                    )
+                )
+
+
+                self.pantalla.blit(
+                    render,
+                    (
+                        x + 18,
+                        cursor_y
+                    )
+                )
+
+
+                cursor_y += 18
+
+
+            cursor_y += 7
+    
     # =========================================
     # TEXTO DE LA REGLA MÁS FUERTE Y DEL
     # CENTROIDE (para el panel)
