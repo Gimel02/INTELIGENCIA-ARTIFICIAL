@@ -254,6 +254,17 @@ class Dios:
         # Quién atrapó al jaguar (con rival)
         self.ganador = None
 
+        # Nombre visible del ganador:
+        # Rodrigo o Gonzalo.
+
+        self.nombre_ganador = None
+
+
+        # True desde que alguien captura al Jaguar
+        # hasta que ambos cazadores llegan
+        # físicamente a sus cabañas.
+
+        self.cierre_por_caza = False
         # Segundos que faltan para que los
         # cazadores puedan volver a pelear
         self.espera_pelea = 0.0
@@ -263,9 +274,21 @@ class Dios:
         #  "tiempo": segundos que le quedan}
         self.ultima_pelea = None
 
-        # Lo que va pasando en la partida
+        # ======================================
+        # BITÁCORAS DEL ORQUESTADOR
+        # ======================================
+
+        # Eventos importantes:
+        # peleas, refugios, capturas, etc.
         self.bitacora = deque(maxlen=100)
 
+
+        # TODAS las decisiones que DIOS coordina.
+        # Se conserva un historial grande para
+        # mostrarlo en el panel lateral.
+        self.bitacora_decisiones = deque(
+            maxlen=500
+        )
 
     # ======================================
     # BASES DE CONOCIMIENTO
@@ -469,9 +492,12 @@ class Dios:
         self.terminada = False
         self.resultado = None
         self.ganador = None
+        self.nombre_ganador = None
+        self.cierre_por_caza = False
         self.espera_pelea = 0.0
         self.ultima_pelea = None
         self.bitacora.clear()
+        self.bitacora_decisiones.clear()
 
         if escenario is None:
 
@@ -726,6 +752,50 @@ class Dios:
             if self.ultima_pelea["tiempo"] <= 0:
 
                 self.ultima_pelea = None
+        # ======================================
+        # FASE FINAL DESPUÉS DE CAPTURAR JAGUAR
+        # ======================================
+
+        if self.cierre_por_caza:
+
+            # Rodrigo vuelve a casa.
+
+            if self.cazador.vidas > 0:
+
+                self.turno_cazador(
+                    dt,
+                    "cazador",
+                    self.cazador,
+                    self.cuerpo_cazador
+                )
+
+
+            # Gonzalo vuelve a casa.
+
+            if self.interceptor_activo():
+
+                self.turno_cazador(
+                    dt,
+                    "interceptor",
+                    self.interceptor,
+                    self.cuerpo_interceptor
+                )
+
+
+            # Cuando ambos llegaron físicamente,
+            # DIOS termina la simulación.
+
+            if self.cazadores_en_casa_fin():
+
+                self.finalizar_por_caza()
+
+                return False
+
+
+            # No mueve Jaguar ni ratones y no
+            # resuelve nuevos encuentros.
+
+            return True
 
         if self.cazador.vidas > 0:
 
@@ -781,6 +851,60 @@ class Dios:
 
 
         if not cuerpo.en_reposo():
+
+            return
+
+        # ======================================
+        # FIN DE CACERÍA
+        #
+        # Si alguien ya capturó al Jaguar,
+        # ninguna otra decisión tiene prioridad.
+        #
+        # DIOS manda al cazador directamente
+        # a su propia cabaña.
+        # ======================================
+
+        if self.cierre_por_caza:
+
+            # ----------------------------------
+            # YA ESTÁ EN CASA
+            # ----------------------------------
+
+            if agente.posicion == agente.campamento:
+
+                agente.estado = (
+                    "FIN: en su cabaña"
+                )
+
+                cuerpo.velocidad = 0.0
+
+                return
+
+
+            # ----------------------------------
+            # SIGUIENTE PASO A* HACIA CASA
+            # ----------------------------------
+
+            posicion_antes = (
+                agente.posicion
+            )
+
+
+            agente.regresar_a_cabana_fin()
+
+
+            if agente.posicion != posicion_antes:
+
+                cuerpo.mover_a(
+                    agente.posicion
+                )
+
+            else:
+
+                cuerpo.detener(
+                    PAUSA_CAZADOR
+                )
+
 
             return
 
@@ -958,6 +1082,125 @@ class Dios:
         agente.tomar_decision(
             self.mundo.posicion_jaguar
         )
+        # ======================================
+        # DIOS REGISTRA LA DECISIÓN DEL CAZADOR
+        # ======================================
+
+        modo = getattr(
+            agente,
+            "modo_difuso_actual",
+            None
+        )
+
+        competencia = getattr(
+            agente,
+            "estado_competitivo",
+            "normal"
+        )
+
+        emergencia = getattr(
+            agente,
+            "modo_emergencia",
+            None
+        )
+
+
+        # --------------------------------------
+        # Determinar cuál decisión terminó
+        # dominando realmente.
+        # --------------------------------------
+
+        if getattr(
+            agente,
+            "herido",
+            False
+        ):
+
+            decision_orquestada = (
+                "REGRESAR HERIDO A CABAÑA"
+            )
+
+        elif getattr(
+            agente,
+            "refugiandose_jaguar",
+            False
+        ):
+
+            decision_orquestada = (
+                "HUIR AL REFUGIO"
+            )
+
+        elif competencia == "interceptar":
+
+            decision_orquestada = (
+                "INTERCEPTAR RIVAL"
+            )
+
+        elif emergencia:
+
+            decision_orquestada = (
+                emergencia.upper()
+            )
+
+        elif modo:
+
+            decision_orquestada = (
+                modo.upper()
+            )
+
+        else:
+
+            decision_orquestada = (
+                agente.estado
+            )
+
+
+        detalle = (
+            f"pos {antes}->{agente.posicion} | "
+            f"energía {agente.energia}"
+        )
+
+
+        meta = getattr(
+            agente,
+            "meta_actual",
+            None
+        )
+
+
+        if meta is not None:
+
+            detalle += (
+                f" | meta {meta}"
+            )
+
+
+        # Red neuronal, si existe.
+
+        red = getattr(
+            agente,
+            "red_ataque",
+            None
+        )
+
+
+        if (
+            red is not None
+            and
+            red.ultimo_riesgo is not None
+        ):
+
+            detalle += (
+                f" | riesgo RN "
+                f"{red.ultimo_riesgo:.0%}"
+            )
+
+
+        self.anotar_decision(
+            agente.nombre,
+            decision_orquestada,
+            detalle
+        )
 
         # ¿Lo atrapó en su propio turno?
         if jaguar_vivo_antes and not self.mundo.jaguar_vivo:
@@ -1101,6 +1344,76 @@ class Dios:
             posicion_cazador,
             energia_cazador,
             self.mundo.ratones
+        )
+        # ======================================
+        # DIOS REGISTRA LA DECISIÓN DEL JAGUAR
+        # ======================================
+
+        decision_jaguar = None
+
+
+        decision_difusa = getattr(
+            self.jaguar,
+            "decision_difusa",
+            None
+        )
+
+
+        if (
+            self.jaguar.prioridad_ratones_refugio
+        ):
+
+            decision_jaguar = (
+                "PRIORIZAR RATONES"
+            )
+
+        elif getattr(
+            self.jaguar,
+            "regresando_cueva",
+            False
+        ):
+
+            decision_jaguar = (
+                "REGRESAR A CUEVA"
+            )
+
+        elif (
+            decision_difusa
+            and
+            decision_difusa.get("accion")
+        ):
+
+            decision_jaguar = (
+                decision_difusa[
+                    "accion"
+                ].upper()
+            )
+
+        else:
+
+            decision_jaguar = (
+                self.jaguar.estado
+            )
+
+
+        detalle_jaguar = (
+            f"hambre {self.jaguar.hambre} | "
+            f"destino {destino} | "
+            f"estado {self.jaguar.estado}"
+        )
+
+
+        if self.jaguar.atacando:
+
+            detalle_jaguar += (
+                " | ATACANDO"
+            )
+
+
+        self.anotar_decision(
+            "Jaguar",
+            decision_jaguar,
+            detalle_jaguar
         )
 
         if destino is not None:
@@ -1277,23 +1590,93 @@ class Dios:
 
     def registrar_caza(self, nombre):
 
+        # Ya existe ganador.
+
         if self.ganador is not None:
 
             return
 
+
         self.ganador = nombre
 
-        self.anotar(f"El {nombre} atrapó al jaguar")
 
-        if self.interceptor is not None:
+        # ======================================
+        # NOMBRE REAL DEL GANADOR
+        # ======================================
 
-            self.anotar(
-                GANA_INTERCEPTOR
-                if nombre == "interceptor"
-                else GANA_CAZADOR
+        if nombre == "interceptor":
+
+            agente_ganador = self.interceptor
+
+        else:
+
+            agente_ganador = self.cazador
+
+
+        self.nombre_ganador = getattr(
+            agente_ganador,
+            "nombre",
+            nombre
+        )
+
+
+        # ======================================
+        # ACTIVAR CIERRE DE PARTIDA
+        # ======================================
+
+        self.cierre_por_caza = True
+
+
+        mensaje = (
+            f"GANA {self.nombre_ganador.upper()} "
+            "- CAPTURÓ EL JAGUAR"
+        )
+
+
+        self.anotar(
+            mensaje
+        )
+
+
+        # ======================================
+        # DIOS CANCELA LA CACERÍA
+        #
+        # Los dos cazadores dejan de explorar,
+        # atacar, interceptar o refugiarse.
+        # ======================================
+
+        for _, agente, _ in self.cazadores():
+
+            if agente is None:
+
+                continue
+
+
+            agente.estado_competitivo = "normal"
+
+            agente.rival_detectado = False
+
+            agente.rival_detectado_por = None
+
+            agente.refugiandose_jaguar = False
+
+            agente.en_refugio_jaguar = False
+
+            agente.modo_emergencia = None
+
+            agente.ruta_planeada = []
+
+            agente.meta_actual = agente.campamento
+
+            agente.estado = (
+                "FIN: regresando a su cabaña"
             )
 
 
+        self.anotar(
+            "DIOS ordena a Rodrigo y Gonzalo "
+            "regresar a sus cabañas"
+        )
     # --------------------------------------
     # Pelea entre los dos cazadores (rivales)
     # --------------------------------------
@@ -1556,6 +1939,89 @@ class Dios:
 
         agente.ruta_planeada = []
 
+    # ======================================
+    # ¿LOS CAZADORES YA REGRESARON A CASA?
+    # ======================================
+
+    def cazadores_en_casa_fin(self):
+
+        if not self.cierre_por_caza:
+
+            return False
+
+
+        for _, agente, cuerpo in self.cazadores():
+
+            if agente is None:
+
+                continue
+
+
+            # Si estuviera eliminado, no esperamos
+            # por él.
+
+            if agente.vidas <= 0:
+
+                continue
+
+
+            # Posición lógica
+
+            if agente.posicion != agente.campamento:
+
+                return False
+
+
+            # Posición física / animación
+
+            if cuerpo is None:
+
+                return False
+
+
+            if not cuerpo.en_reposo():
+
+                return False
+
+
+            if cuerpo.destino != agente.campamento:
+
+                return False
+
+
+        return True
+
+    # ======================================
+    # FINALIZAR DESPUÉS DE LA CACERÍA
+    # ======================================
+
+    def finalizar_por_caza(self):
+
+        if self.terminada:
+
+            return
+
+
+        if self.nombre_ganador is None:
+
+            return
+
+
+        self.cierre_por_caza = False
+
+        self.terminada = True
+
+
+        self.resultado = (
+            "FIN DE LA SIMULACIÓN - "
+            f"GANÓ {self.nombre_ganador.upper()}"
+        )
+
+
+        self.anotar(
+            "FIN DE LA SIMULACIÓN: "
+            f"GANÓ {self.nombre_ganador.upper()}"
+        )
 
     # ======================================
     # 5. ¿TERMINÓ LA PARTIDA?
@@ -1597,13 +2063,73 @@ class Dios:
 
     def anotar(self, texto):
 
-        registro = f"[DIOS] Turno {self.turno_actual()}: {texto}"
+        registro = (
+            f"[DIOS] Turno "
+            f"{self.turno_actual()}: "
+            f"{texto}"
+        )
 
-        self.bitacora.append(registro)
+
+        self.bitacora.append(
+            registro
+        )
+
+
+        # También entra al historial completo
+        # del orquestador.
+
+        if hasattr(
+            self,
+            "bitacora_decisiones"
+        ):
+
+            self.bitacora_decisiones.append({
+                "turno": self.turno_actual(),
+                "actor": "DIOS",
+                "decision": texto,
+                "detalle": "",
+            })
+
 
         print(registro)
+    
+
+    def anotar_decision(
+        self,
+        actor,
+        decision,
+        detalle=""
+    ):
+
+        registro = {
+            "turno": self.turno_actual(),
+            "actor": actor,
+            "decision": str(decision),
+            "detalle": str(detalle),
+        }
 
 
+        self.bitacora_decisiones.append(
+            registro
+        )
+
+
+        texto = (
+            f"[DIOS - DECISIÓN] "
+            f"T{registro['turno']} | "
+            f"{actor} -> "
+            f"{decision}"
+        )
+
+
+        if detalle:
+
+            texto += (
+                f" | {detalle}"
+            )
+
+
+        print(texto)
 # ==========================================
 # UNA SOLA INSTANCIA DE DIOS
 # ==========================================

@@ -658,6 +658,131 @@ class AgenteCazador:
         )
 
     # ==========================================
+    # REGRESAR A CASA AL TERMINAR LA CACERÍA
+    #
+    # Cuando uno de los cazadores captura al
+    # Jaguar, DIOS cancela la cacería y ordena
+    # que ambos regresen a sus propias cabañas.
+    #
+    # No usa lógica difusa ni AG.
+    # Usa A* directamente.
+    # ==========================================
+
+    def regresar_a_cabana_fin(self):
+
+        # Cancelar cualquier comportamiento de
+        # competencia o emergencia.
+
+        self.estado_competitivo = "normal"
+
+        self.rival_detectado = False
+        self.rival_detectado_por = None
+
+        self.refugiandose_jaguar = False
+        self.en_refugio_jaguar = False
+
+        self.modo_emergencia = None
+
+
+        # Su única meta ahora es su casa.
+
+        self.meta_actual = self.campamento
+
+        self.motivo = (
+            "FIN DE CACERÍA: regresar a su cabaña"
+        )
+
+
+        # ======================================
+        # YA ESTÁ EN CASA
+        # ======================================
+
+        if self.posicion == self.campamento:
+
+            self.ruta_planeada = []
+
+            self.estado = (
+                "FIN: esperando en su cabaña"
+            )
+
+            return False
+
+
+        # ======================================
+        # A* HASTA SU PROPIA CABAÑA
+        # ======================================
+
+        camino = AEstrella.buscar(
+            self.posicion,
+            self.campamento,
+            self.mundo,
+            self.zonas_prohibidas(),
+            {}
+        )
+
+
+        if not camino:
+
+            self.estado = (
+                "FIN: no encuentra ruta "
+                "hacia su cabaña"
+            )
+
+            self.fallo_decision = "sin ruta"
+
+            return False
+
+
+        self.ruta_planeada = camino
+
+        siguiente = camino[0]
+
+
+        movimiento_valido = (
+            self.mundo.mover_cazador(
+                siguiente,
+                campamento_propio=self.campamento
+            )
+        )
+
+
+        if not movimiento_valido:
+
+            self.estado = (
+                "FIN: camino a cabaña bloqueado"
+            )
+
+            self.fallo_decision = "bloqueado"
+
+            return False
+
+
+        self.posicion = siguiente
+
+
+        self.ultimas_posiciones.append(
+            self.posicion
+        )
+
+
+        self.memoria.registrar_paso(
+            siguiente
+        )
+
+
+        self.fuente_decision = (
+            "A* FIN"
+        )
+
+
+        self.estado = (
+            "FIN: regresando a su cabaña"
+        )
+
+
+        return True
+
+    # ==========================================
     # LIMPIAR INFORMACIÓN DEL JAGUAR
     # ==========================================
 

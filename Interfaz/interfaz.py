@@ -96,6 +96,12 @@ class Interfaz:
         self.alto_panel = 260
 
         # =========================================
+        # SCROLL DEL HISTORIAL DE DIOS
+        # =========================================
+
+        self.scroll_dios = 0
+
+        # =========================================
         # PANEL LATERAL DE DIOS
         #
         # Solo para demostración visual del
@@ -758,6 +764,22 @@ class Interfaz:
 
                     self.ejecutando = False
 
+                # =====================================
+                # HISTORIAL COMPLETO DE DIOS
+                # =====================================
+
+                elif evento.key == pygame.K_PAGEUP:
+
+                    self.scroll_dios += 5
+
+
+                elif evento.key == pygame.K_PAGEDOWN:
+
+                    self.scroll_dios = max(
+                        0,
+                        self.scroll_dios - 5
+                    )
+
 
             # =====================================
             # CLIC DEL MOUSE
@@ -846,6 +868,11 @@ class Interfaz:
         # =====================================
 
         self.dibujar_panel_dios_lateral()
+        # =====================================
+        # RESULTADO FINAL
+        # =====================================
+
+        self.dibujar_fin_simulacion()
 
 
     def dibujar_caja_biselada_solida(
@@ -1584,11 +1611,29 @@ class Interfaz:
 
         titulo_historial = (
             self.fuente_UI.render(
-                "DECISIONES RECIENTES",
+                "DECISIONES ",
                 True,
                 self.C_ORO_PURO
             )
         )
+
+        ayuda_scroll = (
+            self.fuente_pequena.render(
+                "Page Up / Page Down para recorrer",
+                True,
+                (150, 150, 150)
+            )
+        )
+
+        self.pantalla.blit(
+            ayuda_scroll,
+            (
+                x + 18,
+                cursor_y
+            )
+        )
+
+        cursor_y += 22
 
 
         self.pantalla.blit(
@@ -1603,34 +1648,108 @@ class Interfaz:
         cursor_y += 30
 
 
-        # Últimos 8 eventos
+        # =====================================
+        # HISTORIAL COMPLETO DEL ORQUESTADOR
+        #
+        # PAGE UP   -> decisiones anteriores
+        # PAGE DOWN -> decisiones recientes
+        # =====================================
 
-        eventos = (
-            bitacora[-8:]
-            if bitacora
-            else []
+        historial = list(
+            self.dios.bitacora_decisiones
         )
 
 
-        for evento in eventos:
+        lineas_disponibles = 14
 
-            evento = evento.replace(
-                "[DIOS] ",
-                "",
-                1
+
+        fin = (
+            len(historial)
+            -
+            self.scroll_dios
+        )
+
+
+        fin = max(
+            0,
+            min(
+                fin,
+                len(historial)
+            )
+        )
+
+
+        inicio = max(
+            0,
+            fin - lineas_disponibles
+        )
+
+
+        eventos = historial[
+            inicio:fin
+        ]
+
+
+        for registro in eventos:
+
+            actor = registro[
+                "actor"
+            ]
+
+            decision = registro[
+                "decision"
+            ]
+
+            detalle = registro.get(
+                "detalle",
+                ""
+            )
+
+
+            # ==================================
+            # COLOR SEGÚN QUIÉN DECIDE
+            # ==================================
+
+            if actor == "Rodrigo":
+
+                color_actor = (
+                    self.C_ORO_PURO
+                )
+
+            elif actor == "Gonzalo":
+
+                color_actor = (
+                    self.C_NEON_AZUL
+                )
+
+            elif actor == "Jaguar":
+
+                color_actor = (
+                    self.C_NEON_ROJO
+                )
+
+            else:
+
+                color_actor = (
+                    self.C_NEON_VERDE
+                )
+
+
+            encabezado = (
+                f"T{registro['turno']} "
+                f"{actor}: "
+                f"{decision}"
             )
 
 
             lineas = self.envolver_texto(
-                "• " + evento,
-                self.fuente_pequena,
+                encabezado,
+                self.fuente_UI,
                 ancho - 38
             )
 
 
             for linea in lineas:
-
-                # Evitar salir del panel
 
                 if (
                     cursor_y
@@ -1642,10 +1761,10 @@ class Interfaz:
 
 
                 render = (
-                    self.fuente_pequena.render(
+                    self.fuente_UI.render(
                         linea,
                         True,
-                        (220, 220, 220)
+                        color_actor
                     )
                 )
 
@@ -1662,7 +1781,52 @@ class Interfaz:
                 cursor_y += 18
 
 
-            cursor_y += 7
+            # Detalle más pequeño
+
+            if detalle:
+
+                lineas_detalle = (
+                    self.envolver_texto(
+                        detalle,
+                        self.fuente_pequena,
+                        ancho - 45
+                    )
+                )
+
+
+                for linea in lineas_detalle:
+
+                    if (
+                        cursor_y
+                        >
+                        rect_panel.bottom - 25
+                    ):
+
+                        return
+
+
+                    render = (
+                        self.fuente_pequena.render(
+                            "   " + linea,
+                            True,
+                            (180, 180, 180)
+                        )
+                    )
+
+
+                    self.pantalla.blit(
+                        render,
+                        (
+                            x + 18,
+                            cursor_y
+                        )
+                    )
+
+
+                    cursor_y += 16
+
+
+            cursor_y += 5
     
     # =========================================
     # TEXTO DE LA REGLA MÁS FUERTE Y DEL
@@ -2888,20 +3052,17 @@ class Interfaz:
         # jaguar (la partida sigue mientras
         # regresan a la cabaña)
 
-        elif (
-            self.agente_interceptor is not None
-            and self.dios.ganador is not None
-        ):
+        elif self.dios.ganador is not None:
 
-            if self.dios.ganador == "interceptor":
+            estado_simulacion = (
+                f"GANA "
+                f"{self.dios.nombre_ganador.upper()} "
+                "- CAPTURÓ EL JAGUAR"
+            )
 
-                estado_simulacion = GANA_INTERCEPTOR
-                color_estado = (120, 170, 255)
-
-            else:
-
-                estado_simulacion = GANA_CAZADOR
-                color_estado = self.C_NEON_AMARILLO
+            color_estado = (
+                self.C_NEON_AMARILLO
+            )
 
         elif self.agente_jaguar.regresando_cueva:
 
@@ -3079,12 +3240,173 @@ class Interfaz:
         )
 
     # =========================================
+    # RECUADRO FINAL DE LA SIMULACIÓN
+    # =========================================
+
+    def dibujar_fin_simulacion(self):
+
+        if (
+            not self.dios.terminada
+            or
+            self.dios.ganador is None
+        ):
+
+            return
+
+
+        # =====================================
+        # OSCURECER EL MAPA
+        # =====================================
+
+        overlay = pygame.Surface(
+            (
+                self.mundo.ancho,
+                self.mundo.alto
+            ),
+            pygame.SRCALPHA
+        )
+
+
+        overlay.fill(
+            (
+                0,
+                0,
+                0,
+                135
+            )
+        )
+
+
+        self.pantalla.blit(
+            overlay,
+            (
+                self.offset_mapa_x,
+                self.offset_mapa_y
+            )
+        )
+
+
+        # =====================================
+        # CAJA CENTRAL
+        # =====================================
+
+        ancho_caja = min(
+            620,
+            self.mundo.ancho - 60
+        )
+
+        alto_caja = 220
+
+
+        centro_x = (
+            self.offset_mapa_x
+            +
+            self.mundo.ancho // 2
+        )
+
+
+        centro_y = (
+            self.offset_mapa_y
+            +
+            self.mundo.alto // 2
+        )
+
+
+        rect = pygame.Rect(
+            centro_x - ancho_caja // 2,
+            centro_y - alto_caja // 2,
+            ancho_caja,
+            alto_caja
+        )
+
+
+        self.dibujar_caja_biselada_solida(
+            rect,
+            self.C_MADERA_BASE,
+            self.C_ORO_PURO,
+            self.C_MADERA_SOMBRA,
+            grosor_borde=4
+        )
+
+
+        # =====================================
+        # FIN DE LA SIMULACIÓN
+        # =====================================
+
+        titulo = self.fuente_titulo.render(
+            "FIN DE LA SIMULACIÓN",
+            True,
+            self.C_ORO_PURO
+        )
+
+
+        self.pantalla.blit(
+            titulo,
+            (
+                rect.centerx
+                -
+                titulo.get_width() // 2,
+                rect.y + 38
+            )
+        )
+
+
+        # =====================================
+        # GANADOR
+        # =====================================
+
+        fuente_ganador = pygame.font.SysFont(
+            "Arial",
+            36,
+            bold=True
+        )
+
+
+        ganador = fuente_ganador.render(
+            (
+                f"GANÓ "
+                f"{self.dios.nombre_ganador.upper()}"
+            ),
+            True,
+            self.C_NEON_VERDE
+        )
+
+
+        self.pantalla.blit(
+            ganador,
+            (
+                rect.centerx
+                -
+                ganador.get_width() // 2,
+                rect.y + 90
+            )
+        )
+
+
+        detalle = self.fuente_UI.render(
+            (
+                f"{self.dios.nombre_ganador} "
+                "capturó al Jaguar"
+            ),
+            True,
+            (230, 230, 230)
+        )
+
+
+        self.pantalla.blit(
+            detalle,
+            (
+                rect.centerx
+                -
+                detalle.get_width() // 2,
+                rect.y + 145
+            )
+        )
+
+    # =========================================
     # AVISO DE PELEA: estallido y "¡PELEA!"
     # donde se cruzaron los cazadores
     # =========================================
-
-    
-
     def dibujar_pelea(self):
 
         pelea = self.dios.ultima_pelea
