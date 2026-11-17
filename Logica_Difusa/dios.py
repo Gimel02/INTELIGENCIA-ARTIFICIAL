@@ -238,6 +238,12 @@ class Dios:
         self.con_red_neuronal = True
         self.redes = {}
 
+        # ¿Se guarda en disco lo que aprenden las
+        # redes? Lo enciende el juego; en las
+        # pruebas queda apagado para no tocar
+        # los archivos de pesos.
+        self.guardar_aprendizaje = False
+
         # Partida actual (la crea nueva_partida)
         self.mundo = None
         self.escenario = None
@@ -676,17 +682,48 @@ class Dios:
 
             return None
 
-        from Redes_Neuronales.predictor_ataque import PredictorAtaque
+        from Redes_Neuronales.predictor_ataque import (
+            PredictorAtaque,
+            archivo_de,
+        )
 
         if nombre not in self.redes:
 
-            self.redes[nombre] = PredictorAtaque.cargar()
+            # Si el cazador ya había aprendido en
+            # otra sesión, sigue desde ahí
+            self.redes[nombre] = (
+                PredictorAtaque.cargar(archivo_de(nombre))
+                if self.guardar_aprendizaje
+                else PredictorAtaque()
+            )
 
         red = self.redes[nombre]
 
         red.reiniciar_partida()
 
         return red
+
+
+    # --------------------------------------
+    # Guardar lo que aprendieron las redes
+    #
+    # Se llama al terminar cada partida, al
+    # reiniciar y al cerrar el juego. Así la
+    # próxima vez que se abra, cada cazador
+    # sigue sabiendo lo que ya aprendió.
+    # --------------------------------------
+
+    def guardar_redes(self):
+
+        if not self.guardar_aprendizaje:
+
+            return
+
+        from Redes_Neuronales.predictor_ataque import archivo_de
+
+        for nombre, red in self.redes.items():
+
+            red.guardar(archivo_de(nombre))
 
 
     # ======================================
@@ -2011,6 +2048,8 @@ class Dios:
 
         self.terminada = True
 
+        self.guardar_redes()
+
 
         self.resultado = (
             "FIN DE LA SIMULACIÓN - "
@@ -2046,6 +2085,8 @@ class Dios:
 
         self.terminada = True
         self.resultado = resultado
+
+        self.guardar_redes()
 
         self.anotar(f"FIN DE LA PARTIDA: {resultado}")
 

@@ -86,6 +86,10 @@ class Interfaz:
 
         self.dios = obtener_dios()
 
+        # Lo que aprende la red se guarda en
+        # Redes_Neuronales/pesos/
+        self.dios.guardar_aprendizaje = True
+
         self.dios.nueva_partida()
 
 
@@ -443,6 +447,10 @@ class Interfaz:
         # (teclas 1 y 2). Sin escenario: al azar.
         # =========================================
 
+        # Guarda lo aprendido aunque la partida
+        # no haya terminado
+        self.dios.guardar_redes()
+
         self.dios.nueva_partida(escenario)
 
 
@@ -628,6 +636,9 @@ class Interfaz:
 
             pygame.display.flip()
 
+
+        # Al cerrar, guarda lo que aprendieron
+        self.dios.guardar_redes()
 
         pygame.quit()
 

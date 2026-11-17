@@ -63,17 +63,72 @@ class PruebasFuncionesTransferencia(unittest.TestCase):
 
     def test_escalon(self):
 
+        # E = {0, 1} y E = {-1, 1} (pág. 45)
         self.assertEqual(escalon(0.3), 1)
-        self.assertEqual(escalon(0), 1)
         self.assertEqual(escalon(-0.3), 0)
+        self.assertEqual(escalon(0.3, bipolar=True), 1)
         self.assertEqual(escalon(-0.3, bipolar=True), -1)
 
-    def test_lineal_y_mixta(self):
+    def test_escalon_en_el_umbral_conserva_la_salida(self):
 
+        # Si Net = θ, la salida es y(t), la anterior
+        self.assertEqual(escalon(0, anterior=0), 0)
+        self.assertEqual(escalon(0, anterior=1), 1)
+        self.assertEqual(escalon(0, bipolar=True, anterior=-1), -1)
+
+        # Sin salida anterior se toma 1
+        self.assertEqual(escalon(0), 1)
+
+    def test_lineal(self):
+
+        # y = Net - θ (pág. 46)
         self.assertEqual(lineal(2.5), 2.5)
-        self.assertEqual(lineal_mixta(5, -1, 1), 1)
-        self.assertEqual(lineal_mixta(-5, -1, 1), -1)
-        self.assertEqual(lineal_mixta(0.4, -1, 1), 0.4)
+        self.assertEqual(lineal(-3), -3)
+
+    def test_mixta_de_0_a_1(self):
+
+        # 0 si x < -c; 1 si x > c; x/(2c) + 1/2 en otro caso
+        self.assertEqual(lineal_mixta(-5, c=2), 0)
+        self.assertEqual(lineal_mixta(5, c=2), 1)
+        self.assertAlmostEqual(lineal_mixta(0, c=2), 0.5)
+        self.assertAlmostEqual(lineal_mixta(1, c=2), 0.75)
+
+    def test_mixta_con_limites_b_y_B(self):
+
+        # Pág. 47: b si x <= b; x si b < x < B; B si x >= B
+        self.assertEqual(lineal_mixta(-5, inferior=-2, superior=3), -2)
+        self.assertEqual(lineal_mixta(9, inferior=-2, superior=3), 3)
+        self.assertEqual(lineal_mixta(1.5, inferior=-2, superior=3), 1.5)
+
+    def test_sigmoidal_como_en_el_pdf(self):
+
+        # y = 1 / (1 + e^-(Net - θ)); en Net = θ vale 0.5
+        import math
+
+        self.assertAlmostEqual(sigmoidal(0), 0.5)
+        self.assertAlmostEqual(sigmoidal(1.3), 1 / (1 + math.exp(-1.3)))
+
+    def test_neurona_ficticia_del_umbral(self):
+
+        # Pág. 49: y0 = 1 con peso w0 = -θ, así
+        # f(Σ_{j=1} w·y - θ) = f(Σ_{j=0} w·y)
+        neurona = Neurona(2, pesos=[0.4, 0.6], umbral=0.3)
+
+        x = [1.0, 0.5]
+
+        con_umbral = 0.4 * 1.0 + 0.6 * 0.5 - 0.3
+        con_ficticia = sum(w * y for w, y in zip([neurona.w0, 0.4, 0.6], [1, 1.0, 0.5]))
+
+        self.assertAlmostEqual(neurona.net(x), con_umbral)
+        self.assertAlmostEqual(con_umbral, con_ficticia)
+
+    def test_mixta_de_menos_1_a_1(self):
+
+        # -1 si x < -c; 1 si x > c; a·x en otro caso
+        self.assertEqual(lineal_mixta(-5, c=2, bipolar=True), -1)
+        self.assertEqual(lineal_mixta(5, c=2, bipolar=True), 1)
+        self.assertAlmostEqual(lineal_mixta(1, c=2, bipolar=True), 0.5)
+        self.assertAlmostEqual(lineal_mixta(1, c=2, bipolar=True, a=0.3), 0.3)
 
     def test_sigmoidal(self):
 
@@ -279,6 +334,41 @@ class PruebasPredictorAtaque(unittest.TestCase):
             if os.path.exists(ruta):
 
                 os.remove(ruta)
+
+    def test_guarda_estadisticas_del_refuerzo(self):
+
+        red = PredictorAtaque()
+
+        red.refuerzos_positivos = 7
+        red.recompensa_acumulada = 5
+
+        archivo = "prueba_estadisticas.json"
+
+        try:
+
+            red.guardar(archivo)
+
+            cargada = PredictorAtaque.cargar(archivo)
+
+            self.assertEqual(cargada.refuerzos_positivos, 7)
+            self.assertEqual(cargada.recompensa_acumulada, 5)
+
+        finally:
+
+            ruta = os.path.join(CARPETA_PESOS, archivo)
+
+            if os.path.exists(ruta):
+
+                os.remove(ruta)
+
+    def test_dios_no_guarda_si_no_se_pide(self):
+
+        # En las pruebas DIOS no debe tocar los
+        # archivos de pesos del juego
+
+        from Logica_Difusa.dios import Dios
+
+        self.assertFalse(Dios().guardar_aprendizaje)
 
     def test_pesos_entrenados(self):
 

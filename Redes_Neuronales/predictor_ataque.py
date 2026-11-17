@@ -82,6 +82,27 @@ CARPETA_PESOS = os.path.join(
 
 ARCHIVO_PESOS = "predictor_refuerzo.json"
 
+# Estadísticas que también se guardan, para que
+# el panel siga contando desde donde se quedó
+ESTADISTICAS = (
+    "aciertos",
+    "evaluadas",
+    "ataques_reales",
+    "ataques_anticipados",
+    "falsas_alarmas",
+    "refuerzos_positivos",
+    "refuerzos_negativos",
+    "recompensa_acumulada",
+)
+
+
+def archivo_de(nombre):
+
+    # Cada cazador guarda lo que aprendió en su
+    # propio archivo (cada uno aprende solo)
+
+    return f"predictor_refuerzo_{nombre}.json"
+
 
 class PredictorAtaque:
 
@@ -178,12 +199,16 @@ class PredictorAtaque:
         return self.neurona.salida(entradas)
 
 
-    @staticmethod
-    def decidir(riesgo):
+    def decidir(self, riesgo):
 
-        # Escalón: 1 = ATACA, 0 = no ataca
+        # Escalón: 1 = ATACA, 0 = no ataca. Si el
+        # riesgo queda justo en el corte, conserva
+        # su predicción anterior (como en el PDF).
 
-        return escalon(riesgo - CORTE)
+        return escalon(
+            riesgo - CORTE,
+            anterior=self.ultima_prediccion
+        )
 
 
     def predecir(self, entradas):
@@ -545,6 +570,10 @@ class PredictorAtaque:
             "entradas": NOMBRES_ENTRADAS,
             "corte": CORTE,
             "neurona": self.neurona.a_diccionario(),
+            "estadisticas": {
+                campo: getattr(self, campo)
+                for campo in ESTADISTICAS
+            },
         }
 
         if extra:
@@ -580,4 +609,13 @@ class PredictorAtaque:
         # En el juego aprende más despacio
         neurona.alfa = ALFA_REFUERZO
 
-        return cls(neurona)
+        red = cls(neurona)
+
+        # Sigue contando desde donde se quedó
+        for campo, valor in datos.get("estadisticas", {}).items():
+
+            if campo in ESTADISTICAS:
+
+                setattr(red, campo, valor)
+
+        return red

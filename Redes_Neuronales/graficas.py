@@ -111,7 +111,9 @@ def grafica_funciones():
     paneles = [
         ("Escalón", escalon, -0.2, 1.2),
         ("Lineal (identidad)", lineal, -4, 4),
-        ("Lineal-mixta", lambda x: lineal_mixta(x, -1, 1), -1.5, 1.5),
+        ("Lineal-mixta (0 a 1)", lambda x: lineal_mixta(x, 2), -0.2, 1.2),
+        ("Lineal-mixta (-1 a 1)", lambda x: lineal_mixta(x, 2, bipolar=True), -1.2, 1.2),
+        ("Lineal-mixta (b, B)", lambda x: lineal_mixta(x, inferior=-1.5, superior=2.5), -2, 3),
         ("Sigmoidal", sigmoidal, -0.2, 1.2),
         ("Gaussiana", gaussiana, -0.2, 1.2),
     ]
@@ -129,9 +131,9 @@ def grafica_funciones():
         x0 = 20 + (i % 3) * 230
         y0 = 60 + (i // 3) * 165
 
-        contenido += _panel(x0, y0, titulo, funcion, ymin, ymax, COLORES[i])
+        contenido += _panel(x0, y0, titulo, funcion, ymin, ymax, COLORES[i % len(COLORES)])
 
-    return _svg(720, 400, contenido)
+    return _svg(720, 565, contenido)
 
 
 # ==========================================

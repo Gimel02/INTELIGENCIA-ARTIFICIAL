@@ -81,6 +81,11 @@ class Neurona:
         # Neurona ficticia: w0 = −θ
         self.w0 = -umbral
 
+        # Última salida, y(t). Con el escalón,
+        # si el Net queda justo en el umbral la
+        # neurona conserva esta salida (pág. 45).
+        self.salida_anterior = None
+
         # Estadísticas del aprendizaje
         self.entrenamientos = 0
         self.correcciones = 0
@@ -130,7 +135,18 @@ class Neurona:
 
         # y = f(net)
 
-        return self.funcion(self.activacion(entradas))
+        net = self.activacion(entradas)
+
+        if self.transferencia == "escalon":
+
+            # Si Net = θ, conserva y(t)
+            y = self.funcion(net, anterior=self.salida_anterior)
+
+            self.salida_anterior = y
+
+            return y
+
+        return self.funcion(net)
 
 
     # ======================================
