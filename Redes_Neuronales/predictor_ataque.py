@@ -1,50 +1,18 @@
-# ==========================================
-# RED NEURONAL: ¿EL JAGUAR VA A ATACAR?
+# APRENDIZAJE: POR REFUERZO ONLINE
 #
-# Cada cazador tiene su propia red. Con lo
-# que percibe del jaguar, calcula el RIESGO
-# de que el jaguar lo ataque en los próximos
-# turnos.
+# La red no recibe una respuesta deseada.
 #
-# ESTRUCTURA (microestructura, pág. 56)
-#   - Niveles: 2 (entrada y salida)
-#   - Neuronas por nivel: 4 de entrada (+ la
-#     neurona ficticia del umbral) y 1 de
-#     salida
-#   - Conexiones: hacia adelante (feed-forward):
-#     cada entrada conectada a la salida
-#   - Flujo de la información: entrada ->
-#     salida
+# Después de realizar una predicción,
+# un crítico observa qué ocurrió y entrega:
 #
-# NEURONA: las 3 secciones
-#   1. ENTRADA (todas entre 0 y 1)
-#        x1 cercanía  = 1 − distancia / 10
-#        x2 hambre    = hambre del jaguar / 100
-#        x3 se acerca = 1 si está más cerca que
-#                       la vez anterior
-#        x4 debilidad = 1 − energía del
-#                       cazador / 100
-#   2. PROCESAMIENTO: net = Σ wi · xi − θ
-#   3. SALIDA: función SIGMOIDAL -> riesgo
-#      entre 0 y 1. Después un ESCALÓN decide
-#      sí o no: riesgo >= 0.6 -> "ATACA".
+#   +1 = la decisión fue correcta
+#   -1 = la decisión fue incorrecta
 #
-# APRENDIZAJE: supervisado, por corrección de
-# error, con la REGLA DELTA (Widrow-Hoff):
-#   Δwi = α · xi · (d − y)
-#   - OFFLINE: antes de jugar, con miles de
-#     ejemplos de partidas sin ventana
-#     (Redes_Neuronales/entrenar_red.py).
-#   - ONLINE: durante el juego sigue
-#     aprendiendo, con un α más pequeño.
-#   El supervisor es lo que pasa después: si
-#   en los siguientes 3 turnos el cazador
-#   percibe al jaguar atacándolo, la respuesta
-#   correcta era 1; si no, era 0.
+# Con ese refuerzo se modifican los pesos
+# durante la ejecución del juego.
 #
-# MODO OBSERVADOR: la red predice y aprende,
-# pero NO cambia las decisiones del cazador.
-# ==========================================
+# Cada cazador mantiene su propia red y
+# aprende de su experiencia individual.
 
 import json
 import os
@@ -67,9 +35,6 @@ DISTANCIA_MAXIMA = 10
 # Riesgo desde el cual dice "ATACA"
 CORTE = 0.6
 
-# Factor de aprendizaje α
-ALFA_OFFLINE = 0.05
-ALFA_ONLINE = 0.01
 # Aprendizaje que utiliza realmente
 # el juego actual.
 
@@ -87,9 +52,6 @@ ARCHIVO_PESOS = "predictor_refuerzo.json"
 ESTADISTICAS = (
     "aciertos",
     "evaluadas",
-    "ataques_reales",
-    "ataques_anticipados",
-    "falsas_alarmas",
     "refuerzos_positivos",
     "refuerzos_negativos",
     "recompensa_acumulada",
@@ -120,9 +82,6 @@ class PredictorAtaque:
         # aprendido (siguen entre partidas)
         self.aciertos = 0
         self.evaluadas = 0
-        self.ataques_reales = 0
-        self.ataques_anticipados = 0
-        self.falsas_alarmas = 0
         # ======================================
         # ESTADÍSTICAS DE REFUERZO
         # ======================================
@@ -135,14 +94,8 @@ class PredictorAtaque:
 
         self.historial_refuerzos = []
 
-        # Error de cada entrenamiento online
-        self.historial_errores = []
-
         # Ejemplos ya etiquetados por el
         # supervisor: (entradas, salida deseada).
-        # Sirven para el entrenamiento offline.
-        self.ejemplos = []
-
         # Si es False, solo junta ejemplos y
         # predice, sin cambiar sus pesos
         self.aprende = True
