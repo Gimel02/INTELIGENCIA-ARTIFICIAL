@@ -324,6 +324,160 @@ class PruebasMemoriaART(
             0.7
         )
 
+    def test_dios_asigna_memoria_a_los_tres(
+        self
+    ):
+
+        from Logica_Difusa.dios import Dios
+
+
+        dios = Dios()
+
+        dios.nueva_partida()
+
+
+        self.assertIsNotNone(
+            dios.cazador.memoria_art
+        )
+
+
+        self.assertIsNotNone(
+            dios.jaguar.memoria_art
+        )
+
+
+        self.assertIsNotNone(
+            dios.interceptor.memoria_art
+        )
+
+
+        self.assertEqual(
+            dios.cazador.memoria_art.nombre,
+            "Rodrigo"
+        )
+
+
+        self.assertEqual(
+            dios.interceptor.memoria_art.nombre,
+            "Gonzalo"
+        )
+
+
+        self.assertEqual(
+            dios.jaguar.memoria_art.nombre,
+            "Jaguar"
+        )
+
+
+    def test_art_de_agentes_es_independiente(
+        self
+    ):
+
+        from Logica_Difusa.dios import Dios
+
+
+        dios = Dios()
+
+        dios.nueva_partida()
+
+
+        rodrigo = (
+            dios.cazador.memoria_art
+        )
+
+        gonzalo = (
+            dios.interceptor.memoria_art
+        )
+
+        jaguar = (
+            dios.jaguar.memoria_art
+        )
+
+
+        self.assertIsNot(
+            rodrigo,
+            gonzalo
+        )
+
+
+        self.assertIsNot(
+            rodrigo,
+            jaguar
+        )
+
+
+        self.assertIsNot(
+            gonzalo,
+            jaguar
+        )
+
+
+    def test_art_conserva_ltm_entre_partidas(
+        self
+    ):
+
+        from Logica_Difusa.dios import Dios
+
+
+        dios = Dios()
+
+        dios.nueva_partida()
+
+
+        memoria = (
+            dios.cazador.memoria_art
+        )
+
+
+        # Rodrigo observa su mapa actual.
+
+        memoria.observar(
+            dios.cazador
+        )
+
+
+        categorias_antes = (
+            memoria.numero_categorias
+        )
+
+
+        self.assertGreater(
+            categorias_antes,
+            0
+        )
+
+
+        # Nueva partida.
+
+        dios.nueva_partida()
+
+
+        nueva_memoria = (
+            dios.cazador.memoria_art
+        )
+
+
+        # Es exactamente la misma memoria ART.
+
+        self.assertIs(
+            memoria,
+            nueva_memoria
+        )
+
+
+        # La memoria de largo plazo permanece.
+
+        self.assertEqual(
+            nueva_memoria.numero_categorias,
+            categorias_antes
+        )
+
+
+        # Pero la STM fue reiniciada.
+
+        self.assertIsNone(
+            nueva_memoria.ultimo_patron
+        )
 
 if __name__ == "__main__":
 

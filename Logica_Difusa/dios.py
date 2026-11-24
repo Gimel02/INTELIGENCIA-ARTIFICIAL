@@ -237,7 +237,20 @@ class Dios:
         # aprendiendo cada vez que se reinicia.
         self.con_red_neuronal = True
         self.redes = {}
+        # ======================================
+        # MEMORIA NEURONAL ART
+        #
+        # Cada agente inteligente posee su propia
+        # ART1 para reconocer y recordar patrones
+        # locales del entorno.
+        #
+        # Se conserva entre partidas mientras el
+        # programa siga abierto.
+        # ======================================
 
+        self.con_memoria_art = True
+
+        self.memorias_art = {}
         # ¿Se guarda en disco lo que aprenden las
         # redes? Lo enciende el juego; en las
         # pruebas queda apagado para no tocar
@@ -494,6 +507,36 @@ class Dios:
 
             agente.red_ataque = self.red_de(nombre)
 
+        # ======================================
+        # MEMORIA ART DE CADA AGENTE
+        #
+        # Cada uno posee su propia red ART1.
+        # ======================================
+
+        self.cazador.memoria_art = (
+            self.memoria_art_de(
+                "cazador",
+                "Rodrigo"
+            )
+        )
+
+
+        if self.interceptor is not None:
+
+            self.interceptor.memoria_art = (
+                self.memoria_art_de(
+                    "interceptor",
+                    "Gonzalo"
+                )
+            )
+
+
+        self.jaguar.memoria_art = (
+            self.memoria_art_de(
+                "jaguar",
+                "Jaguar"
+            )
+        )
 
         self.terminada = False
         self.resultado = None
@@ -675,6 +718,107 @@ class Dios:
     # el entrenamiento offline (si existen);
     # después la conserva entre partidas.
     # --------------------------------------
+
+    # --------------------------------------
+    # Memoria ART de un agente
+    #
+    # Cada agente posee una ART independiente.
+    #
+    # La LTM se conserva entre partidas.
+    # Solo se reinicia la STM al comenzar
+    # una nueva partida.
+    # --------------------------------------
+
+    def memoria_art_de(
+        self,
+        clave,
+        nombre_visible
+    ):
+
+        if not self.con_memoria_art:
+
+            return None
+
+
+        from Redes_Neuronales.ART.memoria_art import (
+            MemoriaART,
+        )
+
+
+        # ==================================
+        # PRIMERA VEZ QUE EXISTE EL AGENTE
+        # ==================================
+
+        if clave not in self.memorias_art:
+
+            self.memorias_art[
+                clave
+            ] = MemoriaART(
+                nombre_visible,
+                vigilancia=0.7,
+                max_categorias=16
+            )
+
+
+        memoria = self.memorias_art[
+            clave
+        ]
+
+
+        # Por si cambia el nombre visible.
+
+        memoria.nombre = (
+            nombre_visible
+        )
+
+
+        # Limpiar solamente STM.
+        #
+        # Los prototipos aprendidos permanecen.
+
+        memoria.reiniciar_partida()
+
+
+        return memoria
+
+    # --------------------------------------
+    # Observar el entorno con ART
+    #
+    # ART trabaja en modo observador:
+    #
+    # - recibe el patrón local
+    # - reconoce o crea una categoría
+    # - aprende
+    #
+    # NO modifica todavía la decisión
+    # del agente.
+    # --------------------------------------
+
+    def observar_art(
+        self,
+        agente
+    ):
+
+        if not self.con_memoria_art:
+
+            return None
+
+
+        memoria = getattr(
+            agente,
+            "memoria_art",
+            None
+        )
+
+
+        if memoria is None:
+
+            return None
+
+
+        return memoria.observar(
+            agente
+        )
 
     def red_de(self, nombre):
 
@@ -1116,6 +1260,22 @@ class Dios:
 
         jaguar_vivo_antes = self.mundo.jaguar_vivo
 
+
+        # ======================================
+        # MEMORIA ART
+        #
+        # Antes de tomar una nueva decisión,
+        # observa el patrón local del entorno.
+        #
+        # ART aprende, pero todavía NO modifica
+        # la decisión del cazador.
+        # ======================================
+
+        self.observar_art(
+            agente
+        )
+
+
         agente.tomar_decision(
             self.mundo.posicion_jaguar
         )
@@ -1376,6 +1536,19 @@ class Dios:
         posicion_cazador, energia_cazador = (
             self.cazador_mas_cercano()
         )
+
+
+        # ======================================
+        # MEMORIA ART DEL JAGUAR
+        #
+        # Observa su entorno antes de tomar
+        # la siguiente decisión.
+        # ======================================
+
+        self.observar_art(
+            self.jaguar
+        )
+
 
         destino = self.jaguar.tomar_decision(
             posicion_cazador,
