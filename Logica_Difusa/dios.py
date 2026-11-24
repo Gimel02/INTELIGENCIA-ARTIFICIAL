@@ -253,7 +253,7 @@ class Dios:
         # Mostrar temporalmente el aprendizaje ART
         # en terminal para verificar la integración.
 
-        self.debug_art = True
+        self.debug_art = False
         # ¿Se guarda en disco lo que aprenden las
         # redes? Lo enciende el juego; en las
         # pruebas queda apagado para no tocar

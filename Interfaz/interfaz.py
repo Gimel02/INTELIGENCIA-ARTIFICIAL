@@ -100,18 +100,13 @@ class Interfaz:
         self.alto_panel = 260
 
         # =========================================
-        # SCROLL DEL HISTORIAL DE DIOS
-        # =========================================
-
-        self.scroll_dios = 0
-
-        # =========================================
-        # PANEL LATERAL DE DIOS
+        # PANEL LATERAL DE REDES NEURONALES
         #
-        # Solo para demostración visual del
-        # funcionamiento del orquestador.
+        # Permite inspeccionar la red neuronal
+        # de cada agente durante la simulación.
         # =========================================
 
+        self.agente_panel_red = "Rodrigo"
         self.ancho_panel_dios_lateral = 340
 
         self.margen_mapa = 30
@@ -767,7 +762,56 @@ class Interfaz:
                     )
 
 
+                # =====================================
+                # PANEL DE REDES NEURONALES
+                # =====================================
 
+                elif evento.key in (
+                    pygame.K_F1,
+                    pygame.K_7
+                ):
+
+                    self.agente_panel_red = (
+                        "Rodrigo"
+                    )
+
+
+                elif evento.key in (
+                    pygame.K_F2,
+                    pygame.K_8
+                ):
+
+                    self.agente_panel_red = (
+                        "Gonzalo"
+                    )
+
+
+                elif evento.key in (
+                    pygame.K_F3,
+                    pygame.K_9
+                ):
+
+                    self.agente_panel_red = (
+                        "Jaguar"
+                    )
+
+
+                # Disminuir vigilancia ART
+
+                elif evento.key == pygame.K_LEFTBRACKET:
+
+                    self.ajustar_vigilancia_art(
+                        -0.05
+                    )
+
+
+                # Aumentar vigilancia ART
+
+                elif evento.key == pygame.K_RIGHTBRACKET:
+
+                    self.ajustar_vigilancia_art(
+                        +0.05
+                    )
 
 
                 # ESC = salir
@@ -832,6 +876,7 @@ class Interfaz:
 
                         self.reiniciar_simulacion()
 
+
     def dibujar(self):
 
         # =====================================
@@ -870,15 +915,7 @@ class Interfaz:
 
         self.dibujar_panel()
 
-
-        # =====================================
-        # PANEL LATERAL EXTRA DE DIOS
-        #
-        # Solo para demostrar visualmente
-        # el funcionamiento del orquestador.
-        # =====================================
-
-        self.dibujar_panel_dios_lateral()
+        self.dibujar_panel_redes_lateral()
         # =====================================
         # RESULTADO FINAL
         # =====================================
@@ -1240,12 +1277,89 @@ class Interfaz:
 
 
         return lineas
-    
+
+
     # =========================================
-    # PANEL LATERAL DEL ORQUESTADOR DIOS
+    # AGENTE MOSTRADO EN EL PANEL DE REDES
     # =========================================
 
-    def dibujar_panel_dios_lateral(self):
+    def agente_red_seleccionado(self):
+
+        if self.agente_panel_red == "Rodrigo":
+
+            return self.agente
+
+
+        if self.agente_panel_red == "Gonzalo":
+
+            return self.agente_interceptor
+
+
+        if self.agente_panel_red == "Jaguar":
+
+            return self.agente_jaguar
+
+
+        return None
+
+
+    # =========================================
+    # MODIFICAR VIGILANCIA ART
+    #
+    # [ disminuye rho
+    # ] aumenta rho
+    # =========================================
+
+    def ajustar_vigilancia_art(
+        self,
+        cambio
+    ):
+
+        agente = self.agente_red_seleccionado()
+
+
+        if agente is None:
+
+            return
+
+
+        memoria = getattr(
+            agente,
+            "memoria_art",
+            None
+        )
+
+
+        if memoria is None:
+
+            return
+
+
+        nuevo_valor = max(
+            0.0,
+            min(
+                1.0,
+                memoria.vigilancia + cambio
+            )
+        )
+
+
+        memoria.vigilancia = round(
+            nuevo_valor,
+            2
+        )
+
+
+        print(
+            f"[ART - {memoria.nombre.upper()}] "
+            f"vigilancia cambiada a "
+            f"{memoria.vigilancia:.0%}"
+        )
+    # =========================================
+    # PANEL LATERAL DE REDES NEURONALES
+    # =========================================
+
+    def dibujar_panel_redes_lateral(self):
 
         margen_derecho = 25
 
@@ -1302,7 +1416,7 @@ class Interfaz:
         # =====================================
 
         titulo = self.fuente_titulo.render(
-            "ORQUESTADOR DIOS",
+            "REDES NEURONALES",
             True,
             self.C_ORO_PURO
         )
@@ -1312,17 +1426,15 @@ class Interfaz:
             titulo,
             (
                 x + 18,
-                y + 18
+                y + 15
             )
         )
 
 
-        subtitulo = (
-            self.fuente_pequena.render(
-                "Decisiones y eventos en tiempo real",
-                True,
-                (190, 170, 120)
-            )
+        subtitulo = self.fuente_pequena.render(
+            "F1 Rodrigo | F2 Gonzalo | F3 Jaguar",
+            True,
+            (190, 170, 120)
         )
 
 
@@ -1330,110 +1442,74 @@ class Interfaz:
             subtitulo,
             (
                 x + 18,
-                y + 50
+                y + 46
             )
         )
 
-
-        # Línea divisoria
 
         pygame.draw.line(
             self.pantalla,
             self.C_ORO_VIEJO,
             (
                 x + 15,
-                y + 78
+                y + 69
             ),
             (
                 x + ancho - 15,
-                y + 78
+                y + 69
             ),
             2
         )
 
 
-        # =====================================
-        # ESTADO ACTUAL
-        # =====================================
+        agente = (
+            self.agente_red_seleccionado()
+        )
+
 
         cursor_y = (
-            y + 95
+            y + 82
         )
 
 
-        turno = (
-            self.dios.turno_actual()
-        )
+        # =====================================
+        # AGENTE NO DISPONIBLE
+        # =====================================
+
+        if agente is None:
+
+            texto = self.fuente_UI.render(
+                f"{self.agente_panel_red} no está activo",
+                True,
+                self.C_NEON_ROJO
+            )
+
+            self.pantalla.blit(
+                texto,
+                (
+                    x + 18,
+                    cursor_y
+                )
+            )
+
+            return
 
 
-        estado_partida = (
-            "FINALIZADA"
-            if self.dios.terminada
-            else "EN CURSO"
-        )
+        # =====================================
+        # FUNCIÓN PARA ESCRIBIR DATOS
+        # =====================================
+
+        def linea(
+            etiqueta,
+            valor,
+            color=(235, 235, 235)
+        ):
+
+            nonlocal cursor_y
 
 
-        jaguar_estado = (
-            "VIVO"
-            if self.mundo.jaguar_vivo
-            else "CAPTURADO"
-        )
-
-
-        cazadores_vivos = 0
-
-
-        for _, agente, _ in self.dios.cazadores():
-
-            if (
-                agente is not None
-                and
-                agente.vidas > 0
-            ):
-
-                cazadores_vivos += 1
-
-
-        estado_red = (
-            "ACTIVA"
-            if self.dios.con_red_neuronal
-            else "APAGADA"
-        )
-
-
-        datos_estado = [
-
-            (
-                "Turno",
-                str(turno)
-            ),
-
-            (
-                "Partida",
-                estado_partida
-            ),
-
-            (
-                "Jaguar",
-                jaguar_estado
-            ),
-
-            (
-                "Cazadores activos",
-                str(cazadores_vivos)
-            ),
-
-            (
-                "Red neuronal",
-                estado_red
-            ),
-        ]
-
-
-        for etiqueta, valor in datos_estado:
-
-            texto_etiqueta = (
-                self.fuente_UI.render(
+            etiqueta_render = (
+                self.fuente_pequena.render(
                     f"{etiqueta}:",
                     True,
                     (190, 170, 120)
@@ -1442,7 +1518,7 @@ class Interfaz:
 
 
             self.pantalla.blit(
-                texto_etiqueta,
+                etiqueta_render,
                 (
                     x + 18,
                     cursor_y
@@ -1450,65 +1526,41 @@ class Interfaz:
             )
 
 
-            texto_valor = (
-                self.fuente_UI.render(
-                    valor,
+            valor_render = (
+                self.fuente_pequena.render(
+                    str(valor),
                     True,
-                    (
-                        self.C_NEON_VERDE
-                        if valor
-                        in (
-                            "EN CURSO",
-                            "VIVO",
-                            "ACTIVA"
-                        )
-                        else
-                        (235, 235, 235)
-                    )
+                    color
                 )
             )
 
 
             self.pantalla.blit(
-                texto_valor,
+                valor_render,
                 (
-                    x + 155,
+                    x + 125,
                     cursor_y
                 )
             )
 
 
-            cursor_y += 25
+            cursor_y += 17
 
 
         # =====================================
-        # ÚLTIMA DECISIÓN DE DIOS
+        # AGENTE SELECCIONADO
         # =====================================
 
-        cursor_y += 8
-
-
-        pygame.draw.line(
-            self.pantalla,
-            self.C_ORO_VIEJO,
-            (
-                x + 15,
-                cursor_y
-            ),
-            (
-                x + ancho - 15,
-                cursor_y
-            ),
-            1
+        nombre_agente = getattr(
+            agente,
+            "nombre",
+            self.agente_panel_red
         )
 
 
-        cursor_y += 15
-
-
-        titulo_ultima = (
+        nombre_render = (
             self.fuente_UI.render(
-                "ÚLTIMA DECISIÓN",
+                f"AGENTE: {nombre_agente.upper()}",
                 True,
                 self.C_NEON_AMARILLO
             )
@@ -1516,7 +1568,7 @@ class Interfaz:
 
 
         self.pantalla.blit(
-            titulo_ultima,
+            nombre_render,
             (
                 x + 18,
                 cursor_y
@@ -1524,82 +1576,157 @@ class Interfaz:
         )
 
 
-        cursor_y += 27
+        cursor_y += 28
 
 
-        bitacora = list(
-            self.dios.bitacora
+        # =====================================
+        # RED 1 - PREDICTOR DE ATAQUE
+        # =====================================
+
+        titulo_predictor = (
+            self.fuente_UI.render(
+                "PREDICTOR DE ATAQUE",
+                True,
+                self.C_ORO_PURO
+            )
         )
 
 
-        if bitacora:
+        self.pantalla.blit(
+            titulo_predictor,
+            (
+                x + 18,
+                cursor_y
+            )
+        )
 
-            ultima = bitacora[-1]
 
-            ultima = ultima.replace(
-                "[DIOS] ",
-                "",
-                1
+        cursor_y += 22
+
+
+        red = getattr(
+            agente,
+            "red_ataque",
+            None
+        )
+
+
+        # Jaguar no utiliza esta red.
+
+        if (
+            self.agente_panel_red
+            ==
+            "Jaguar"
+        ):
+
+            linea(
+                "Estado",
+                "No aplica al Jaguar",
+                (160, 160, 160)
             )
 
 
-            lineas = self.envolver_texto(
-                ultima,
-                self.fuente_UI,
-                ancho - 36
+        elif red is None:
+
+            linea(
+                "Estado",
+                "APAGADA",
+                self.C_NEON_ROJO
             )
 
-
-            for linea in lineas:
-
-                render = (
-                    self.fuente_UI.render(
-                        linea,
-                        True,
-                        self.C_NEON_VERDE
-                    )
-                )
-
-
-                self.pantalla.blit(
-                    render,
-                    (
-                        x + 18,
-                        cursor_y
-                    )
-                )
-
-
-                cursor_y += 20
 
         else:
 
-            render = (
-                self.fuente_UI.render(
-                    "Sin decisiones todavía",
-                    True,
-                    (160, 160, 160)
+            if red.ultimo_riesgo is None:
+
+                riesgo = "-"
+
+                prediccion = (
+                    "Sin observación"
                 )
+
+            else:
+
+                riesgo = (
+                    f"{red.ultimo_riesgo:.0%}"
+                )
+
+                prediccion = (
+                    "ATACA"
+                    if red.ultima_prediccion == 1
+                    else "NO ATACA"
+                )
+
+
+            color_prediccion = (
+                self.C_NEON_ROJO
+                if red.ultima_prediccion == 1
+                else self.C_NEON_VERDE
             )
 
 
-            self.pantalla.blit(
-                render,
+            linea(
+                "Riesgo",
+                riesgo
+            )
+
+
+            linea(
+                "Predicción",
+                prediccion,
+                color_prediccion
+            )
+
+
+            # Último refuerzo recibido.
+
+            ultimo_refuerzo = "-"
+
+
+            if red.bitacora:
+
+                ultimo = red.bitacora[-1]
+
+                refuerzo = ultimo.get(
+                    "refuerzo"
+                )
+
+
+                if refuerzo is not None:
+
+                    ultimo_refuerzo = (
+                        f"{refuerzo:+d}"
+                    )
+
+
+            color_refuerzo = (
+                self.C_NEON_VERDE
+                if ultimo_refuerzo.startswith("+")
+                else
+                self.C_NEON_ROJO
+                if ultimo_refuerzo.startswith("-")
+                else
+                (200, 200, 200)
+            )
+
+
+            linea(
+                "Último refuerzo",
+                ultimo_refuerzo,
+                color_refuerzo
+            )
+
+
+            linea(
+                "Éxitos / fallos",
                 (
-                    x + 18,
-                    cursor_y
+                    f"+{red.refuerzos_positivos} "
+                    f"/ -{red.refuerzos_negativos}"
                 )
             )
 
 
-            cursor_y += 20
-
-
-        # =====================================
-        # HISTORIAL DE DECISIONES
-        # =====================================
-
-        cursor_y += 12
+        cursor_y += 5
 
 
         pygame.draw.line(
@@ -1617,228 +1744,452 @@ class Interfaz:
         )
 
 
-        cursor_y += 15
+        cursor_y += 10
 
 
-        titulo_historial = (
-            self.fuente_UI.render(
-                "DECISIONES ",
-                True,
-                self.C_ORO_PURO
-            )
+        # =====================================
+        # RED 2 - ART1
+        # =====================================
+
+        titulo_art = self.fuente_UI.render(
+            "MEMORIA ART1",
+            True,
+            self.C_ORO_PURO
         )
 
-        ayuda_scroll = (
-            self.fuente_pequena.render(
-                "Page Up / Page Down para recorrer",
-                True,
-                (150, 150, 150)
-            )
-        )
 
         self.pantalla.blit(
-            ayuda_scroll,
+            titulo_art,
             (
                 x + 18,
                 cursor_y
             )
         )
+
 
         cursor_y += 22
 
 
-        self.pantalla.blit(
-            titulo_historial,
-            (
-                x + 18,
-                cursor_y
-            )
+        memoria = getattr(
+            agente,
+            "memoria_art",
+            None
         )
 
 
-        cursor_y += 30
+        if memoria is None:
+
+            linea(
+                "Estado",
+                "ART apagada",
+                self.C_NEON_ROJO
+            )
+
+            return
+
+
+        resultado = (
+            memoria.ultimo_resultado
+        )
+
+
+        patron = (
+            memoria.ultimo_patron
+        )
 
 
         # =====================================
-        # HISTORIAL COMPLETO DEL ORQUESTADOR
-        #
-        # PAGE UP   -> decisiones anteriores
-        # PAGE DOWN -> decisiones recientes
+        # MINI VISUAL DE LAS 4 ENTRADAS
         # =====================================
 
-        historial = list(
-            self.dios.bitacora_decisiones
-        )
+        if patron is not None:
 
-
-        lineas_disponibles = 14
-
-
-        fin = (
-            len(historial)
-            -
-            self.scroll_dios
-        )
-
-
-        fin = max(
-            0,
-            min(
-                fin,
-                len(historial)
+            centro_x = (
+                x + ancho // 2
             )
-        )
 
-
-        inicio = max(
-            0,
-            fin - lineas_disponibles
-        )
-
-
-        eventos = historial[
-            inicio:fin
-        ]
-
-
-        for registro in eventos:
-
-            actor = registro[
-                "actor"
-            ]
-
-            decision = registro[
-                "decision"
-            ]
-
-            detalle = registro.get(
-                "detalle",
-                ""
+            centro_y = (
+                cursor_y + 28
             )
 
 
-            # ==================================
-            # COLOR SEGÚN QUIÉN DECIDE
-            # ==================================
+            posiciones_bits = [
 
-            if actor == "Rodrigo":
+                (
+                    centro_x,
+                    centro_y - 23
+                ),
 
-                color_actor = (
-                    self.C_ORO_PURO
-                )
+                (
+                    centro_x,
+                    centro_y + 23
+                ),
 
-            elif actor == "Gonzalo":
+                (
+                    centro_x - 38,
+                    centro_y
+                ),
 
-                color_actor = (
-                    self.C_NEON_AZUL
-                )
+                (
+                    centro_x + 38,
+                    centro_y
+                ),
+            ]
 
-            elif actor == "Jaguar":
 
-                color_actor = (
-                    self.C_NEON_ROJO
-                )
+            for bit, posicion in zip(
+                patron,
+                posiciones_bits
+            ):
 
-            else:
-
-                color_actor = (
+                color_bit = (
                     self.C_NEON_VERDE
+                    if bit == 1
+                    else self.C_NEON_ROJO
                 )
 
 
-            encabezado = (
-                f"T{registro['turno']} "
-                f"{actor}: "
-                f"{decision}"
-            )
+                pygame.draw.circle(
+                    self.pantalla,
+                    color_bit,
+                    posicion,
+                    11
+                )
 
 
-            lineas = self.envolver_texto(
-                encabezado,
-                self.fuente_UI,
-                ancho - 38
-            )
-
-
-            for linea in lineas:
-
-                if (
-                    cursor_y
-                    >
-                    rect_panel.bottom - 25
-                ):
-
-                    return
-
-
-                render = (
+                bit_render = (
                     self.fuente_UI.render(
-                        linea,
+                        str(bit),
                         True,
-                        color_actor
+                        (20, 20, 20)
                     )
                 )
 
 
                 self.pantalla.blit(
-                    render,
+                    bit_render,
                     (
-                        x + 18,
-                        cursor_y
+                        posicion[0]
+                        -
+                        bit_render.get_width() // 2,
+
+                        posicion[1]
+                        -
+                        bit_render.get_height() // 2
                     )
                 )
 
 
-                cursor_y += 18
+            inicial = (
+                nombre_agente[0].upper()
+            )
 
 
-            # Detalle más pequeño
-
-            if detalle:
-
-                lineas_detalle = (
-                    self.envolver_texto(
-                        detalle,
-                        self.fuente_pequena,
-                        ancho - 45
-                    )
+            centro_render = (
+                self.fuente_UI.render(
+                    inicial,
+                    True,
+                    self.C_ORO_PURO
                 )
+            )
 
 
-                for linea in lineas_detalle:
+            self.pantalla.blit(
+                centro_render,
+                (
+                    centro_x
+                    -
+                    centro_render.get_width() // 2,
 
-                    if (
-                        cursor_y
-                        >
-                        rect_panel.bottom - 25
-                    ):
-
-                        return
-
-
-                    render = (
-                        self.fuente_pequena.render(
-                            "   " + linea,
-                            True,
-                            (180, 180, 180)
-                        )
-                    )
+                    centro_y
+                    -
+                    centro_render.get_height() // 2
+                )
+            )
 
 
-                    self.pantalla.blit(
-                        render,
-                        (
-                            x + 18,
-                            cursor_y
-                        )
-                    )
+            cursor_y += 64
 
 
-                    cursor_y += 16
+        # =====================================
+        # TODAVÍA NO HAY OBSERVACIÓN
+        # =====================================
+
+        if resultado is None:
+
+            linea(
+                "Estado",
+                "Esperando patrón",
+                (160, 160, 160)
+            )
+
+            linea(
+                "Vigilancia ρ",
+                f"{memoria.vigilancia:.0%}"
+            )
+
+            return
 
 
-            cursor_y += 5
-    
+        # =====================================
+        # DATOS DE ART
+        # =====================================
+
+        patron_texto = (
+            "["
+            +
+            " ".join(
+                str(valor)
+                for valor
+                in memoria.ultimo_patron
+            )
+            +
+            "]"
+        )
+
+
+        categoria = resultado.get(
+            "categoria"
+        )
+
+
+        categoria_texto = (
+            f"C{categoria}"
+            if categoria is not None
+            else "-"
+        )
+
+
+        similitud = resultado.get(
+            "similitud"
+        )
+
+
+        similitud_texto = (
+            f"{similitud:.0%}"
+            if similitud is not None
+            else "-"
+        )
+
+
+        activacion = resultado.get(
+            "activacion"
+        )
+
+
+        activacion_texto = (
+            f"{activacion:.2f}"
+            if activacion is not None
+            else "-"
+        )
+
+
+        estado = resultado.get(
+            "estado",
+            "-"
+        )
+
+
+        if estado == "RESONANCIA":
+
+            color_estado = (
+                self.C_NEON_VERDE
+            )
+
+        elif estado == "NUEVA_CATEGORIA":
+
+            color_estado = (
+                self.C_NEON_AZUL
+            )
+
+        elif estado == "SATURADA":
+
+            color_estado = (
+                self.C_NEON_ROJO
+            )
+
+        else:
+
+            color_estado = (
+                self.C_NEON_AMARILLO
+            )
+
+
+        linea(
+            "Patrón",
+            patron_texto
+        )
+
+
+        linea(
+            "Categoría",
+            categoria_texto
+        )
+
+
+        linea(
+            "Estado",
+            estado.replace(
+                "_",
+                " "
+            ),
+            color_estado
+        )
+
+
+        linea(
+            "Similitud",
+            similitud_texto
+        )
+
+
+        linea(
+            "Vigilancia ρ",
+            f"{memoria.vigilancia:.0%}",
+            self.C_NEON_AMARILLO
+        )
+
+
+        linea(
+            "Activación",
+            activacion_texto
+        )
+
+
+        # =====================================
+        # PROTOTIPO V Y PESOS W
+        # =====================================
+
+        prototipo = resultado.get(
+            "prototipo"
+        )
+
+
+        if prototipo is not None:
+
+            v_texto = (
+                "["
+                +
+                " ".join(
+                    str(v)
+                    for v
+                    in prototipo
+                )
+                +
+                "]"
+            )
+
+
+            pesos_w = (
+                memoria.art.pesos_feedforward(
+                    prototipo
+                )
+            )
+
+
+            w_texto = (
+                "["
+                +
+                " ".join(
+                    f"{peso:.2f}"
+                    for peso
+                    in pesos_w
+                )
+                +
+                "]"
+            )
+
+
+            linea(
+                "Prototipo V",
+                v_texto
+            )
+
+
+            linea(
+                "Pesos W",
+                w_texto
+            )
+
+
+        linea(
+            "Categorías",
+            (
+                f"{memoria.numero_categorias}"
+                f" / "
+                f"{memoria.art.max_categorias}"
+            )
+        )
+
+
+        resets = resultado.get(
+            "categorias_reseteadas",
+            []
+        )
+
+
+        if resets:
+
+            resets_texto = (
+                ", ".join(
+                    f"C{numero}"
+                    for numero
+                    in resets
+                )
+            )
+
+        else:
+
+            resets_texto = "-"
+
+
+        linea(
+            "Reset",
+            resets_texto
+        )
+
+
+        # =====================================
+        # AYUDA
+        # =====================================
+
+        if (
+            cursor_y
+            <
+            rect_panel.bottom - 35
+        ):
+
+            pygame.draw.line(
+                self.pantalla,
+                self.C_ORO_VIEJO,
+                (
+                    x + 15,
+                    cursor_y + 4
+                ),
+                (
+                    x + ancho - 15,
+                    cursor_y + 4
+                ),
+                1
+            )
+
+
+            ayuda = (
+                self.fuente_pequena.render(
+                    "[ / ] modificar vigilancia",
+                    True,
+                    (150, 150, 150)
+                )
+            )
+
+
+            self.pantalla.blit(
+                ayuda,
+                (
+                    x + 18,
+                    cursor_y + 10
+                )
+            )
     # =========================================
     # TEXTO DE LA REGLA MÁS FUERTE Y DEL
     # CENTROIDE (para el panel)
