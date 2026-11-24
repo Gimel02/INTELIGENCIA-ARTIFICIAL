@@ -262,33 +262,139 @@ class PruebasPredictorAtaque(unittest.TestCase):
 
         self.assertEqual(PredictorAtaque().predecir([1, 1, 1, 1]), 0)
 
-    def test_supervisor_etiqueta_ataque(self):
+    def test_refuerzo_negativo_si_no_anticipa_ataque(self):
 
-        # Predice en el turno 1 y en el 2 lo ve
-        # atacando: la respuesta correcta era 1
-
-        red = PredictorAtaque()
-
-        red.observar(1, True, 3, 70, 30, False)
-        red.observar(2, True, 2, 70, 30, True)
-
-        self.assertEqual(red.ejemplos[-1][1], 1)
-        self.assertEqual(red.ataques_reales, 1)
-
-    def test_supervisor_etiqueta_no_ataque(self):
-
-        # Pasan 3 turnos sin ataque: era 0
+        # La red predice NO ATACA.
+        # Si después el Jaguar sí ataca,
+        # el crítico entrega -1.
 
         red = PredictorAtaque()
 
-        red.observar(1, True, 8, 10, 90, False)
 
-        for turno in range(2, 2 + HORIZONTE):
+        red.observar(
+            1,
+            True,
+            3,
+            70,
+            30,
+            False
+        )
 
-            red.observar(turno, False, None, 10, 90, False)
 
-        self.assertEqual(red.ejemplos[0][1], 0)
+        red.observar(
+            2,
+            True,
+            2,
+            70,
+            30,
+            True
+        )
 
+
+        self.assertEqual(
+            red.evaluadas,
+            1
+        )
+
+
+        self.assertEqual(
+            red.refuerzos_negativos,
+            1
+        )
+
+
+        self.assertEqual(
+            red.refuerzos_positivos,
+            0
+        )
+
+
+        self.assertEqual(
+            red.recompensa_acumulada,
+            -1
+        )
+
+
+        self.assertEqual(
+            red.bitacora[-1]["refuerzo"],
+            -1
+        )
+
+
+        self.assertEqual(
+            red.bitacora[-1]["motivo"],
+            "no anticipó el ataque"
+        )
+
+    def test_refuerzo_positivo_si_no_hay_ataque(self):
+
+        # La red predice NO ATACA.
+        # Si transcurre el horizonte sin ataque,
+        # el crítico entrega +1.
+
+        red = PredictorAtaque()
+
+
+        red.observar(
+            1,
+            True,
+            8,
+            10,
+            90,
+            False
+        )
+
+
+        for turno in range(
+            2,
+            2 + HORIZONTE
+        ):
+
+            red.observar(
+                turno,
+                False,
+                None,
+                10,
+                90,
+                False
+            )
+
+
+        self.assertEqual(
+            red.evaluadas,
+            1
+        )
+
+
+        self.assertEqual(
+            red.refuerzos_positivos,
+            1
+        )
+
+
+        self.assertEqual(
+            red.refuerzos_negativos,
+            0
+        )
+
+
+        self.assertEqual(
+            red.recompensa_acumulada,
+            1
+        )
+
+
+        self.assertEqual(
+            red.bitacora[-1]["refuerzo"],
+            1
+        )
+
+
+        self.assertEqual(
+            red.bitacora[-1]["motivo"],
+            "correctamente continuó sin alarma"
+        )
+    
     def test_aprende_de_sus_errores(self):
 
         # Siempre que está débil y cerca, el
