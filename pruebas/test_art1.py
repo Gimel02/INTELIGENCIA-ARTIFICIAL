@@ -245,6 +245,99 @@ class PruebasART1(unittest.TestCase):
             2 / 3
         )
 
+    def test_pesos_w_del_ejemplo_de_clase(
+        self
+    ):
+
+        art = ART1(
+            numero_entradas=4,
+            vigilancia=0.5,
+            gamma=0.5
+        )
+
+
+        prototipo = [
+            1,
+            1,
+            0,
+            0
+        ]
+
+
+        pesos = art.pesos_feedforward(
+            prototipo
+        )
+
+
+        self.assertEqual(
+            pesos,
+            [
+                0.4,
+                0.4,
+                0.0,
+                0.0
+            ]
+        )
+
+    def test_competencia_del_ejemplo_de_clase(
+        self
+    ):
+
+        art = ART1(
+            numero_entradas=4,
+            vigilancia=0.5,
+            gamma=0.5
+        )
+
+
+        # Categoría 1
+        art.prototipos.append(
+            [1, 1, 0, 0]
+        )
+
+
+        # Categoría 2
+        art.prototipos.append(
+            [0, 0, 1, 1]
+        )
+
+
+        entrada = [
+            1,
+            1,
+            1,
+            0
+        ]
+
+
+        categorias = (
+            art.categorias_por_competencia(
+                entrada
+            )
+        )
+
+
+        # Según el ejemplo:
+        #
+        # C1 = 0.8
+        # C2 = 0.4
+
+        self.assertEqual(
+            categorias[0]["indice"],
+            0
+        )
+
+
+        self.assertAlmostEqual(
+            categorias[0]["activacion"],
+            0.8
+        )
+
+
+        self.assertAlmostEqual(
+            categorias[1]["activacion"],
+            0.4
+        )
 if __name__ == "__main__":
 
     unittest.main()

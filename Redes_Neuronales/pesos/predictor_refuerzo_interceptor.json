@@ -1,0 +1,29 @@
+{
+  "entradas": [
+    "cercania",
+    "hambre",
+    "se_acerca",
+    "debilidad"
+  ],
+  "corte": 0.6,
+  "neurona": {
+    "transferencia": "sigmoidal",
+    "alfa": 0.03,
+    "pesos": [
+      -0.05982310272425695,
+      -0.014296030939859048,
+      -0.01462695516293512,
+      -0.005097260333431539
+    ],
+    "w0": -0.073098737456659,
+    "entrenamientos": 5,
+    "correcciones": 5
+  },
+  "estadisticas": {
+    "aciertos": 5,
+    "evaluadas": 5,
+    "refuerzos_positivos": 5,
+    "refuerzos_negativos": 0,
+    "recompensa_acumulada": 5
+  }
+}

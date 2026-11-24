@@ -249,8 +249,11 @@ class Dios:
         # ======================================
 
         self.con_memoria_art = True
-
         self.memorias_art = {}
+        # Mostrar temporalmente el aprendizaje ART
+        # en terminal para verificar la integración.
+
+        self.debug_art = True
         # ¿Se guarda en disco lo que aprenden las
         # redes? Lo enciende el juego; en las
         # pruebas queda apagado para no tocar
@@ -793,7 +796,6 @@ class Dios:
     # NO modifica todavía la decisión
     # del agente.
     # --------------------------------------
-
     def observar_art(
         self,
         agente
@@ -816,9 +818,72 @@ class Dios:
             return None
 
 
-        return memoria.observar(
+        resultado = memoria.observar(
             agente
         )
+
+
+        # ======================================
+        # DEPURACIÓN TEMPORAL
+        #
+        # Nos permite comprobar en una partida
+        # real qué está viendo y aprendiendo ART.
+        # ======================================
+
+        if self.debug_art:
+
+            similitud = resultado.get(
+                "similitud"
+            )
+
+
+            if similitud is None:
+
+                texto_similitud = "-"
+
+            else:
+
+                texto_similitud = (
+                    f"{similitud:.0%}"
+                )
+
+
+            categoria = resultado.get(
+                "categoria"
+            )
+
+
+            if categoria is None:
+
+                texto_categoria = "-"
+
+            else:
+
+                texto_categoria = (
+                    f"C{categoria}"
+                )
+
+
+            resets = resultado.get(
+                "categorias_reseteadas",
+                []
+            )
+
+
+            print(
+                f"[ART - {memoria.nombre.upper()}] "
+                f"patrón={memoria.ultimo_patron} | "
+                f"{texto_categoria} | "
+                f"sim={texto_similitud} | "
+                f"ρ={memoria.vigilancia:.0%} | "
+                f"{resultado['estado']} | "
+                f"categorías={memoria.numero_categorias} | "
+                f"reset={resets}"
+            )
+
+
+        return resultado
+
 
     def red_de(self, nombre):
 

@@ -30,7 +30,8 @@ class ART1:
         self,
         numero_entradas=4,
         vigilancia=0.5,
-        max_categorias=16
+        max_categorias=16,
+        gamma=0.5
     ):
 
         if numero_entradas <= 0:
@@ -54,6 +55,26 @@ class ART1:
         self.vigilancia = vigilancia
 
         self.max_categorias = max_categorias
+
+        # ======================================
+        # GAMMA
+        #
+        # Parámetro estabilizador utilizado para
+        # calcular los pesos feedforward W.
+        #
+        # En el ejemplo de clase:
+        #
+        # gamma = 0.5
+        # ======================================
+
+        if gamma <= 0:
+
+            raise ValueError(
+                "gamma debe ser mayor que 0"
+            )
+
+
+        self.gamma = gamma
 
         # Cada elemento es el prototipo binario
         # de una categoría.
@@ -158,22 +179,73 @@ class ART1:
 
 
     # ======================================
+    # PESOS FEEDFORWARD W
+    #
+    # A partir del prototipo V de una
+    # categoría se calculan sus conexiones
+    # hacia la capa de salida:
+    #
+    #             vi
+    # wi = ----------------
+    #       gamma + sum(V)
+    #
+    # Ejemplo de clase:
+    #
+    # V = [1, 1, 0, 0]
+    # gamma = 0.5
+    #
+    # W = [0.4, 0.4, 0, 0]
+    # ======================================
+
+    def pesos_feedforward(
+        self,
+        prototipo
+    ):
+
+        denominador = (
+            self.gamma
+            +
+            sum(prototipo)
+        )
+
+
+        if denominador == 0:
+
+            return [
+                0.0
+                for _ in prototipo
+            ]
+
+
+        return [
+
+            valor
+            /
+            denominador
+
+            for valor
+            in prototipo
+
+        ]
+
+    # ======================================
     # ACTIVACIÓN DE UNA CATEGORÍA
     #
-    # Las categorías compiten entre ellas.
-    # El valor depende de:
+    # La entrada se propaga mediante los
+    # pesos feedforward W.
     #
-    # - cuánto coincide la entrada
-    # - qué tan específico es el prototipo
+    # La categoría con mayor activación
+    # gana la competencia.
     #
-    # L > 1 es el parámetro de elección.
+    #       N
+    # yj = Σ ei * wji
+    #      i=1
     # ======================================
 
     def activacion_categoria(
         self,
         patron,
-        prototipo,
-        L=2.0
+        prototipo
     ):
 
         self.validar_patron(
@@ -181,40 +253,25 @@ class ART1:
         )
 
 
-        coincidencias = sum(
-
-            entrada & memoria
-
-            for entrada, memoria
-            in zip(
-                patron,
+        pesos_w = (
+            self.pesos_feedforward(
                 prototipo
             )
         )
 
 
-        activos_prototipo = sum(
-            prototipo
-        )
+        return sum(
 
-
-        if activos_prototipo == 0:
-
-            return 0.0
-
-
-        return (
-            L
+            entrada
             *
-            coincidencias
-            /
-            (
-                L
-                -
-                1
-                +
-                activos_prototipo
+            peso
+
+            for entrada, peso
+            in zip(
+                patron,
+                pesos_w
             )
+
         )
 
 
