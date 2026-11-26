@@ -170,6 +170,10 @@ class AgenteCazador:
 
         self.turno = 0
 
+        # True cuando la energía llegó a 0 lejos de la
+        # cabaña: se arrastra hacia ella (no muere).
+        self.agotado = False
+
         # Lo que percibe ahora con cada sentido
 
         self.percepcion = {}
@@ -366,6 +370,8 @@ class AgenteCazador:
         self.herido = False
 
         self.recuperandose = False
+
+        self.agotado = False
 
         self.tiempo_recuperacion_restante = 0.0
 
@@ -3088,6 +3094,75 @@ class AgenteCazador:
 
 
     # ==========================================
+    # AGOTADO: ARRASTRARSE A LA CABAÑA
+    #
+    # Un paso A* hacia su campamento. No gasta
+    # energía y no toca la lógica difusa.
+    # ==========================================
+
+    def arrastrarse_a_cabana(self):
+
+        self.meta_actual = self.campamento
+
+        self.motivo = (
+            "AGOTADO: se arrastra hacia su cabaña"
+        )
+
+        camino = AEstrella.buscar(
+            self.posicion,
+            self.campamento,
+            self.mundo,
+            self.zonas_prohibidas(),
+            {}
+        )
+
+        if not camino:
+
+            self.estado = (
+                "AGOTADO: sin ruta a su cabaña"
+            )
+
+            self.fallo_decision = "sin ruta"
+
+            return False
+
+        self.ruta_planeada = camino
+
+        siguiente = camino[0]
+
+        if not self.mundo.mover_cazador(
+            siguiente,
+            campamento_propio=self.campamento
+        ):
+
+            self.estado = (
+                "AGOTADO: camino bloqueado"
+            )
+
+            self.fallo_decision = "bloqueado"
+
+            return False
+
+        self.posicion = siguiente
+
+        self.ultimas_posiciones.append(
+            self.posicion
+        )
+
+        self.memoria.registrar_paso(
+            siguiente
+        )
+
+        self.fuente_decision = "A* AGOTADO"
+
+        self.estado = (
+            "AGOTADO: arrastrándose a la cabaña"
+        )
+
+        return True
+
+
+    # ==========================================
     # DECIDIR Y ACTUAR
     # ==========================================
 
@@ -3135,6 +3210,10 @@ class AgenteCazador:
         # 1. COMPROBAR ENERGÍA
         # ==========================================
 
+        if self.energia > 0:
+
+            self.agotado = False
+
         if self.energia <= 0:
 
             # Si alcanzó el campamento justo
@@ -3150,15 +3229,21 @@ class AgenteCazador:
                     self.energia_max
                 )
 
+                self.agotado = False
+
                 self.estado = (
                     "Energía recuperada"
                 )
 
             else:
 
-                self.estado = (
-                    "Murió de agotamiento"
-                )
+                # AGOTADO (no mortal): se arrastra muy
+                # lento hacia su cabaña. DIOS baja su
+                # velocidad con FACTOR_VELOCIDAD_AGOTADO.
+
+                self.agotado = True
+
+                self.arrastrarse_a_cabana()
 
                 return
 

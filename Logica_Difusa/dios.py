@@ -177,7 +177,15 @@ ESPERA_PELEA = 3.0
 # Tiempo que permanece recuperándose
 # dentro de su propia cabaña.
 
-DURACION_RECUPERACION = 5.0
+DURACION_RECUPERACION = 3.0
+
+# Refugio del Jaguar: misma duración que la
+# recuperación en la cabaña (una sola regla).
+DURACION_REFUGIO = DURACION_RECUPERACION
+
+# Velocidad de un cazador AGOTADO (energía 0)
+# mientras se arrastra hacia su cabaña.
+FACTOR_VELOCIDAD_AGOTADO = 0.35
 
 
 # Camina al 50 % mientras está herido.
@@ -259,6 +267,12 @@ class Dios:
         # pruebas queda apagado para no tocar
         # los archivos de pesos.
         self.guardar_aprendizaje = False
+
+        # Contador GLOBAL de eventos lógicos de DIOS.
+        # Sube con cada decisión de cualquier agente
+        # (Rodrigo, Gonzalo o Jaguar). No depende de
+        # ningún agente en particular.
+        self.turno_global = 0
 
         # Partida actual (la crea nueva_partida)
         self.mundo = None
@@ -550,6 +564,7 @@ class Dios:
         self.ultima_pelea = None
         self.bitacora.clear()
         self.bitacora_decisiones.clear()
+        self.turno_global = 0
 
         if escenario is None:
 
@@ -1257,7 +1272,7 @@ class Dios:
 
             agente.en_refugio_jaguar = True
 
-            agente.tiempo_refugio_restante = 5.0
+            agente.tiempo_refugio_restante = DURACION_REFUGIO
 
             cuerpo.velocidad = 0.0
 
@@ -1308,6 +1323,10 @@ class Dios:
 
                 agente.modo_emergencia = None
 
+                # Refugio = protección + recarga de energía
+                # (igual que recuperarse en la cabaña).
+                agente.energia = agente.energia_max
+
                 agente.estado = (
                     "Refugio terminado: "
                     "vuelve a la cacería"
@@ -1340,10 +1359,29 @@ class Dios:
             agente
         )
 
+        estaba_agotado = getattr(
+            agente,
+            "agotado",
+            False
+        )
+
+        self.avanzar_turno_global()
 
         agente.tomar_decision(
             self.mundo.posicion_jaguar
         )
+
+        # Agotado: se mueve muy lento. Al recuperar
+        # energía vuelve a su velocidad normal.
+        if getattr(agente, "agotado", False):
+
+            cuerpo.factor_velocidad = (
+                FACTOR_VELOCIDAD_AGOTADO
+            )
+
+        elif estaba_agotado:
+
+            cuerpo.factor_velocidad = 1.0
         # ======================================
         # DIOS REGISTRA LA DECISIÓN DEL CAZADOR
         # ======================================
@@ -1380,6 +1418,16 @@ class Dios:
 
             decision_orquestada = (
                 "REGRESAR HERIDO A CABAÑA"
+            )
+
+        elif getattr(
+            agente,
+            "agotado",
+            False
+        ):
+
+            decision_orquestada = (
+                "AGOTADO: ARRASTRARSE A CABAÑA"
             )
 
         elif getattr(
@@ -1614,6 +1662,8 @@ class Dios:
             self.jaguar
         )
 
+
+        self.avanzar_turno_global()
 
         destino = self.jaguar.tomar_decision(
             posicion_cazador,
@@ -2335,9 +2385,18 @@ class Dios:
     # 6. BITÁCORA
     # ======================================
 
+    def avanzar_turno_global(self):
+
+        self.turno_global += 1
+
+        return self.turno_global
+
+
     def turno_actual(self):
 
-        return self.cazador.turno if self.cazador else 0
+        # Contador propio de DIOS: ya no depende
+        # del turno interno de Rodrigo.
+        return self.turno_global
 
 
     def anotar(self, texto):

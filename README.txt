@@ -596,3 +596,10 @@ Archivos (carpeta Redes_Neuronales/):
 -graficas.py: funciones de transferencia, curva de aprendizaje y pesos (en reporte/).
 -pesos/: los pesos aprendidos (el conocimiento de la red) en JSON.
 -pruebas/test_redes_neuronales.py: 20 pruebas automáticas de la red.
+
+
+Los JSON de Redes_Neuronales/pesos/
+ (predictor_refuerzo_cazador.json y 
+ predictor_refuerzo_interceptor.json) son el estado 
+ inicial aprendido de la rama art-memoria. 
+ No se regeneran en cada demo.
