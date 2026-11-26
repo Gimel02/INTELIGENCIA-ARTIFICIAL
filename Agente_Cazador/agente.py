@@ -1921,6 +1921,9 @@ class AgenteCazador:
 
         self.turno += 1
 
+        # ART: ¿cómo le fue en la huida anterior?
+        self.evaluar_huida_art()
+
         posicion_antes = self.posicion
 
         energia_antes = self.energia
@@ -3094,6 +3097,214 @@ class AgenteCazador:
 
 
     # ==========================================
+    # HUIDA CON EXPERIENCIA ART
+    #
+    # Mamdani ya decidió HUIR. ART no cambia esa
+    # decisión: solo da una preferencia según la
+    # experiencia de cada tipo de lugar.
+    #
+    # Si ART no reconoce una casilla o no tiene
+    # experiencia de ella, no la afecta. Sin
+    # información, la huida es idéntica a antes.
+    # ==========================================
+
+    def elegir_escape_con_art(
+        self,
+        posicion_amenaza
+    ):
+
+        sin_art = Huida.elegir_escape(
+            self.posicion,
+            posicion_amenaza,
+            self.mundo
+        )
+
+        memoria = getattr(
+            self,
+            "memoria_art",
+            None
+        )
+
+        self.art_huida = None
+
+        if memoria is None:
+
+            return sin_art
+
+        def experiencia(casilla):
+
+            return memoria.clasificar_casilla(
+                self.mundo,
+                casilla
+            )["experiencia"]
+
+        con_art = Huida.elegir_escape(
+            self.posicion,
+            posicion_amenaza,
+            self.mundo,
+            preferencia=experiencia
+        )
+
+        # Para la bitácora y el panel
+        self.art_huida = {
+            "sin_art": sin_art,
+            "con_art": con_art,
+            "influyo": con_art != sin_art,
+            "motivo": None,
+        }
+
+        if con_art != sin_art and None not in (con_art, sin_art):
+
+            elegida = memoria.clasificar_casilla(self.mundo, con_art)
+            evitada = memoria.clasificar_casilla(self.mundo, sin_art)
+
+            def texto(info):
+
+                if info["categoria"] is None:
+                    return "?"
+
+                exp = info["experiencia"]
+
+                return (
+                    f"C{info['categoria']}"
+                    + (f" ({exp:+.1f})" if exp is not None else "")
+                )
+
+            self.art_huida["motivo"] = (
+                f"{texto(elegida)} en vez de {texto(evitada)}"
+            )
+
+        # ======================================
+        # REFUERZO: QUEDÓ ACORRALADO
+        #
+        # Ninguna casilla lo aleja del jaguar:
+        # castigo a la categoría del lugar donde
+        # quedó (la que ART acaba de observar).
+        # ======================================
+
+        if con_art is None:
+
+            self.reforzar_lugar_art(
+                -1.0,
+                "quedó acorralado"
+            )
+
+        else:
+
+            # Se revisa en su siguiente turno
+            self.huida_pendiente_art = {
+                "casilla": con_art,
+                "distancia_antes": AEstrella.heuristica(
+                    self.posicion,
+                    posicion_amenaza
+                ),
+            }
+
+        if con_art != sin_art:
+
+            print(
+                f"[ART] {self.nombre} huye por {con_art} "
+                f"en vez de {sin_art} (experiencia "
+                f"{experiencia(con_art)} contra "
+                f"{experiencia(sin_art)})"
+            )
+
+        return con_art
+
+
+    # ==========================================
+    # REFUERZOS ART DE LA HUIDA
+    #
+    # Solo 3 eventos:
+    #   pisó arena al huir      -> -1
+    #   logró alejarse          -> +0.5
+    #   quedó acorralado        -> -1
+    #
+    # Se refuerza la categoría del lugar donde
+    # quedó el cazador: la que ART observó al
+    # empezar este turno (DIOS llama a ART
+    # antes de tomar_decision).
+    # ==========================================
+
+    def reforzar_lugar_art(
+        self,
+        refuerzo,
+        motivo
+    ):
+
+        memoria = getattr(
+            self,
+            "memoria_art",
+            None
+        )
+
+        if memoria is None or memoria.ultimo_resultado is None:
+
+            return None
+
+        categoria = memoria.ultimo_resultado.get(
+            "categoria"
+        )
+
+        valor = memoria.reforzar_categoria(
+            categoria,
+            refuerzo
+        )
+
+        if valor is not None:
+
+            print(
+                f"[ART] {self.nombre} C{categoria} "
+                f"{refuerzo:+.1f} ({motivo}) -> experiencia {valor:+.2f}"
+            )
+
+        return valor
+
+
+    def evaluar_huida_art(self):
+
+        pendiente = getattr(
+            self,
+            "huida_pendiente_art",
+            None
+        )
+
+        self.huida_pendiente_art = None
+
+        if pendiente is None:
+
+            return
+
+        # Pisó arena mientras huía
+        if (
+            self.posicion == pendiente["casilla"]
+            and self.mundo.grid[self.posicion] == 4
+        ):
+
+            self.reforzar_lugar_art(
+                -1.0,
+                "pisó arena al huir"
+            )
+
+            return
+
+        # Logró alejarse del jaguar
+        if (
+            self.mundo.jaguar_vivo
+            and self.mundo.posicion_jaguar is not None
+            and AEstrella.heuristica(
+                self.posicion,
+                self.mundo.posicion_jaguar
+            ) > pendiente["distancia_antes"]
+        ):
+
+            self.reforzar_lugar_art(
+                0.5,
+                "logró alejarse"
+            )
+
+
+    # ==========================================
     # AGOTADO: ARRASTRARSE A LA CABAÑA
     #
     # Un paso A* hacia su campamento. No gasta
@@ -3417,10 +3628,8 @@ class AgenteCazador:
 
         if en_peligro:
 
-            escape = Huida.elegir_escape(
-                self.posicion,
-                posicion_amenaza,
-                self.mundo
+            escape = self.elegir_escape_con_art(
+                posicion_amenaza
             )
 
 

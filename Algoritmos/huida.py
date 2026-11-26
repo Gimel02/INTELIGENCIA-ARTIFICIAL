@@ -1,6 +1,13 @@
 from Algoritmos.a_Estrella import AEstrella
 
 
+# Peso de la experiencia ART al huir.
+# Alejarse una casilla vale 10 puntos; ART
+# suma como máximo ±5, así que solo
+# desempata entre rutas igual de buenas.
+PESO_ART = 5
+
+
 class Huida:
 
     # ==========================================
@@ -27,8 +34,17 @@ class Huida:
         posicion_presa,
         posicion_cazador,
         mundo,
-        prohibidas=()
+        prohibidas=(),
+        preferencia=None
     ):
+
+        # preferencia (opcional): función que
+        # recibe una casilla vecina y regresa su
+        # experiencia ART (-1 a 1) o None si no
+        # hay información. Sin ella, todo
+        # funciona exactamente igual que antes.
+
+        candidatas = []
 
         distancia_actual = (
             AEstrella.heuristica(
@@ -91,6 +107,10 @@ class Huida:
                 puntaje -= 6
 
 
+            candidatas.append(
+                (vecino, distancia, puntaje)
+            )
+
             if (
                 mejor_puntaje is None
                 or
@@ -110,6 +130,47 @@ class Huida:
         if mejor is None:
 
             return None
+
+
+        # ======================================
+        # PREFERENCIA ART
+        #
+        # Solo puede elegir entre casillas que
+        # quedan IGUAL DE LEJOS O MÁS del
+        # perseguidor que la que se elegía sin
+        # ART. Así nunca se acerca por culpa de
+        # ART ni se queda sin salida. Nunca quita
+        # opciones: solo cambia puntajes.
+        # ======================================
+
+        if preferencia is not None:
+
+            distancia_base = AEstrella.heuristica(
+                mejor,
+                posicion_cazador
+            )
+
+            mejor_art = None
+            puntaje_art = None
+
+            for vecino, distancia, puntaje in candidatas:
+
+                if distancia < distancia_base:
+
+                    continue
+
+                experiencia = preferencia(vecino)
+
+                if experiencia is not None:
+
+                    puntaje += PESO_ART * experiencia
+
+                if puntaje_art is None or puntaje > puntaje_art:
+
+                    mejor_art = vecino
+                    puntaje_art = puntaje
+
+            mejor = mejor_art
 
 
         if (

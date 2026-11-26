@@ -482,3 +482,174 @@ class PruebasMemoriaART(
 if __name__ == "__main__":
 
     unittest.main()
+
+# ==========================================
+# EXPERIENCIA POR CATEGORÍA (ETAPA 1)
+# ==========================================
+
+class PruebasExperienciaART(
+    unittest.TestCase
+):
+
+    def memoria_con_una_categoria(self):
+
+        memoria = MemoriaART("Rodrigo")
+
+        resultado = memoria.observar(
+            AgenteFalso(MundoFalso(), (2, 2))
+        )
+
+        return memoria, resultado["categoria"]
+
+
+    def test_empieza_sin_informacion(self):
+
+        memoria, categoria = self.memoria_con_una_categoria()
+
+        # None = sin información (no es 0.0)
+        self.assertIsNone(memoria.experiencia_de(categoria))
+
+
+    def test_premio_sube_y_castigo_baja(self):
+
+        memoria, categoria = self.memoria_con_una_categoria()
+
+        self.assertAlmostEqual(
+            memoria.reforzar_categoria(categoria, +1), 0.2
+        )
+
+        self.assertAlmostEqual(
+            memoria.reforzar_categoria(categoria, -1), 0.0
+        )
+
+        self.assertAlmostEqual(
+            memoria.reforzar_categoria(categoria, -1), -0.2
+        )
+
+
+    def test_queda_entre_menos_uno_y_uno(self):
+
+        memoria, categoria = self.memoria_con_una_categoria()
+
+        for _ in range(20):
+            memoria.reforzar_categoria(categoria, -1)
+
+        self.assertEqual(memoria.experiencia_de(categoria), -1.0)
+
+        for _ in range(40):
+            memoria.reforzar_categoria(categoria, +1)
+
+        self.assertEqual(memoria.experiencia_de(categoria), 1.0)
+
+
+    def test_categoria_none_no_hace_nada(self):
+
+        memoria, _ = self.memoria_con_una_categoria()
+
+        self.assertIsNone(memoria.reforzar_categoria(None, -1))
+
+        self.assertEqual(memoria.experiencia, {})
+
+
+    def test_categoria_inexistente_da_error(self):
+
+        memoria, _ = self.memoria_con_una_categoria()
+
+        with self.assertRaises(ValueError):
+            memoria.reforzar_categoria(5, -1)
+
+
+    def test_se_conserva_entre_partidas(self):
+
+        memoria, categoria = self.memoria_con_una_categoria()
+
+        memoria.reforzar_categoria(categoria, -1)
+
+        memoria.reiniciar_partida()
+
+        self.assertAlmostEqual(
+            memoria.experiencia_de(categoria), -0.2
+        )
+
+
+# ==========================================
+# CONSULTAR SIN APRENDER (ETAPA 2)
+# ==========================================
+
+class PruebasClasificarMemoriaART(
+    unittest.TestCase
+):
+
+    def test_memoria_vacia_no_reconoce(self):
+
+        memoria = MemoriaART("Rodrigo")
+
+        resultado = memoria.clasificar_patron([1, 1, 1, 1])
+
+        self.assertFalse(resultado["reconocido"])
+        self.assertIsNone(resultado["categoria"])
+        self.assertIsNone(resultado["experiencia"])
+        self.assertEqual(memoria.numero_categorias, 0)
+
+
+    def test_regresa_categoria_y_experiencia(self):
+
+        memoria = MemoriaART("Rodrigo")
+
+        memoria.observar(AgenteFalso(MundoFalso(), (2, 2)))
+
+        memoria.reforzar_categoria(1, -1)
+
+        resultado = memoria.clasificar_patron([1, 1, 1, 1])
+
+        self.assertTrue(resultado["reconocido"])
+        self.assertEqual(resultado["categoria"], 1)
+        self.assertEqual(resultado["similitud"], 1.0)
+        self.assertAlmostEqual(resultado["experiencia"], -0.2)
+
+
+    def test_consultar_no_cambia_la_memoria(self):
+
+        mundo = MundoFalso()
+
+        memoria = MemoriaART("Rodrigo")
+
+        memoria.observar(AgenteFalso(mundo, (2, 2)))
+
+        antes = (
+            [list(p) for p in memoria.prototipos],
+            memoria.numero_categorias,
+            memoria.ultimo_patron,
+            memoria.observaciones,
+            dict(memoria.experiencia),
+        )
+
+        # Patrones que, si se aprendieran,
+        # crearían categorías o recortarían
+        # prototipos
+        memoria.clasificar_patron([0, 0, 0, 0])
+        memoria.clasificar_patron([1, 0, 1, 0])
+        memoria.clasificar_casilla(mundo, (0, 0))
+
+        despues = (
+            [list(p) for p in memoria.prototipos],
+            memoria.numero_categorias,
+            memoria.ultimo_patron,
+            memoria.observaciones,
+            dict(memoria.experiencia),
+        )
+
+        self.assertEqual(antes, despues)
+
+
+    def test_clasificar_casilla_usa_sus_vecinos(self):
+
+        mundo = MundoFalso()
+
+        memoria = MemoriaART("Rodrigo")
+
+        # Esquina (0, 0): arriba e izquierda
+        # son borde, abajo y derecha libres
+        resultado = memoria.clasificar_casilla(mundo, (0, 0))
+
+        self.assertEqual(resultado["patron"], [0, 1, 0, 1])

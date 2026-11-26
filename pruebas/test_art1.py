@@ -341,3 +341,71 @@ class PruebasART1(unittest.TestCase):
 if __name__ == "__main__":
 
     unittest.main()
+
+# ==========================================
+# CLASIFICAR SIN APRENDER
+# ==========================================
+
+class PruebasClasificarART1(unittest.TestCase):
+
+    def art_con_dos_categorias(self):
+
+        art = ART1(
+            numero_entradas=4,
+            vigilancia=0.5,
+            max_categorias=4
+        )
+
+        art.aprender([1, 1, 0, 0])
+        art.aprender([0, 0, 1, 1])
+
+        return art
+
+
+    def test_reconoce_igual_que_aprender(self):
+
+        art = self.art_con_dos_categorias()
+
+        resultado = art.clasificar([0, 0, 1, 1])
+
+        self.assertEqual(resultado["categoria"], 2)
+        self.assertEqual(resultado["similitud"], 1.0)
+
+
+    def test_no_reconoce_si_no_supera_la_vigilancia(self):
+
+        art = self.art_con_dos_categorias()
+
+        art.vigilancia = 0.9
+
+        resultado = art.clasificar([1, 0, 1, 0])
+
+        self.assertIsNone(resultado["categoria"])
+
+
+    def test_no_modifica_nada(self):
+
+        art = self.art_con_dos_categorias()
+
+        prototipos = [list(p) for p in art.prototipos]
+
+        # Con aprender() este patrón recortaría
+        # el prototipo de C1; con clasificar()
+        # no debe cambiar nada.
+        art.clasificar([1, 1, 1, 0])
+        art.clasificar([1, 0, 0, 1])
+
+        self.assertEqual(
+            [list(p) for p in art.prototipos],
+            prototipos
+        )
+
+
+    def test_sin_categorias(self):
+
+        art = ART1(numero_entradas=4)
+
+        resultado = art.clasificar([1, 1, 1, 1])
+
+        self.assertIsNone(resultado["categoria"])
+        self.assertEqual(art.prototipos, [])

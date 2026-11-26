@@ -343,6 +343,51 @@ class ART1:
     # CREAR CATEGORÍA
     # ======================================
 
+    # ======================================
+    # CLASIFICAR SIN APRENDER
+    #
+    # Misma competencia y misma vigilancia
+    # que aprender(), pero NO modifica nada:
+    # ni prototipos, ni pesos, ni crea
+    # categorías.
+    #
+    # Regresa la categoría que resuena
+    # (numerada desde 1) o None si ninguna
+    # supera la vigilancia.
+    # ======================================
+
+    def clasificar(
+        self,
+        patron
+    ):
+
+        self.validar_patron(
+            patron
+        )
+
+        candidatas = self.categorias_por_competencia(
+            patron
+        )
+
+        for candidata in candidatas:
+
+            if candidata["similitud"] >= self.vigilancia:
+
+                return {
+                    "categoria": candidata["indice"] + 1,
+                    "similitud": candidata["similitud"],
+                    "activacion": candidata["activacion"],
+                }
+
+        mejor = candidatas[0] if candidatas else None
+
+        return {
+            "categoria": None,
+            "similitud": mejor["similitud"] if mejor else None,
+            "activacion": mejor["activacion"] if mejor else None,
+        }
+
+
     def crear_categoria(
         self,
         patron

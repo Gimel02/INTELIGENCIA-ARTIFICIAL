@@ -25,7 +25,32 @@ from Redes_Neuronales.ART.art1 import ART1
 
 from Redes_Neuronales.ART.patron_entorno import (
     analizar_entorno,
+    patron_en,
 )
+
+
+# ==========================================
+# EXPERIENCIA POR CATEGORÍA
+#
+# Cada categoría que aprende ART tiene un
+# valor de experiencia entre -1 y 1:
+#
+#   positivo = en ese tipo de lugar le ha
+#              ido bien
+#   negativo = ese tipo de lugar estuvo
+#              ligado a problemas
+#
+# Se ajusta con:
+#
+#   valor_nuevo = valor_anterior + α · refuerzo
+#
+# y se limita entre -1 y 1.
+# ==========================================
+
+ALFA_EXPERIENCIA = 0.2
+
+EXPERIENCIA_MINIMA = -1.0
+EXPERIENCIA_MAXIMA = 1.0
 
 
 class MemoriaART:
@@ -74,6 +99,20 @@ class MemoriaART:
         self.resets = 0
 
         self.saturaciones = 0
+
+
+        # ======================================
+        # EXPERIENCIA DE CADA CATEGORÍA
+        #
+        # número de categoría -> valor (-1 a 1)
+        #
+        # Si una categoría no aparece, no hay
+        # información sobre ella. Es memoria de
+        # largo plazo: no se borra entre
+        # partidas.
+        # ======================================
+
+        self.experiencia = {}
 
 
     # ======================================
@@ -217,6 +256,124 @@ class MemoriaART:
     # partidas mientras el programa siga
     # abierto.
     # ======================================
+
+    # ======================================
+    # CONSULTAR SIN APRENDER
+    #
+    # Compara un patrón con lo que ART ya
+    # sabe y regresa:
+    #
+    #   categoria  (None si no la reconoce)
+    #   similitud
+    #   activacion
+    #   experiencia (None si no hay info)
+    #
+    # NO modifica prototipos, NO crea
+    # categorías, NO cambia pesos ni la
+    # memoria de corto plazo.
+    # ======================================
+
+    def clasificar_patron(
+        self,
+        patron
+    ):
+
+        resultado = self.art.clasificar(
+            patron
+        )
+
+        categoria = resultado["categoria"]
+
+        return {
+            "patron": list(patron),
+            "categoria": categoria,
+            "reconocido": categoria is not None,
+            "similitud": resultado["similitud"],
+            "activacion": resultado["activacion"],
+            "experiencia": self.experiencia_de(
+                categoria
+            ),
+        }
+
+
+    # Lo mismo, pero para una casilla del
+    # mapa (por ejemplo, una casilla a la que
+    # el cazador piensa huir).
+
+    def clasificar_casilla(
+        self,
+        mundo,
+        posicion
+    ):
+
+        return self.clasificar_patron(
+            patron_en(
+                mundo,
+                posicion
+            )
+        )
+
+
+    # ======================================
+    # REFORZAR UNA CATEGORÍA
+    #
+    #   refuerzo > 0: le fue bien
+    #   refuerzo < 0: le fue mal
+    #
+    # Regresa el nuevo valor. Si la categoría
+    # es None (ART saturada), no hace nada.
+    # ======================================
+
+    def reforzar_categoria(
+        self,
+        categoria,
+        refuerzo,
+        alfa=ALFA_EXPERIENCIA
+    ):
+
+        if categoria is None:
+
+            return None
+
+        if categoria < 1 or categoria > self.numero_categorias:
+
+            raise ValueError(
+                f"La categoría C{categoria} no existe"
+            )
+
+        anterior = self.experiencia.get(
+            categoria,
+            0.0
+        )
+
+        nuevo = anterior + alfa * refuerzo
+
+        nuevo = max(
+            EXPERIENCIA_MINIMA,
+            min(EXPERIENCIA_MAXIMA, nuevo)
+        )
+
+        self.experiencia[categoria] = nuevo
+
+        return nuevo
+
+
+    # ======================================
+    # CONSULTAR LA EXPERIENCIA
+    #
+    # None = sin información (todavía no se
+    # ha reforzado). Es distinto de 0.0.
+    # ======================================
+
+    def experiencia_de(
+        self,
+        categoria
+    ):
+
+        return self.experiencia.get(
+            categoria
+        )
+
 
     def reiniciar_partida(
         self

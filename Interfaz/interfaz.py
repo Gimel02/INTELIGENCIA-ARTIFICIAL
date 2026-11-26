@@ -2073,6 +2073,90 @@ class Interfaz:
 
 
         # =====================================
+        # EXPERIENCIA ART (refuerzo al huir)
+        # =====================================
+
+        categoria_actual = resultado.get(
+            "categoria"
+        )
+
+        experiencia = memoria.experiencia_de(
+            categoria_actual
+        )
+
+        if experiencia is None:
+
+            recomendacion = "SIN DATOS"
+            color_rec = (150, 150, 150)
+            motivo = "categoría sin experiencia"
+
+        elif experiencia >= 0.2:
+
+            recomendacion = "PREFERIR"
+            color_rec = self.C_NEON_VERDE
+            motivo = "experiencia positiva"
+
+        elif experiencia <= -0.2:
+
+            recomendacion = "EVITAR"
+            color_rec = self.C_NEON_ROJO
+            motivo = "experiencia negativa"
+
+        else:
+
+            recomendacion = "NEUTRAL"
+            color_rec = self.C_NEON_AMARILLO
+            motivo = "experiencia cercana a 0"
+
+        linea(
+            "Experiencia",
+            f"{experiencia:+.2f}" if experiencia is not None else "-",
+            color_rec
+        )
+
+        linea(
+            "Recomienda",
+            recomendacion,
+            color_rec
+        )
+
+        linea(
+            "Motivo",
+            motivo
+        )
+
+        if self.agente_panel_red == "Jaguar":
+
+            influyo_texto = "no aplica"
+            color_influyo = (150, 150, 150)
+
+        else:
+
+            huida = getattr(agente, "art_huida", None)
+
+            if huida is None:
+
+                influyo_texto = "- (aún no huye)"
+                color_influyo = (150, 150, 150)
+
+            elif huida["influyo"]:
+
+                influyo_texto = f"SÍ: {huida['motivo'] or 'cambió la ruta'}"
+                color_influyo = self.C_NEON_VERDE
+
+            else:
+
+                influyo_texto = "NO"
+                color_influyo = (235, 235, 235)
+
+        linea(
+            "Influyó en ruta",
+            influyo_texto,
+            color_influyo
+        )
+
+
+        # =====================================
         # PROTOTIPO V Y PESOS W
         # =====================================
 

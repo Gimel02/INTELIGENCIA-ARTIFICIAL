@@ -200,6 +200,30 @@ def analizar_casilla(
 # ANALIZAR ENTORNO COMPLETO
 # ==========================================
 
+def patron_en(
+    mundo,
+    posicion
+):
+
+    # Patrón de las 4 casillas alrededor de
+    # CUALQUIER posición (no solo la del
+    # agente). Lo usa el cazador para
+    # preguntarle a ART cómo es la casilla a
+    # la que piensa huir.
+
+    vecinos = posiciones_vecinas(
+        posicion
+    )
+
+    return [
+        analizar_casilla(
+            mundo,
+            vecinos[nombre]
+        )["valor"]
+        for nombre, _ in DIRECCIONES
+    ]
+
+
 def analizar_entorno(
     agente
 ):
