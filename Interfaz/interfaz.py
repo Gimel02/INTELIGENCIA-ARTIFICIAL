@@ -107,6 +107,11 @@ class Interfaz:
         # =========================================
 
         self.agente_panel_red = "Rodrigo"
+
+        # Mapa de memoria (tecla M): pinta sobre
+        # el tablero lo que recuerda el agente
+        # elegido con F1/F2/F3
+        self.ver_memoria = False
         self.ancho_panel_dios_lateral = 340
 
         self.margen_mapa = 30
@@ -796,6 +801,13 @@ class Interfaz:
                     )
 
 
+                # M = ver / ocultar el mapa de memoria
+                # del agente elegido con F1/F2/F3
+                elif evento.key == pygame.K_m:
+
+                    self.ver_memoria = not self.ver_memoria
+
+
                 # Disminuir vigilancia ART
 
                 elif evento.key == pygame.K_LEFTBRACKET:
@@ -916,6 +928,10 @@ class Interfaz:
         self.dibujar_panel()
 
         self.dibujar_panel_redes_lateral()
+
+        # Leyenda del mapa de memoria (tecla M)
+        self.dibujar_leyenda_memoria()
+
         # =====================================
         # RESULTADO FINAL
         # =====================================
@@ -3881,6 +3897,234 @@ class Interfaz:
                 2
             )
 
+    # =========================================
+    # MAPA DE MEMORIA EN TIEMPO REAL (tecla M)
+    #
+    # Pinta sobre el tablero lo que recuerda el
+    # agente elegido con F1/F2/F3. Solo dibuja:
+    # no cambia nada del juego.
+    # =========================================
+
+    def dibujar_mapa_memoria(self):
+
+        agente = self.agente_red_seleccionado()
+
+        if agente is None:
+
+            return
+
+        memoria = agente.memoria
+
+        tamano = self.mundo.tamano_celda
+
+        capa = pygame.Surface(
+            (self.mundo.ancho, self.mundo.alto),
+            pygame.SRCALPHA
+        )
+
+        def celda(posicion, margen=0):
+
+            fila, columna = posicion
+
+            return pygame.Rect(
+                columna * tamano + margen,
+                fila * tamano + margen,
+                tamano - 2 * margen,
+                tamano - 2 * margen
+            )
+
+        es_jaguar = agente is self.agente_jaguar
+
+        visitas = getattr(memoria, "visitas", {})
+
+        maximo = max(visitas.values(), default=1)
+
+        if es_jaguar:
+
+            # Casillas pisadas: más rojo = más veces
+            for posicion, veces in visitas.items():
+
+                alfa = 40 + int(110 * veces / maximo)
+
+                capa.fill((230, 90, 60, alfa), celda(posicion))
+
+            for posicion in memoria.memoria_arena:
+
+                pygame.draw.rect(
+                    capa, (255, 170, 40, 255), celda(posicion, 3), 3
+                )
+
+            for posicion in memoria.memoria_bayas:
+
+                pygame.draw.circle(
+                    capa, (255, 255, 255, 255),
+                    celda(posicion).center, tamano // 5, 3
+                )
+
+            for posicion in memoria.posiciones_recientes:
+
+                pygame.draw.rect(
+                    capa, (255, 255, 255, 230), celda(posicion, 8), 2
+                )
+
+            leyenda = [
+                (
+                    "MEMORIA DEL JAGUAR:"
+                    if self.mundo.jaguar_vivo
+                    else "MEMORIA DEL JAGUAR (ya cazado, no se mueve):",
+                    (255, 255, 255)
+                ),
+                ("rojo = pisó (más fuerte, más veces)", (240, 120, 90)),
+                ("naranja = arena", (255, 170, 40)),
+                ("círculo = baya", (255, 255, 255)),
+                ("cuadro chico = últimas posiciones", (220, 220, 220)),
+            ]
+
+        else:
+
+            # Casillas que ya revisó con los sentidos
+            for posicion in memoria.celdas_revisadas:
+
+                capa.fill((255, 255, 255, 55), celda(posicion))
+
+            # Casillas pisadas: más azul = más veces
+            for posicion, veces in visitas.items():
+
+                alfa = 40 + int(110 * veces / maximo)
+
+                capa.fill((40, 110, 230, alfa), celda(posicion))
+
+            for posicion in memoria.arena_conocida:
+
+                pygame.draw.rect(
+                    capa, (255, 170, 40, 255), celda(posicion, 3), 3
+                )
+
+            for posicion, color in memoria.bayas_vistas.items():
+
+                saber = memoria.conocimiento_bayas.get(color)
+
+                marca = (
+                    (230, 40, 40, 255) if saber == "mala"
+                    else (60, 220, 90, 255) if saber == "buena"
+                    else (255, 255, 255, 255)
+                )
+
+                pygame.draw.circle(
+                    capa, marca, celda(posicion).center, tamano // 5, 3
+                )
+
+            if memoria.ultima_posicion_jaguar is not None:
+
+                rect = celda(memoria.ultima_posicion_jaguar, 2)
+
+                pygame.draw.rect(capa, (230, 30, 30, 255), rect, 3)
+
+                pygame.draw.line(capa, (230, 30, 30, 255), rect.topleft, rect.bottomright, 3)
+
+                pygame.draw.line(capa, (230, 30, 30, 255), rect.topright, rect.bottomleft, 3)
+
+            if memoria.objetivo_busqueda is not None:
+
+                pygame.draw.rect(
+                    capa, (255, 230, 60, 255),
+                    celda(memoria.objetivo_busqueda, 6), 3
+                )
+
+            nombre = (
+                "GONZALO" if agente is self.agente_interceptor
+                else "RODRIGO"
+            )
+
+            roja = memoria.conocimiento_bayas.get("roja") or "?"
+            azul = memoria.conocimiento_bayas.get("azul") or "?"
+
+            leyenda = [
+                (f"MEMORIA DE {nombre}:", (255, 255, 255)),
+                ("blanco = revisó", (235, 235, 235)),
+                ("azul = pisó (más fuerte, más veces)", (120, 170, 255)),
+                ("naranja = arena", (255, 170, 40)),
+                ("círculo = baya (rojo mala, verde buena, blanco no sabe)", (255, 255, 255)),
+                ("X roja = último jaguar visto", (240, 80, 80)),
+                ("amarillo = investigando", (255, 230, 60)),
+                (f"sabe: roja {roja}, azul {azul}", (255, 255, 255)),
+            ]
+
+        self.pantalla.blit(
+            capa,
+            (self.offset_mapa_x, self.offset_mapa_y)
+        )
+
+        # Leyenda debajo del mapa, en renglones
+        # que se acomodan al ancho del mapa
+        self.leyenda_memoria = leyenda
+
+
+    def dibujar_leyenda_memoria(self):
+
+        leyenda = getattr(self, "leyenda_memoria", None)
+
+        if not self.ver_memoria or not leyenda:
+
+            return
+
+        piezas = [
+            self.fuente_pequena.render(texto, True, color)
+            for texto, color in leyenda
+        ]
+
+        ancho_max = self.mundo.ancho
+
+        renglones = [[]]
+
+        usado = 0
+
+        for pieza in piezas:
+
+            if renglones[-1] and usado + pieza.get_width() > ancho_max:
+
+                renglones.append([])
+
+                usado = 0
+
+            renglones[-1].append(pieza)
+
+            usado += pieza.get_width() + 14
+
+        alto_renglon = piezas[0].get_height() + 2
+
+        alto = alto_renglon * len(renglones) + 10
+
+        x0 = self.offset_mapa_x
+
+        y = self.offset_mapa_y + self.mundo.alto + 14
+
+        # Si no cabe abajo, va dentro del mapa
+        if y + alto > self.pantalla.get_height():
+
+            y = self.offset_mapa_y + self.mundo.alto - alto
+
+        fondo = pygame.Surface((ancho_max, alto), pygame.SRCALPHA)
+
+        fondo.fill((0, 0, 0, 190))
+
+        self.pantalla.blit(fondo, (x0, y))
+
+        y += 5
+
+        for renglon in renglones:
+
+            x = x0 + 6
+
+            for pieza in renglon:
+
+                self.pantalla.blit(pieza, (x, y))
+
+                x += pieza.get_width() + 14
+
+            y += alto_renglon
+
+
     def dibujar_tablero(self):
 
 
@@ -4260,6 +4504,15 @@ class Interfaz:
             )
 
         )
+
+
+        # =====================================
+        # MAPA DE MEMORIA (tecla M)
+        # =====================================
+
+        if self.ver_memoria:
+
+            self.dibujar_mapa_memoria()
 
 
         # =====================================
